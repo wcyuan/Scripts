@@ -306,7 +306,7 @@ sub parse_command_line() {
     #
     # use pass_through, since we want basic options, but other options
     # should just be passed through.
-    Getopt::Long::Configure("pass_through", "require_order", "noauto_abbrev", "noignore_case", "nocardinal_options");
+    Getopt::Long::Configure("pass_through", "require_order", "noauto_abbrev", "noignore_case");
     GetOptions( "run" => \my $run_cmds,
                 "no_write" => \$NO_WRITE,
                 "verbose|v" => sub { $logger->level($DEBUG) },
@@ -332,8 +332,6 @@ sub parse_command_line() {
         $action = shift(@ARGV);
 
         $logger->debug("Action = $action");
-
-        Getopt::Long::Configure("nobasic_options");
 
         if ($action eq "fdiff" || 
             $action eq "foreign_diff" || 
