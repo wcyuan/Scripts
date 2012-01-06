@@ -122,7 +122,7 @@ for (my $ii = 1; $ii <= $nfiles; $ii++) {
     if ($ii > 1) {
 	if ($file{$ii}{basename} eq "") {
 	    # After the first file, the later files can just be
-	    # directories and we'll assumet he same basename as the
+	    # directories and we'll assume the same basename as the
 	    # first file.
 	    if ($file{1}{basename} ne "") {
 		$file{$ii}{basename} = $file{1}{basename};
@@ -170,7 +170,7 @@ foreach my $fileno (keys %file) {
         or $logger->logconfess("Can't close $file{$fileno}{temp}: $? $! $@");
 }
 
-my $cmd = join(" ", "gnu diff", @ARGV, $file{1}{temp},  $file{2}{temp});
+my $cmd = join(" ", "diff", @ARGV, $file{1}{temp},  $file{2}{temp});
 if ($debug) {
     $logger->debug("Not running $cmd");
 } else {
