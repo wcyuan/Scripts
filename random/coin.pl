@@ -150,7 +150,7 @@ Compare not only the probability of success, but how quickly the game ends (is t
 use strict;
 use warnings 'all';
 use Pod::Usage;
-use Math::Matrix;
+use Math::MatrixReal;
 use Memoize;
 
 use Getopt::Long;
@@ -170,7 +170,8 @@ GetOptions( "alpha_sz=i" => \$alpha_sz,
 	    "string_len=i" => \$default_string_len,
 	    "fast!" => \my $fast,
             "verbose|v" => sub { $logger->level($DEBUG) },
-	  );
+	  )
+    or pod2usage();
 
 my $is_debug = $logger->is_debug();
 
@@ -286,25 +287,28 @@ sub compete ( $@ ) {
     }
 
     # solve it!
-    my $matrix = new Math::Matrix(@rules);
+    my $matrix = Math::MatrixReal->new_from_rows(\@rules);
     if ($is_debug) {
-	$matrix->print("Matrix\n");
+        print("Rules\n");
+	print $matrix;
     }
-    my $constants_mat = new Math::Matrix(\@result);
-    my $equation = $matrix->concat($constants_mat->transpose());
+    my $constants_mat = Math::MatrixReal->new_from_columns([\@result]);
     if ($is_debug) {
-	$equation->print("Equation system\n");
+        print("Constants\n");
+        print $constants_mat;
     }
-    my $solution = $equation->solve();
+    # We assume that the matrix is invertible -- technically when we
+    # call inverse we should check to make sure the return value isn't
+    # undef.
+    my $solution = $matrix->inverse()->multiply($constants_mat); 
     if ($is_debug) {
-	$solution->print("Solutions\n");
+        print("Solutions\n");
+	print $solution;
     }
     my $prob = 0;
     my $state_prob = $trans_prob ** ($string_len-1);
-    foreach my $col (@$solution) {
-	foreach my $val (@$col) {
-	    $prob += $val * $state_prob;
-	}
+    for (my $row = 1; $row <= scalar(@rules); $row++) {
+        $prob += $solution->element($row, 1) * $state_prob;
     }
     return $prob;
 }
