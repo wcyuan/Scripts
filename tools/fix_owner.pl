@@ -46,7 +46,7 @@ use strict;
 use warnings 'all';
 use Getopt::Long;
 use File::Basename qw(basename dirname);
-use File::Temp qw(tmpnam);
+use File::Temp qw(tempfile);
 use Pod::Usage;
 
 # ------------------------------------------------------
@@ -76,31 +76,36 @@ sub main() {
             next;
         }
 
-        my $owner_id = get_owner($fn);
-        if ($uid eq $owner_id) {
+        if ($uid eq get_owner($fn)) {
             warning("Skipping $fn, it already has owner $user");
             $success = 0;
             next;
         }
-        my $owner = getpwuid($owner_id);
-        my $sudo_old = ($owner eq $me || !can_sudo_to($owner)) ? '' : "sudo -u $owner";
 
-        my $temp_file = tmpnam();
-        #my $temp_file = new File::Temp(UNLINK => 0,
-        #                               DIR => dirname($fn),
-        #                               SUFFIX => join('.', '', $scriptname, $pid, basename($fn)));
-        if (!run("$sudo_old mv $fn $temp_file")) {
+        # Create a temp file in the same directory as the existing
+        # file.  We don't want to create it in /tmp because moving
+        # things to /tmp will change their permissions.
+        #
+        # UNLINK is false because we want to control when it is
+        # removed.  If there is an error somewhere, we don't want to
+        # remove the temp file, it could be the only copy of the file.
+        my (undef, $temp_file) = tempfile(UNLINK => 0,
+                                          DIR => dirname($fn),
+                                          SUFFIX => join('.', '', $scriptname, $pid, basename($fn)));
+
+        # Overwrites the newly created temp file
+        if (!run("mv $fn $temp_file")) {
             $success = 0;
             next;
         }
 
         if (!run("$sudo_new cp $temp_file $fn")) {
-            run("$sudo_old mv $temp_file $fn");
+            run("mv $temp_file $fn");
             $success = 0;
             next;
         }
 
-        run("$sudo_old rm -f $temp_file"); 
+        run("rm -f $temp_file"); 
     }
 
     if (!$success) {
@@ -125,12 +130,6 @@ sub get_owner($) {
     my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
         $atime,$mtime,$ctime,$blksize,$blocks) = stat($fn);
     return $uid;
-}
-
-sub can_sudo_to($) {
-    my ($test_userid) = @_;
-    my $rc = system("sudo -u $test_userid -S /bin/true </dev/null 2>/dev/null");
-    return $rc == 0;
 }
 
 sub run_cmd($;$$$$$) {
