@@ -54,6 +54,11 @@ sub main() {
     # If user A sudoes to user B, then both $< and $> will return user
     # B, while getlogin will return user A.  
     #
+    #    $ perl -e 'print join(" ", getlogin(), scalar(getpwuid($>)), scalar(getpwuid($<))) . "\n"'
+    #    yuanc yuanc yuanc
+    #    $ sudo -u convert perl -e 'print join(" ", getlogin(), scalar(getpwuid($>)), scalar(getpwuid($<))) . "\n"'
+    #    yuanc convert convert
+    #
     # But getlogin doesn't work if there was no terminal, such as
     # cronjobs or non-interactive situations
     #
