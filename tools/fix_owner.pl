@@ -62,17 +62,25 @@ sub main() {
     # But getlogin doesn't work if there was no terminal, such as
     # cronjobs or non-interactive situations
     #
+    # Another difference is that getlogin always just returns a
+    # username, while getpwuid and getpwnam both return all the passwd
+    # file information as an array, in array context.  In scalar
+    # context, they return the first element of the array, which is
+    # the username or id.  Just as a reminder of that, we wrap the
+    # calls in 'scalar', even though we are only using them in scalar
+    # context anyway.  
+    #
     # Anyway, hopefully that doesn't matter here because we should
     # only be run interactively on a terminal without having been
     # sudoed to.
     #
-    my $me = getpwuid($>) || getpwuid($<) || getlogin();
+    my $me = scalar(getpwuid($>)) || scalar(getpwuid($<)) || getlogin();
     if (!defined($user)) {
         $user = $me;
     }
     my $sudo_new = ($user eq $me) ? '' : "sudo -u $user";
 
-    my $uid = getpwnam($user);
+    my $uid = scalar(getpwnam($user));
     my $scriptname = basename($0);
     my $pid = $$;
 
