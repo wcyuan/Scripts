@@ -67,7 +67,8 @@ my $logger = Log::Log4perl->get_logger();
 GetOptions( "score=s" => \my %score,
             "verbose" => sub { $logger->level($DEBUG) },
             "log_level=s" => sub { $logger->level($_[1]) },
-          );
+          )
+    or pod2usage();
 
 my @in_words = @ARGV;
 

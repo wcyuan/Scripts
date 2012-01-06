@@ -96,7 +96,8 @@ GetOptions( "slow|s!" => \my $slow,
 	    "generate|g!" => \my $generate,
             "verbose" => sub { $logger->level($DEBUG) },
             "log_level=s" => sub { $logger->level($_[1]) },
-	  );
+	  )
+    or pod2usage();
 
 my $MAX_DIGIT = ($MAX_DIGIT_V * $MAX_DIGIT_H);
 

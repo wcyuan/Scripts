@@ -150,7 +150,8 @@ use Text::Table;
 # default values
 
 # parse command-line options
-GetOptions();
+GetOptions()
+    or pod2usage();
 
 # parse script arguments
 pod2usage("Wrong number of arguments") unless @ARGV == 4;

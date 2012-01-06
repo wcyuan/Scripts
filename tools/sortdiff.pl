@@ -104,7 +104,8 @@ GetOptions( "col=s"    => \my %col,
             "debug!"   => \my $debug,
             "leave!"   => \my $leave_files,
             "verbose|v" => sub { $logger->level($DEBUG) },
-          );
+          )
+    or pod2usage();
 
 # parse script arguments
 pod2usage("Wrong number of arguments") unless @ARGV >= $nfiles;

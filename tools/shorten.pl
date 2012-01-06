@@ -52,6 +52,7 @@ shorten lines
 use strict;
 use warnings 'all';
 
+use Pod::Usage;
 use Getopt::Long;
 use Log::Log4perl qw(:levels);
 use Scalar::Util qw(looks_like_number);
@@ -68,7 +69,8 @@ my $logger = Log::Log4perl->get_logger();
 GetOptions( "offset|o=i" => \$OFFSET,
             "width|w=i"  => \$WIDTH,
             "verbose|v!" => sub { $logger->level($DEBUG) },
-          );
+          )
+    or pod2usage();
 
 if (scalar(@ARGV) > 0 &&
     ! -f $ARGV[0] &&

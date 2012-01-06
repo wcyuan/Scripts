@@ -66,12 +66,14 @@ use Getopt::Long;
 # Default values
 my $N_LETTERS = 4;
 
-my @WORDLISTS = ('/usr/dict/words',
+my @WORDLISTS = ('/usr/dict/words', # for unix
+                 '/usr/share/dict/words', # for linux
 		 '4_letter_aus_scrabble_words.txt',
 		 '4_letter_enable2k_words.txt');
 
 # Parse any command-line options
-GetOptions(  );
+GetOptions(  )
+    or pod2usage();
 
 # Parse any script arguments
 #pod2usage("Wrong number of arguments") unless @ARGV == 0;

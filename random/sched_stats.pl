@@ -303,7 +303,8 @@ my $weeks_per_season = 32;
 GetOptions("first!" => \my $first,
 	   "second!" => \my $second,
 	   "2007!" => \my $use_2007_data,
-	  );
+	  )
+    or pod2usage();
 
 # Parse any script arguments
 pod2usage("Wrong number of arguments") unless @ARGV == 0;

@@ -11,7 +11,8 @@ use Getopt::Long;
 my $FS = " ";
 GetOptions("FS|F=s" => \$FS,
            "exclude|e=s" => \my @EXCLUDE,
-          );
+          )
+    or die();
 
 sub contains($$) {
     my ($elt, $list) = @_;

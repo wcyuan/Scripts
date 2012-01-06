@@ -310,7 +310,8 @@ sub parse_command_line() {
     GetOptions( "run" => \my $run_cmds,
                 "no_write" => \$NO_WRITE,
                 "verbose|v" => sub { $logger->level($DEBUG) },
-              );
+              )
+        or pod2usage();
 
     # Save the original arguments
     my $cmd_name = basename($0);
@@ -342,11 +343,13 @@ sub parse_command_line() {
             GetOptions( "repository|r=s" => \$foreign_arg_repos,
                         "file|fn|filename|f=s" => \$foreign_arg_fn,
                         "version|v=s" => \$foreign_arg_version,
-                      );
+                      )
+                or pod2usage();
         } elsif ($action eq "uptrunk") {
             Getopt::Long::Configure("no_pass_through");
             GetOptions( "revision|r=i" => \$uptrunk_arg_revision,
-                      );
+                      )
+                or pod2usage();
         } else {
             # use pass_through since we want some special handling of
             # certain options (like -u), and all other options should
@@ -357,7 +360,8 @@ sub parse_command_line() {
                         "v" => \$ann_arg_v,
                         "d" => \$up_arg_d,
                         "P" => \$up_arg_P,
-                      );
+                      )
+                or pod2usage();
         }
     }
     my @subcmd_options = consume_leading_options(\@ARGV);

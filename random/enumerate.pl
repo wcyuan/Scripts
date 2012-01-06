@@ -80,7 +80,8 @@ GetOptions("num_buckets=i" => \$N_BUCKETS,
 	   "grey_code|gray_code|greycode|graycode|grey|gray|g!" => \my $USE_GREYCODE,
             "verbose" => sub { $logger->level($DEBUG) },
             "log_level=s" => sub { $logger->level($_[1]) },
-	  );
+	  )
+    or pod2usage()
 
 # parse script arguments
 pod2usage("Wrong number of arguments") unless @ARGV == 0;

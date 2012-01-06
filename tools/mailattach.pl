@@ -87,10 +87,9 @@ GetOptions( "attach=s"  => \@attach,
             "mailto=s"  => \@mailto,
             "verbose|v" => sub { $logger->level($DEBUG) },
             "no_write"  => \my $no_write,
-          );
+          )
+    or pod2usage();
 
-# Parse any script arguments
-#pod2usage("Wrong number of arguments") unless @ARGV > 1;
 push(@mailto, shift @ARGV)
     if (scalar(@ARGV) > 0);
 push(@attach, @ARGV);
