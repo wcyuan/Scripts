@@ -25,20 +25,9 @@ back where it was.
 You can change the owner of a file as long as 
  - you can sudo to the new owner of the file
  - the new owner can write to the directory and /tmp
-and either:
- - you can sudo to the file's old owner
- - the file's old owner can write to the file, the directory, and to /tmp
-or
  - you can write to the file, the directory, and /tmp
 
-If you can sudo to the file's old owner, we'll mv the file out of the
-way as the old owner and cp it back as the new owner.
-
-If you can't sudo to the file's old owner, then we'll mv the file away
-as yourself and cp it back as the new owner.  In this case, if the new
-owner doesn't have write permissions to the directory, we'll be
-copying back the file as yourself, so the file's owner will have
-changed anyway.
+We'll mv the file away (as yourself) and cp it back as the new owner.
 
 =cut
 
@@ -57,6 +46,21 @@ my ($VERBOSE, $DEBUG, $QUIET);
 sub main() {
     my ($user, @fns) = parse_command_line();
 
+    #
+    # $> = effective user
+    # $< = real user
+    # getlogin = user that opened the terminal
+    #
+    # If user A sudoes to user B, then both $< and $> will return user
+    # B, while getlogin will return user A.  
+    #
+    # But getlogin doesn't work if there was no terminal, such as
+    # cronjobs or non-interactive situations
+    #
+    # Anyway, hopefully that doesn't matter here because we should
+    # only be run interactively on a terminal without having been
+    # sudoed to.
+    #
     my $me = getpwuid($>) || getpwuid($<) || getlogin();
     if (!defined($user)) {
         $user = $me;
@@ -84,7 +88,7 @@ sub main() {
 
         # Create a temp file in the same directory as the existing
         # file.  We don't want to create it in /tmp because moving
-        # things to /tmp will change their permissions.
+        # things to /tmp could change their permissions.  
         #
         # UNLINK is false because we want to control when it is
         # removed.  If there is an error somewhere, we don't want to
