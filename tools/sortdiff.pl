@@ -24,7 +24,7 @@ sortdiff.pl - diff two files unordered (sort them first).
     --leave           leave the temporary files that were created
     --help, -?        shows brief help message
     --perldoc         shows full documentation
-    other options     passed onto gnu diff
+    other options     passed onto diff
 
   See also Getopt::Long for complete standard options list.
 
@@ -73,7 +73,7 @@ Prints the perldoc page and exits.
 
 =item I<other options>
 
-are passed onto gnu diff
+are passed onto diff
 
 =back
 
