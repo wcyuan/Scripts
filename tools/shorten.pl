@@ -56,6 +56,7 @@ use Pod::Usage;
 use Getopt::Long;
 use Log::Log4perl qw(:levels);
 use Scalar::Util qw(looks_like_number);
+use Text::Tabs qw(expand);
 
 # ----------------------
 
@@ -89,6 +90,9 @@ $logger->debug("FILES  = " . join(', ', @FILES));
 
 sub shorten($) {
     my ($line) = @_;
+    # expand tabs.  otherwise substr sees the tab as a
+    # single character, and won't shorten the line enough.  
+    $line = expand($line);
     $line = substr($line, $OFFSET, $WIDTH);
     # trim trailing whitespace
     $line =~ s/\s+$//g;
