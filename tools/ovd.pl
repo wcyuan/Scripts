@@ -44,7 +44,7 @@ my $INOUT_SCHEDULE = $ENV{HOME} . "/usr/crontab/inoutschedule";
 sub main() {
     my ($year, $end_year) = parse_command_line();
 
-    if ($year eq "status") {
+    if (defined($year) && $year eq "status") {
         print inout_status($INOUT_SCHEDULE, $end_year) . "\n";
         return;
     }
