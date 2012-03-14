@@ -1,0 +1,88 @@
+# -*- mode: bash -*-
+# this isn't really a bash script, but at least bash mode is better
+# than text
+#
+# Config file for GNU readline
+#
+# http://www.gnu.org/software/readline/
+# http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#SEC10
+# 
+# You can re-read the inputrc file with C-x C-r.
+# Lines beginning with '#' are comments.
+#
+
+# First, include any systemwide bindings and variable assignments from
+# /etc/.inputrc (only seems to exist on linux)
+$include /etc/.inputrc
+
+set editing-mode emacs 
+
+set mark-symlinked-directories on
+
+$if mode=emacs
+
+#
+# Make me like tcsh:
+#
+# 1. control whether history reverts after a newline:
+#
+#set revert-all-at-newline on
+#
+# Instead, just learn to use 
+#    Ctrl-G (cancel a search)
+#    Meta-> (go to the end of the history)
+#
+#
+# 2. In tcsh: control-w deletes from the beginning of the line to the
+# cursor.  
+# 
+# In bash, we have:
+#
+# unix-word-rubout (C-w)
+#   Kill the word behind point, using white space as a word
+#   boundary. The killed text is saved on the kill-ring.
+#
+# backward-kill-word (M-DEL)
+#   Kill the word behind point. Word boundaries are the same as
+#   backward-word.
+#
+# unix-line-discard (C-u)
+#   Kill backward from the cursor to the beginning of the current line.
+#
+# So, learn to use C-u instead.  
+#
+#
+# 3. In tcsh, alt-b moves back by a word. In bash, it will move to the
+# previous underscore or period.  This is probably better, but it will
+# take some getting used to.  Anyway, I don't know how to change it.  
+#
+#
+# 4. In tcsh, when tab-complete has multiple matches, it shows the
+# matches.  In Bash, the first tab just sounds the bell, it's the
+# second tab that shows completions. This can be controlled with
+#
+set show-all-if-ambiguous on
+#
+
+# Similar to C-u, except it adds the line to the kill-ring
+"\C-x\b": backward-kill-line
+
+$endif
+
+# Macros that are convenient for shell interaction
+$if Bash
+
+# prepare to type a quoted word --
+# insert open and close quotes
+# and move to just after the open quote
+"\C-x\"": "\"\"\C-b"
+"\C-x\'": "\'\'\C-b"
+
+# Quote the current or previous word
+"\M-x\"": "\eb\"\ef\""
+"\M-x\'": "\eb\'\ef\'"
+
+# Add a binding to refresh the line, which is unbound
+"\C-xr": redraw-current-line
+
+$endif
