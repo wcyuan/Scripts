@@ -440,7 +440,7 @@ sub get_repo_type($$$) {
         $LOGGER->debug("Checking vc for $file_to_check");
         my $dirname = my_dirname($file_to_check);
         my $new_cmd_name;
-        if (-d "$dirname/.svn/entries") {
+        if (-d "$dirname/.svn") {
             $new_cmd_name = "svn";
         } elsif (-f "$dirname/CVS/Entries") {
             $new_cmd_name = "cvs";
