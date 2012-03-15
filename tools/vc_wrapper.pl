@@ -1157,6 +1157,13 @@ sub customize_subcmd_options($$$$$$$$) {
                 unshift(@$subcmd_options, '-P');
             }
         }
+    } elsif ($repo_type eq "rcs") {
+        if ($action eq "diff") {
+            if (!$diff_arg_u) {
+                $LOGGER->warn("Adding -u argument to rcs diff");
+            }
+            unshift(@$subcmd_options, '-u'); 
+        }
     }
 
     if ($action ne "diff") {
@@ -1181,6 +1188,8 @@ sub get_command($$) {
     if ($repo_type eq 'rcs') {
         if ($action eq 'log') {
             return ('rlog', undef);
+        } elsif ($action eq 'diff') {
+            return ('rcsdiff', undef);
         } elsif (scalar(grep {$action eq $_} qw(ann annotate blame)) > 0) {
             return ('blame', undef);
         }
