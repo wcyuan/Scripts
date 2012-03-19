@@ -155,7 +155,7 @@ use Log::Log4perl qw(:levels);
 #
 
 my $NO_WRITE;
-Log::Log4perl->easy_init($ERROR);
+Log::Log4perl->easy_init($WARN);
 my $LOGGER = Log::Log4perl->get_logger();
 
 #
@@ -219,6 +219,8 @@ sub main() {
         $foreign_arg_fn,
         $foreign_arg_version,
         $uptrunk_arg_revision,
+        $lastrev_arg_revno,
+        $lastrev_arg_revs_back,
        ) = parse_command_line();
 
     my $repo_type = get_repo_type($cmd_name, $action, $files);
@@ -262,6 +264,10 @@ sub main() {
                  $action eq "fmerge") {
 
             foreign_merge($repo_type, $action, $files);
+            return;
+        } elsif ($action eq "lastrev") {
+            
+            lastrev($repo_type, $action, $files, $lastrev_arg_revs_back, $lastrev_arg_revno);
             return;
         }
     }
@@ -332,6 +338,8 @@ sub parse_command_line() {
     my $foreign_arg_fn;
     my $foreign_arg_version;
     my $uptrunk_arg_revision;
+    my $lastrev_arg_revno;
+    my $lastrev_arg_revs_back;
     if (scalar(@ARGV) > 0) {
         $action = shift(@ARGV);
 
@@ -351,6 +359,12 @@ sub parse_command_line() {
         } elsif ($action eq "uptrunk") {
             Getopt::Long::Configure("no_pass_through");
             GetOptions( "revision|r=i" => \$uptrunk_arg_revision,
+                      )
+                or pod2usage();
+        } elsif ($action eq "lastrev") {
+            Getopt::Long::Configure("no_pass_through");
+            GetOptions( "revno|r=s" => \$lastrev_arg_revno,
+                        "revs_back|b=i" => \$lastrev_arg_revs_back,
                       )
                 or pod2usage();
         } else {
@@ -387,7 +401,10 @@ sub parse_command_line() {
             $foreign_arg_repos,
             $foreign_arg_fn,
             $foreign_arg_version,
-            $uptrunk_arg_revision);
+            $uptrunk_arg_revision,
+            $lastrev_arg_revno,
+            $lastrev_arg_revs_back,
+           );
 }
 
 # ------------------------------------------------------------------------------
@@ -516,6 +533,8 @@ sub run ( $;$ ) {
 		$LOGGER->error("error running $cmd ($! $retval): $output");
 	    }
 	}
+    } else {
+        print "NO WRITE: Not running $cmd\n";
     }
     return wantarray ? ($retval, $output) : $output;
 }
@@ -713,6 +732,76 @@ sub get_branch_info_from_trunk_file($) {
     return wantarray ? ($full_file, $branch_file) : $branch_file;
 }
 
+sub get_cvs_rcs_last_rev ($$) {
+    my ($repo_type, $file) = @_;
+    my ($rev, $repository_file);
+    my $dirname = dirname($file);
+    my $basename = basename($file);
+    if ($repo_type eq 'rcs') {
+        chomp($rev = `rlog -h $file | grep head | cut -d' ' -f 2-`);
+    } elsif ($repo_type eq 'cvs') {
+        my $CVS_ENTRIES = "$dirname/CVS/Entries";
+        unless(open(CVS_ENTRIES, $CVS_ENTRIES)) {
+            warn "Can't find CVS Entries file: $CVS_ENTRIES, $!";
+            return;
+        }
+        while (<CVS_ENTRIES>) {
+            my (undef, $filename, $revision, $date, $other) = split '/';
+            if (defined($filename) && $filename eq $basename) {
+                $rev = $revision;
+                last;
+            }
+        }
+        unless(close(CVS_ENTRIES)) {
+            warn "Can't close $CVS_ENTRIES";
+            return;
+        }
+    }
+    # rev is not necessarily defined
+    # it won't be defined if the file doesn't exist or isn't cvs'ed
+    # because cvs status will still exist successfully
+    return $rev;
+}
+
+
+# given a file under svn control, return the svn revisions where that
+# file changed.
+sub svn_revision_list($;$) {
+    my ($file, $revs_needed) = @_;
+    my $cmd = "svn log -q $file 2>&1";
+    my $error = 0;
+    open(SVNLOG, "$cmd |")
+	or ($error = 1);
+    if ($error) {
+	warn("Error running $cmd: $? $@ $!");
+	return;
+    }
+    my @revs;
+    while(my $line = <SVNLOG>) {
+	next if ($line =~ m/^-*$/);
+	# rely on the fact that the revision is the first column
+	my ($rev) = split(' ', $line);
+
+	$rev =~ s/^r//;
+	push(@revs, $rev);
+
+	if (defined($revs_needed) && scalar(@revs) > $revs_needed) {
+	    last;
+	}
+    }
+    close(SVNLOG);
+    return \@revs;
+}
+
+sub git_revision_list($) {
+    my ($file) = @_;
+    my $log = run("git log --oneline $file", {always => 1});
+    return [map {
+        my @fields = split(' ', $_);
+        $fields[0];
+    } split("\n", $log)]
+}
+
 # ------------------------------------------------------------------------------
 # Functions on "foreign" files, which used to be part of a repository, but were moved
 #
@@ -805,6 +894,98 @@ sub get_version ( $$ ) {
 # ------------------------------------------------------------------------------
 # My added subcommands
 #
+
+sub lastrev($$$$) {
+    my ($repo_type, $action, $files, $lastrev_arg_revs_back, $lastrev_arg_revno) = @_;
+
+    $lastrev_arg_revs_back //= 1;
+    foreach my $file (@$files) {
+        my $repo_type = get_repo_type($repo_type, $action, [$file]);
+        
+        if ($repo_type eq 'svn') {
+            my $prev;
+            my $revno = $lastrev_arg_revno;
+            if ($lastrev_arg_revs_back != 1) {
+                my $rev_list = svn_revision_list($file, $lastrev_arg_revs_back);
+                if (defined($rev_list)) {
+                    if (scalar(@$rev_list) >= $lastrev_arg_revs_back) {
+                        if (defined($revno)) {
+                            $LOGGER->warn("specified both revs_back and revno -- ignoring revno $revno");
+                        }
+                        $revno = $rev_list->[$lastrev_arg_revs_back-1];
+                    } else {
+                        $LOGGER->logconfess("Not enough revisions: $lastrev_arg_revs_back, " . scalar(@$rev_list));
+                    }
+                }
+            }
+            if (defined($revno)) {
+                $revno =~ s/^r//;
+                $prev = $revno - 1;
+            } else {
+                $prev = "PREV";
+                $revno = "COMMITTED";
+            }
+            my $output = run("svn log -r$prev:$revno $file");
+            print $output if defined($output);
+            $output = run("svn diff -r$prev:$revno $file");
+            print $output if defined($output);
+        } elsif ($repo_type eq 'cvs' ||
+                 $repo_type eq 'rcs') {
+            my $last_revision;
+            if (defined($lastrev_arg_revno)) {
+                $last_revision = $lastrev_arg_revno;
+            } else {
+                $last_revision = get_cvs_rcs_last_rev($repo_type, $file)
+            }
+            if (!defined($last_revision) || $last_revision eq "") {
+                $LOGGER->warn("skipping $file");
+                next;
+            } else {
+                print "$last_revision\n";
+            }
+            my @rev_nos = split(/\./, $last_revision);
+            $rev_nos[$#rev_nos] -= $lastrev_arg_revs_back;
+            die "Not enough revisions: $last_revision" if ($rev_nos[$#rev_nos] < 1);
+            my $prev_revision = join(".", @rev_nos);
+            if ($lastrev_arg_revs_back > 1) {
+                $rev_nos[$#rev_nos]++;
+                $last_revision = join(".", @rev_nos);
+            }
+	
+            if ($repo_type eq 'rcs') {
+                my $output = run("rlog -r$last_revision $file");
+                print $output if defined($output);
+                $output = run("rcsdiff -u -r$prev_revision -r$last_revision $file", {no_warn=>1});
+                print $output if defined($output);
+            } else {
+                my $output = run("cvs log -r$last_revision $file");
+                print $output if defined($output);
+                $output = run("cvs diff -u -r $prev_revision -r $last_revision $file", {no_warn=>1});
+                print $output if defined($output);
+            }
+        } elsif ($repo_type eq 'git') {
+            my $revno = $lastrev_arg_revno;
+            if ($lastrev_arg_revs_back != 1) {
+                my $rev_list = git_revision_list($file);
+                if (defined($rev_list)) {
+                    if (scalar(@$rev_list) >= $lastrev_arg_revs_back) {
+                        if (defined($revno)) {
+                            $LOGGER->warn("specified both revs_back and revno -- ignoring revno $revno");
+                        }
+                        $revno = $rev_list->[$lastrev_arg_revs_back-1];
+                    } else {
+                        $LOGGER->logconfess("Not enough revisions: $lastrev_arg_revs_back, " . scalar(@$rev_list));
+                    }
+                }
+            }
+            if (!defined($revno)) {
+                $revno = 'HEAD';
+            }
+            my $output = run("git show -n 1 $revno $file");
+            print $output if defined($output);
+        }
+    }
+}
 
 sub switch_to_release($$$$) {
     my ($repo_type, $action, $files, $run_cmds) = @_;
