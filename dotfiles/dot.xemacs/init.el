@@ -58,3 +58,33 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 (setq version-control t)
 (setq-default delete-old-versions t)
 
+;; -------------------------------------------------
+;; Parens
+
+; sexp mode will highlight the entire block contained in the parens,
+; when the cursor is placed right after a paren
+; (This is xemacs specific, it's a different command in emacs)
+(require 'paren)
+(paren-set-mode 'sexp)
+
+; From http://www.emacswiki.org/emacs/ParenthesisMatching#toc6
+(defun goto-match-paren (arg)
+  "Go to the matching parenthesis if on parenthesis.
+   vi style of % jumping to matching brace."
+  (interactive "p")
+  (message "%s" last-command)
+  (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
+	((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+	(t (self-insert-command (or arg 1)))))
+
+(global-set-key "%" 'goto-match-paren)
+
+;; -------------------------------------------------
+;; Always make sure files end with newlines
+(setq require-final-newline t)
+
+;; -------------------------------------------------
+;; Matlab mode
+
+(add-to-list 'load-path "~/.xemacs/matlab-emacs/matlab-emacs/")
+(require 'matlab-load)
