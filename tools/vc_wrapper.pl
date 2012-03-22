@@ -316,7 +316,7 @@ sub parse_command_line() {
     # use pass_through, since we want basic options, but other options
     # should just be passed through.
     Getopt::Long::Configure("pass_through", "require_order", "noauto_abbrev", 
-                            "noignore_case", "bundling");
+                            "noignore_case");
     GetOptions( "run" => \my $run_cmds,
                 "no_write" => \$NO_WRITE,
                 "verbose|v" => sub { $LOGGER->level($DEBUG) },
@@ -363,7 +363,7 @@ sub parse_command_line() {
                       )
                 or pod2usage();
         } elsif ($action eq "lastrev") {
-            Getopt::Long::Configure("no_pass_through");
+            Getopt::Long::Configure("no_pass_through", "bundling");
             GetOptions( "revno|r=s" => \$lastrev_arg_revno,
                         "revs_back|b=i" => \$lastrev_arg_revs_back,
                       )
