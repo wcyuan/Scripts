@@ -61,10 +61,11 @@ complete -d cd chdir pushd popd mkdir rmdir
 
 # commands
 complete -c lw where type which
-#complete -c -f go find_source
 
-# exported variables
-#complete -e unsetenv
+#----------------------------------------------------------------------
+
+# don't clobber files
+set -o noclobber
 
 # ----------------------------------------------------
 
