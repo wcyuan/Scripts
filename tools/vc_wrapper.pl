@@ -146,6 +146,7 @@ use Pod::Usage;
 use File::Basename qw(basename dirname);
 use Data::Dumper qw(Dumper);
 use File::Compare qw(compare);
+use Cwd qw(abs_path);
 
 use Getopt::Long qw(GetOptions);
 use Log::Log4perl qw(:levels);
@@ -439,10 +440,10 @@ sub get_repo_type($$$) {
         ($action eq "co" || $action eq "checkout")) {
         # nop
 
-        # if we are checking out a repository, then use_svn_instead_of_cvs
-        # doesn't work, since it looks for an existing .svn directory that
-        # won't exist yet.  So, for checkouts, assume that the user knows
-        # which of svn/cvs to use.  
+        # if we are checking out a repository, then this function
+        # doesn't work, since it looks for an existing .svn/CVS/.git
+        # directory that won't exist yet.  So, for checkouts, assume
+        # that the user knows which of svn/cvs/etc to use.
     } else {
         my $file_to_check;
         if (scalar(@$files) > 0) {
@@ -1383,6 +1384,25 @@ sub get_command($$) {
     return ($CMDS{$repo_type}, $action);
 }
 
+sub cd_to_git_repo($) {
+    my ($files) = @_;
+    my $dir;
+    my @newfiles;
+    for (my $ii = 0; $ii < scalar(@$files); $ii++) {
+        if (! -f $files->[$ii]) {
+            next;
+        }
+        my $abs_path = abs_path($files->[$ii]);
+        $LOGGER->debug("$files->[$ii] => $abs_path");
+        $files->[$ii] = $abs_path;
+        if (!defined($dir)) {
+            $dir = my_dirname($files->[$ii]);
+            $LOGGER->info("chdir $dir");
+            chdir $dir;
+        }
+    }
+}
+
 sub run_modified_command($$$$$$$$$$) {
     my ($repo_type, $cmd_options, $action, $subcmd_options, $files,
         $diff_arg_u, $diff_arg_w, 
@@ -1400,6 +1420,9 @@ sub run_modified_command($$$$$$$$$$) {
     my @cmd = ($cmd, @$cmd_options);
     if (defined($action)) {
         push(@cmd, $action);
+    }
+    if ($repo_type eq 'git') {
+        cd_to_git_repo($files);
     }
     push(@cmd, @$subcmd_options, @$files);
     run(\@cmd, {exec => 1});
