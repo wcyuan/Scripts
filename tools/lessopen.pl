@@ -1,7 +1,5 @@
 #!/usr/local/bin/perl -w
 #
-# $Header: /u/yuanc/testbed/perl/RCS/lessopen.pl,v 1.2 2012/03/29 16:34:17 yuanc Exp $
-#
 # lesspipe.sh knows how to automatically decompress files.  So this
 # wrapper knows that if you can't find a file, look for the compressed
 # version.  lesspipe.sh only appears on Linux.
