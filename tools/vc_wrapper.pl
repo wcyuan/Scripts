@@ -1323,6 +1323,14 @@ sub grep_hist($$$$) {
     }
 }
 
+#
+# Run a bisect command across the whole repository history.
+#
+# For example, to find the first time a line appears in a file, run
+# this:
+# 
+#   vc bisect-all true_if_failure git grep <pattern> <file>
+#
 sub bisect_all($$$$) {
     my ($repo_type, $action, $options, $args) = @_;
     if ($repo_type ne 'git') {
