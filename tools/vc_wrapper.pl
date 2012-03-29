@@ -226,6 +226,11 @@ sub main() {
 
     my $repo_type = get_repo_type($cmd_name, $action, $files);
 
+    customize_subcmd_options($repo_type, $action, $subcmd_options,
+                             $diff_arg_u, $diff_arg_w, 
+                             $ann_arg_v, 
+                             $up_arg_d, $up_arg_P);
+
     if (defined($action)) {
         if ($action eq "switch_to_release" ||
             $action eq "switchrel" ||
@@ -269,6 +274,10 @@ sub main() {
         } elsif ($action eq "lastrev") {
             
             lastrev($repo_type, $action, $files, $lastrev_arg_revs_back, $lastrev_arg_revno);
+            return;
+        } elsif ($action eq "grep-hist") {
+            
+            grep_hist($repo_type, $action, $subcmd_options, $files);
             return;
         }
     }
@@ -770,7 +779,7 @@ sub get_cvs_rcs_last_rev ($$) {
 # file changed.
 sub svn_revision_list($;$) {
     my ($file, $revs_needed) = @_;
-    my $cmd = "svn log -q $file 2>&1";
+    my $cmd = "$SVN log -q $file 2>&1";
     my $error = 0;
     open(SVNLOG, "$cmd |")
 	or ($error = 1);
@@ -795,13 +804,14 @@ sub svn_revision_list($;$) {
     return \@revs;
 }
 
-sub git_revision_list($) {
-    my ($file) = @_;
-    my $log = run("git log --oneline $file", {always => 1});
-    return [map {
-        my @fields = split(' ', $_);
-        $fields[0];
-    } split("\n", $log)]
+sub git_revision_list {
+    my $format = '"%h %ce %ci %s"';
+    my $log = run("$GIT log --pretty=format:$format " . join(' ', @_), {always => 1});
+    return [map { 
+        my ($hash, $email, $date, $time, $tz, $msg) = split(' ', $_, 6);
+        $email =~ s/@([\w\.]*)deshaw\.com$//;
+        [$hash, $email, $date, $msg, $time, $tz];
+    } split(/\n/, $log)]
 }
 
 # ------------------------------------------------------------------------------
@@ -966,6 +976,11 @@ sub lastrev($$$$) {
                 print $output if defined($output);
             }
         } elsif ($repo_type eq 'git') {
+            # You would think that for git, this would be trivial --
+            # just convert "lastrev -b 3" into "git show -n 1
+            # HEAD^^^".  But that doesn't work because HEAD^ is the
+            # previous commit for the whole repository, not the
+            # previous commit that touched this file.
             my $revno = $lastrev_arg_revno;
             if ($lastrev_arg_revs_back != 1) {
                 my $rev_list = git_revision_list($file);
@@ -974,7 +989,7 @@ sub lastrev($$$$) {
                         if (defined($revno)) {
                             $LOGGER->warn("specified both revs_back and revno -- ignoring revno $revno");
                         }
-                        $revno = $rev_list->[$lastrev_arg_revs_back-1];
+                        $revno = $rev_list->[$lastrev_arg_revs_back-1][0];
                     } else {
                         $LOGGER->logconfess("Not enough revisions: $lastrev_arg_revs_back, " . scalar(@$rev_list));
                     }
@@ -1264,6 +1279,34 @@ sub foreign_merge($$$) {
     }
 }
 
+sub grep_hist($$$$) {
+    my ($repo_type, $action, $options, $files) = @_;
+    if ($repo_type ne 'git') {
+        $LOGGER->logconfess("grep_hist is only implemented for git");
+    }
+    if (scalar(@$files) < 1) {
+        $LOGGER->logconfess("grep_hist takes at least one args: " . join(' ', @$files));
+    }
+    $options = join(' ', @$options);
+    my $cmd = $CMDS{$repo_type};
+
+    my $patt = shift(@$files);
+    if (scalar(@$files) == 0) {
+        push(@$files, "");
+    }
+    foreach my $file (@$files) {
+        my $revs = git_revision_list($file);
+        foreach my $rev (@$revs) {
+            my ($hash, $email, $date, $msg) = @$rev;
+            my $output = run("$cmd grep $options $patt $hash $file", {no_warn => 1});
+            if ($output ne "") {
+                print join(' ', $email, $date) . "\n";
+                print $output;
+            }
+        }
+    }
+}
+
 # ------------------------------------------------------------------------------
 # If it isn't one of the added subcommands, it's one of the standard
 # subcommands.  But we still modify the arguments a little.
@@ -1364,6 +1407,8 @@ sub customize_subcmd_options($$$$$$$$) {
         unshift(@$subcmd_options, '-d') if ($up_arg_d);
         unshift(@$subcmd_options, '-P') if ($up_arg_P);
     }
+
+    $LOGGER->debug("new subcmd_options = '" . join(', ', @$subcmd_options) . "'");
 }
 
 sub get_command($$) {
@@ -1408,11 +1453,6 @@ sub run_modified_command($$$$$$$$$$) {
         $diff_arg_u, $diff_arg_w, 
         $ann_arg_v, 
         $up_arg_d, $up_arg_P) = @_;
-
-    customize_subcmd_options($repo_type, $action, $subcmd_options,
-                             $diff_arg_u, $diff_arg_w, 
-                             $ann_arg_v, 
-                             $up_arg_d, $up_arg_P);
 
     my $cmd;
     ($cmd, $action) = get_command($repo_type, $action);
