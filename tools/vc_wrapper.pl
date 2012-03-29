@@ -279,6 +279,10 @@ sub main() {
             
             grep_hist($repo_type, $action, $subcmd_options, $files);
             return;
+        } elsif ($action eq "bisect-all") {
+            
+            bisect_all($repo_type, $action, $subcmd_options, $files);
+            return;
         }
     }
 
@@ -443,6 +447,17 @@ sub my_dirname($) {
     }
 }
 
+sub get_git_top($) {
+    my ($file) = @_;
+    
+    my $dirname = my_dirname($file);
+    for (my $ii = 0; -d $dirname && $ii < 100; $dirname .= "/..", $ii++) {
+        if (-d "$dirname/.git") {
+            return $dirname;
+        }
+    }
+}
+
 sub get_repo_type($$$) {
     my ($cmd_name, $action, $files) = @_;
     if (defined($action) && 
@@ -474,16 +489,10 @@ sub get_repo_type($$$) {
             $new_cmd_name = "cvs";
         } elsif (-d "$dirname/RCS") {
             $new_cmd_name = "rcs";
+        } elsif (defined(get_git_top($file_to_check))) {
+            $new_cmd_name = "git";
         } else {
-            for (my $ii = 0; -d $dirname && $ii < 100; $dirname .= "/..", $ii++) {
-                if (-d "$dirname/.git") {
-                    $new_cmd_name = "git";
-                    last;
-                }
-            }
-            if (!defined($new_cmd_name)) {
-                print "$file_to_check $dirname\n";
-            }
+            $LOGGER->warn("Couldn't find repo for $file_to_check ($dirname)");
         }
         if (defined($new_cmd_name)) {
             if ($cmd_name ne $new_cmd_name) {
@@ -912,6 +921,8 @@ sub lastrev($$$$) {
 
     $lastrev_arg_revs_back //= 1;
     foreach my $file (@$files) {
+        # run get_repo_type again on each file, so we can handle files
+        # on different repositories.
         my $repo_type = get_repo_type($repo_type, $action, [$file]);
         
         if ($repo_type eq 'svn') {
@@ -982,6 +993,9 @@ sub lastrev($$$$) {
             # previous commit for the whole repository, not the
             # previous commit that touched this file.
             my $revno = $lastrev_arg_revno;
+            my $file_hash = [$file];
+            cd_to_git_repo($file_hash);
+            $file = $file_hash->[0];
             if ($lastrev_arg_revs_back != 1) {
                 my $rev_list = git_revision_list($file);
                 if (defined($rev_list)) {
@@ -1282,10 +1296,10 @@ sub foreign_merge($$$) {
 sub grep_hist($$$$) {
     my ($repo_type, $action, $options, $files) = @_;
     if ($repo_type ne 'git') {
-        $LOGGER->logconfess("grep_hist is only implemented for git");
+        $LOGGER->logconfess("grep-hist is only implemented for git");
     }
     if (scalar(@$files) < 1) {
-        $LOGGER->logconfess("grep_hist takes at least one args: " . join(' ', @$files));
+        $LOGGER->logconfess("grep-hist takes at least one args: " . join(' ', @$files));
     }
     $options = join(' ', @$options);
     my $cmd = $CMDS{$repo_type};
@@ -1307,6 +1321,26 @@ sub grep_hist($$$$) {
             }
         }
     }
+}
+
+sub bisect_all($$$$) {
+    my ($repo_type, $action, $options, $args) = @_;
+    if ($repo_type ne 'git') {
+        $LOGGER->logconfess("bisect-all is only implemented for git");
+    }
+    if (scalar(@$args) < 1) {
+        $LOGGER->logconfess("bisect-all takes at least one args: " . join(' ', @$args));
+    }
+    # this will change the contents of $args
+    cd_to_git_top($args);
+    my $cmd = join(' ', map {"'$_'"} (@$options, @$args));
+    my $revs = git_revision_list();
+    run('git bisect start');
+    run('git bisect bad');
+    run('git bisect good ' . $revs->[$#$revs][0]);
+    my $output = run('git bisect run ' . $cmd);
+    print $output;
+    run('git bisect reset');
 }
 
 # ------------------------------------------------------------------------------
@@ -1431,10 +1465,17 @@ sub get_command($$) {
     return ($CMDS{$repo_type}, $action);
 }
 
+#
+# Git commands must be run from a git repository, so this will cd into
+# the directory of the first file given.
+#
+# This command changes the contents of the $files array ref that it is
+# given.  It converts paths into absolute paths, so that things will
+# still work after the cd.
+#
 sub cd_to_git_repo($) {
     my ($files) = @_;
     my $dir;
-    my @newfiles;
     for (my $ii = 0; $ii < scalar(@$files); $ii++) {
         if (! -f $files->[$ii]) {
             next;
@@ -1444,10 +1485,43 @@ sub cd_to_git_repo($) {
         $files->[$ii] = $abs_path;
         if (!defined($dir)) {
             $dir = my_dirname($files->[$ii]);
-            $LOGGER->info("chdir $dir");
-            chdir $dir;
         }
     }
+    if (defined($dir)) {
+        $LOGGER->info("chdir $dir");
+        chdir $dir;
+    }
+}
+
+#
+# Some git commands must be run from the top of the git repository.  
+#
+# This command changes the contents of the $files array ref that it is
+# given.  It converts paths so they are relative to the git top so
+# that things will work after the cd.
+#
+sub cd_to_git_top($) {
+    my ($files) = @_;
+    if (!defined($files) || scalar(@$files) == 0) {
+        return;
+    }
+    my $dir = get_git_top($files->[$#$files]);
+    if (!defined($dir)) {
+        return;
+    }
+    $dir = abs_path($dir);
+
+    for (my $ii = 0; $ii < scalar(@$files); $ii++) {
+        if (! -f $files->[$ii]) {
+            next;
+        }
+        my $abs_path = abs_path($files->[$ii]);
+        $abs_path =~ s@^$dir/@@;
+        $LOGGER->debug("$files->[$ii] => $abs_path");
+        $files->[$ii] = $abs_path;
+    }
+    $LOGGER->info("chdir $dir");
+    chdir $dir;
 }
 
 sub run_modified_command($$$$$$$$$$) {
