@@ -1331,6 +1331,11 @@ sub grep_hist($$$$) {
 # 
 #   vc bisect-all true_if_failure git grep <pattern> <file>
 #
+# (the only problem is that this might not work if the command
+# "true_if_failure" is part of the current repository because the
+# repository will have been rewound to an earlier state where
+# true_if_failure might not exist)
+#
 sub bisect_all($$$$) {
     my ($repo_type, $action, $options, $args) = @_;
     if ($repo_type ne 'git') {
