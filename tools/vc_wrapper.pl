@@ -1293,6 +1293,8 @@ sub grep_hist($$$$) {
     my $patt = shift(@$files);
     if (scalar(@$files) == 0) {
         push(@$files, "");
+    } else {
+        cd_to_git_repo($files);
     }
     foreach my $file (@$files) {
         my $revs = git_revision_list($file);
