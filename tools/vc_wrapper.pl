@@ -147,6 +147,7 @@ use File::Basename qw(basename dirname);
 use Data::Dumper qw(Dumper);
 use File::Compare qw(compare);
 use Cwd qw(abs_path);
+# should probably use File::Spec
 
 use Getopt::Long qw(GetOptions);
 use Log::Log4perl qw(:levels);
@@ -337,6 +338,9 @@ sub parse_command_line() {
               )
         or pod2usage();
 
+    my $orig_cmd_line = join(' ', $0, @ARGV);
+    $LOGGER->debug("Running $orig_cmd_line");
+
     # Save the original arguments
     my $cmd_name = basename($0);
     my @cmd_options = consume_leading_options(\@ARGV);
@@ -401,7 +405,6 @@ sub parse_command_line() {
     $LOGGER->debug("subcmd_options = '" . join(', ', @subcmd_options) . "'");
     $LOGGER->debug("files = '" . join(', ', @files) . "'");
 
-
     return ($cmd_name, 
             \@cmd_options,
             $action,
@@ -456,6 +459,7 @@ sub get_git_top($) {
             return $dirname;
         }
     }
+    return undef;
 }
 
 sub get_repo_type($$$) {
