@@ -469,21 +469,25 @@ sub get_repo_type($$$) {
         # directory that won't exist yet.  So, for checkouts, assume
         # that the user knows which of svn/cvs/etc to use.
     } else {
-        my $file_to_check;
-        if (scalar(@$files) > 0) {
-            # Check the last file, not the first file.  Since the files
-            # are just the remaining arguments that we couldn't parse, it
-            # could include switches for the svn statement (like -r).  So
-            # the first few "files" might not actually be files.
-            $file_to_check = $files->[$#$files];
-        } else {
-            $file_to_check = ".";
+        my $file_to_check = ".";
+        # If none of the arguments are existing files, then default to
+        # the last file, not the first.  Check the last file, not the
+        # first file.  Since the files are just the remaining
+        # arguments that we couldn't parse, it could include switches
+        # for the svn statement (like -r).  So the first few "files"
+        # might not actually be files.
+        foreach $file_to_check (@$files) {
+            if (-f $file_to_check) {
+                last;
+            }
         }
 
         $LOGGER->debug("Checking vc for $file_to_check");
         my $dirname = my_dirname($file_to_check);
         my $new_cmd_name;
         if (-d "$dirname/.svn") {
+            $new_cmd_name = "svn";
+        } elsif ($file_to_check =~ m@^svn\+ssh://@) {
             $new_cmd_name = "svn";
         } elsif (-f "$dirname/CVS/Entries") {
             $new_cmd_name = "cvs";
