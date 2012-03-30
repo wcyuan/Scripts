@@ -476,8 +476,9 @@ sub get_repo_type($$$) {
         # arguments that we couldn't parse, it could include switches
         # for the svn statement (like -r).  So the first few "files"
         # might not actually be files.
-        foreach $file_to_check (@$files) {
-            if (-f $file_to_check) {
+        foreach my $file (@$files) {
+            if (-f $file) {
+                $file_to_check = $file;
                 last;
             }
         }
