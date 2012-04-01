@@ -473,17 +473,30 @@ sub get_repo_type($$$) {
         # directory that won't exist yet.  So, for checkouts, assume
         # that the user knows which of svn/cvs/etc to use.
     } else {
-        my $file_to_check = ".";
-        # If none of the arguments are existing files, then default to
-        # the last file, not the first.  Check the last file, not the
+        my $file_to_check;
+        # Check the first argument that is actually a file.  If none
+        # of the arguments are existing files, then default to the
+        # last file, not the first.  Check the last file, not the
         # first file.  Since the files are just the remaining
         # arguments that we couldn't parse, it could include switches
         # for the svn statement (like -r).  So the first few "files"
         # might not actually be files.
+        #
+        # Make sure we can handle things like:
+        # svn info svn+ssh://invest2.nyc/proj/infra/svn/repository/base/branches/rel_20120316
+        # svn info --xml svn+ssh://invest2.nyc/proj/infra/svn/repository/base/branches/rel_20120316
+        # svn info <directory>
         foreach my $file (@$files) {
-            if (-f $file) {
+            if (-e $file) {
                 $file_to_check = $file;
                 last;
+            }
+        }
+        if (!defined($file_to_check)) {
+            if (scalar(@$files) > 0) {
+                $file_to_check = $files->[$#$files];
+            } else {
+                $file_to_check = '.';
             }
         }
 
