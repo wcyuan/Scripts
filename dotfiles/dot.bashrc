@@ -1,6 +1,11 @@
 # -*- mode: bash -*-
 # ----------------------------------------------------
+# PATH
 
+PATH=$PATH:/cygdrive/c/Program\ Files/Java/jdk1.6.0_21/bin
+PATH=$PATH:$HOME/bin
+
+# ----------------------------------------------------
 # aliases
 alias      rm='rm -i'
 alias      cp='cp -i'
@@ -44,7 +49,6 @@ alias   ruinterm="echo -n ^N"
 alias    fixterm="echo -n "
 alias        hex='printf "%x\n"'
 alias       beep='perl -e "print \"\a\";"'
-alias     repath="unsetenv PATHRCDONE; source ~/.bashrc"
 
 # ----------------------------------------------------
 # Completion
