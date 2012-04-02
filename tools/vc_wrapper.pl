@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 #
 # vc_wrapper.pl
 # @desc:  wrapper around cvs and svn
@@ -137,8 +137,66 @@ fdiff and fmerge work for both SVN and CVS
 =cut
 
 # ------------------------------------------------------------------------------
+
+package Logger;
+
+use Carp;
+use Data::Dumper;
+
+our %LEVELS = (DEBUG      => 50,
+	       INFO       => 40,
+	       WARN       => 30,
+	       ERROR      => 20,
+	       LOGCONFESS => 10);
+our %REVLEVELS = map { $LEVELS{$_} => $_ } keys(%LEVELS);
+
+sub new($;$) {
+  my ($this, $level) = @_;
+  my $class = ref($this) || $this;
+  my $self = {};
+  $level //= 'WARN';
+  bless $self, $class;
+  return $self;
+}
+
+sub level($;$) {
+  my ($self, $level) = @_;
+  if (defined($level)) {
+    if (defined($LEVELS{$level})) {
+      $self->{level} = $level;
+    } elsif (defined($REVLEVELS{$level})) {
+      $self->{level} = $REVLEVELS{$level};
+    } else {
+      confess("Unknown level: $level");
+    }
+  }
+  return $self->{level};
+}
+
+sub output($$$) {
+  my ($self, $level, $msg) = @_;
+  if ($LEVELS{$self->{level}} >= $LEVELS{$level}) {
+    my ($pack, $fn, $line, $sub) = caller(2);
+    my $str = "[$level][$sub:$line] $msg";
+    if ($level eq 'LOGCONFESS') {
+      confess($str);
+    } else {
+      print STDERR "$str\n";
+    }
+  }
+}
+
+sub debug($$)      { $_[0]->output('DEBUG',      $_[1]) }
+sub info($$)       { $_[0]->output('INFO',       $_[1]) }
+sub warn($$)       { $_[0]->output('WARN',       $_[1]) }
+sub error($$)      { $_[0]->output('ERROR',      $_[1]) }
+sub logconfess($$) { $_[0]->output('LOGCONFESS', $_[1]) }
+
+# ------------------------------------------------------------------------------
 # Imports
 #
+
+package main;
 
 use strict;
 use warnings 'all';
@@ -150,15 +208,16 @@ use Cwd qw(abs_path);
 # should probably use File::Spec
 
 use Getopt::Long qw(GetOptions);
-use Log::Log4perl qw(:levels);
+#use Log::Log4perl qw(:levels);
 
 # ------------------------------------------------------------------------------
 # Global Variables
 #
 
 my $NO_WRITE;
-Log::Log4perl->easy_init($WARN);
-my $LOGGER = Log::Log4perl->get_logger();
+#Log::Log4perl->easy_init($WARN);
+#my $LOGGER = Log::Log4perl->get_logger();
+my $LOGGER = new Logger();
 
 #
 # We want to run svn and cvs, but we've already wrapped svn and cvs in
@@ -334,7 +393,7 @@ sub parse_command_line() {
                             "noignore_case");
     GetOptions( "run" => \my $run_cmds,
                 "no_write" => \$NO_WRITE,
-                "verbose|v" => sub { $LOGGER->level($DEBUG) },
+                "verbose|v" => sub { $LOGGER->level('DEBUG') },
               )
         or pod2usage();
 
