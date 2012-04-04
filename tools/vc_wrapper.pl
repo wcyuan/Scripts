@@ -908,7 +908,7 @@ sub git_revision_list {
     my $log = run("$GIT log --pretty=format:$format " . join(' ', @_), {always => 1});
     return [map { 
         my ($hash, $email, $date, $time, $tz, $msg) = split(' ', $_, 6);
-        $email =~ s/@([\w\.]*)deshaw\.com$//;
+        $email =~ s/@(.*)$//;
         [$hash, $email, $date, $msg, $time, $tz];
     } split(/\n/, $log)]
 }
@@ -1383,6 +1383,15 @@ sub foreign_merge($$$) {
     }
 }
 
+#
+# Let's say a line was removed from a file, and you want to know the
+# last time that line existed in the file:
+#
+#   vc grep-hist <patt> <file>
+#
+# will go through history from most recent to oldest, and print
+# matches.
+#
 sub grep_hist($$$$) {
     my ($repo_type, $action, $options, $files) = @_;
     if ($repo_type ne 'git') {
@@ -1404,7 +1413,7 @@ sub grep_hist($$$$) {
         my $revs = git_revision_list($file);
         foreach my $rev (@$revs) {
             my ($hash, $email, $date, $msg) = @$rev;
-            my $output = run("$cmd grep $options $patt $hash $file", {no_warn => 1});
+            my $output = run("$cmd grep $options '$patt' $hash $file", {no_warn => 1});
             if ($output ne "") {
                 print join(' ', $email, $date) . "\n";
                 print $output;
