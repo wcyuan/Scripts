@@ -894,6 +894,15 @@ sub svn_revision_list($;$) {
     return \@revs;
 }
 
+# Returns git log information.  
+#
+# Returns an array of arrays.  Each element of the array is a
+# 6-element array:
+#    [ commit-hash, committer, date, time, tz, msg ]
+#
+# The order is the same as the order of git log: the first element is
+# the most recent commit, the last element is the first commit by
+# time.
 sub git_revision_list {
     my $format = '"%h %ce %ci %s"';
     my $log = run("$GIT log --pretty=format:$format " . join(' ', @_), {always => 1});
