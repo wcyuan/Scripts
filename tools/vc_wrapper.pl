@@ -282,6 +282,9 @@ sub main() {
         $uptrunk_arg_revision,
         $lastrev_arg_revno,
         $lastrev_arg_revs_back,
+        $grep_hist_arg_missing,
+        $grep_hist_arg_first_occur,
+        $grep_hist_arg_last_occur,
        ) = parse_command_line();
 
     my $repo_type = get_repo_type($cmd_name, $action, $files);
@@ -337,7 +340,10 @@ sub main() {
             return;
         } elsif ($action eq "grep-hist") {
             
-            grep_hist($repo_type, $action, $subcmd_options, $files);
+            grep_hist($repo_type, $action, $subcmd_options, $files, 
+                      $grep_hist_arg_missing, 
+                      $grep_hist_arg_first_occur,
+                      $grep_hist_arg_last_occur);
             return;
         } elsif ($action eq "bisect-all") {
             
@@ -418,6 +424,9 @@ sub parse_command_line() {
     my $uptrunk_arg_revision;
     my $lastrev_arg_revno;
     my $lastrev_arg_revs_back;
+    my $grep_hist_arg_missing;
+    my $grep_hist_arg_first_occur;
+    my $grep_hist_arg_last_occur;
     if (scalar(@ARGV) > 0) {
         $action = shift(@ARGV);
 
@@ -443,6 +452,13 @@ sub parse_command_line() {
             Getopt::Long::Configure("no_pass_through", "bundling");
             GetOptions( "revno|r=s" => \$lastrev_arg_revno,
                         "revs_back|b=i" => \$lastrev_arg_revs_back,
+                      )
+                or pod2usage();
+        } elsif ($action eq "grep-hist") {
+            Getopt::Long::Configure("no_pass_through");
+            GetOptions( "missing" => \$grep_hist_arg_missing,
+                        "first"   => \$grep_hist_arg_first_occur,
+                        "last"    => \$grep_hist_arg_last_occur,
                       )
                 or pod2usage();
         } else {
@@ -481,6 +497,9 @@ sub parse_command_line() {
             $uptrunk_arg_revision,
             $lastrev_arg_revno,
             $lastrev_arg_revs_back,
+            $grep_hist_arg_missing,
+            $grep_hist_arg_first_occur,
+            $grep_hist_arg_last_occur,
            );
 }
 
@@ -1006,10 +1025,18 @@ sub get_version ( $$ ) {
 # My added subcommands
 #
 
-sub lastrev($$$$) {
+sub lastrev($$$$$) {
     my ($repo_type, $action, $files, $lastrev_arg_revs_back, $lastrev_arg_revno) = @_;
 
     $lastrev_arg_revs_back //= 1;
+    if (scalar(@$files) == 0 && ($repo_type eq 'svn' || $repo_type eq 'git')) {
+        # A file of "" will do whatever the log and diff commands will
+        # do with no arguments.  For svn, it will show the log or diff
+        # of the current directory.  For git, it will show the log or
+        # diff of the whole repo.  Since RCS and CVS are file based,
+        # you can't run log and diff without files.
+        push(@$files, "");
+    }
     foreach my $file (@$files) {
         # run get_repo_type again on each file, so we can handle files
         # on different repositories.
@@ -1392,8 +1419,9 @@ sub foreign_merge($$$) {
 # will go through history from most recent to oldest, and print
 # matches.
 #
-sub grep_hist($$$$) {
-    my ($repo_type, $action, $options, $files) = @_;
+sub grep_hist($$$$$$) {
+    my ($repo_type, $action, $options, $files, 
+        $show_missing, $first_occur, $last_occur) = @_;
     if ($repo_type ne 'git') {
         $LOGGER->logconfess("grep-hist is only implemented for git");
     }
@@ -1409,15 +1437,37 @@ sub grep_hist($$$$) {
     } else {
         cd_to_git_repo($files);
     }
+ FILE:
     foreach my $file (@$files) {
         my $revs = git_revision_list($file);
+        my $prev;
         foreach my $rev (@$revs) {
             my ($hash, $email, $date, $msg) = @$rev;
             my $output = run("$cmd grep $options '$patt' $hash $file", {no_warn => 1});
-            if ($output ne "") {
-                print join(' ', $email, $date) . "\n";
-                print $output;
+            if ($first_occur || $last_occur) {
+                if (($first_occur && $output eq "") || ($last_occur && $output ne "")) {
+                    if (defined($prev)) {
+                        lastrev($repo_type, 'lastrev', $file, undef, $prev);
+                        next FILE;
+                    }
+                } else {
+                    $prev = $hash;
+                }
             }
+            elsif ($show_missing) {
+                if ($output eq "") {
+                    print join(' ', $hash, $email, $date, $msg) . "\n";
+                }
+            }
+            else {
+                if ($output ne "") {
+                    print join(' ', $email, $date) . "\n";
+                    print $output;
+                }
+            }
+        }
+        if (($first_occur || $last_occur) && defined($prev)) {
+            lastrev($repo_type, 'lastrev', $file, undef, $prev);
         }
     }
 }
