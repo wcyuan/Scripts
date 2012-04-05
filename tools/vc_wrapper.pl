@@ -334,9 +334,9 @@ sub main() {
 
             foreign_merge($repo_type, $action, $files);
             return;
-        } elsif ($action eq "lastrev") {
+        } elsif ($action eq "lastrev" || $action eq 'rlastrev') {
             
-            lastrev($repo_type, $action, $files, $lastrev_arg_revs_back, $lastrev_arg_revno);
+            lastrev($repo_type, $action, $cmd_options, $files, $lastrev_arg_revs_back, $lastrev_arg_revno);
             return;
         } elsif ($action eq "grep-hist") {
             
@@ -448,7 +448,7 @@ sub parse_command_line() {
             GetOptions( "revision|r=i" => \$uptrunk_arg_revision,
                       )
                 or pod2usage();
-        } elsif ($action eq "lastrev") {
+        } elsif ($action eq "lastrev" || $action eq 'rlastrev') {
             Getopt::Long::Configure("no_pass_through", "bundling");
             GetOptions( "revno|r=s" => \$lastrev_arg_revno,
                         "revs_back|b=i" => \$lastrev_arg_revs_back,
@@ -1025,8 +1025,9 @@ sub get_version ( $$ ) {
 # My added subcommands
 #
 
-sub lastrev($$$$$) {
-    my ($repo_type, $action, $files, $lastrev_arg_revs_back, $lastrev_arg_revno) = @_;
+sub lastrev($$$$$$) {
+    my ($repo_type, $action, $cmd_options, $files, 
+        $lastrev_arg_revs_back, $lastrev_arg_revno) = @_;
 
     $lastrev_arg_revs_back //= 1;
     if (scalar(@$files) == 0 && ($repo_type eq 'svn' || $repo_type eq 'git')) {
@@ -1098,9 +1099,16 @@ sub lastrev($$$$$) {
                 $output = run("rcsdiff -u -r$prev_revision -r$last_revision $file", {no_warn=>1});
                 print $output if defined($output);
             } else {
-                my $output = run("cvs log -r$last_revision $file");
+                my $log  = 'log';
+                my $diff = 'diff';
+                if ($action eq 'rlastrev') {
+                    $log  = 'rlog';
+                    $diff = 'rdiff';
+                }
+                my $cmd_options_str = join(' ', @$cmd_options);
+                my $output = run("cvs $cmd_options_str $log -r$last_revision $file");
                 print $output if defined($output);
-                $output = run("cvs diff -u -r $prev_revision -r $last_revision $file", {no_warn=>1});
+                $output = run("cvs $cmd_options_str $diff -u -r $prev_revision -r $last_revision $file", {no_warn=>1});
                 print $output if defined($output);
             }
         } elsif ($repo_type eq 'git') {
@@ -1447,7 +1455,7 @@ sub grep_hist($$$$$$) {
             if ($first_occur || $last_occur) {
                 if (($first_occur && $output eq "") || ($last_occur && $output ne "")) {
                     if (defined($prev)) {
-                        lastrev($repo_type, 'lastrev', $file, undef, $prev);
+                        lastrev($repo_type, 'lastrev', [], [$file], undef, $prev);
                         next FILE;
                     }
                 } else {
@@ -1467,7 +1475,7 @@ sub grep_hist($$$$$$) {
             }
         }
         if (($first_occur || $last_occur) && defined($prev)) {
-            lastrev($repo_type, 'lastrev', $file, undef, $prev);
+            lastrev($repo_type, 'lastrev', [], [$file], undef, $prev);
         }
     }
 }
