@@ -565,7 +565,9 @@ sub get_repo_type($$$) {
         # svn info --xml svn+ssh://invest2.nyc/proj/infra/svn/repository/base/branches/rel_20120316
         # svn info <directory>
         foreach my $file (@$files) {
-            if (-e $file) {
+            # Don't check -e on $file if it has a new line.  Same
+            # reason as in my_dirname (see the comment there).
+            if ($file !~ m/\n/ && -e $file) {
                 $file_to_check = $file;
                 last;
             }
