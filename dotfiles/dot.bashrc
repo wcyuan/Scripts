@@ -79,6 +79,13 @@ export PYTHONPATH
 
 # ----------------------------------------------------
 
+# less
+# use a verbose prompt
+LESS='-M'
+export LESS
+
+# ----------------------------------------------------
+
 # ssa
 #
 # Runs ssa-add on startup.  This will ask for your passphrase every
