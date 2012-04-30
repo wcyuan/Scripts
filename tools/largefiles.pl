@@ -14,6 +14,7 @@ use Getopt::Long;
 use warnings 'all';
 use List::Util qw(min);
 use Log::Log4perl qw(:levels);
+use Statistics::Lite qw(median);
 
 Log::Log4perl->easy_init($WARN);
 my $LOGGER = Log::Log4perl->get_logger();
@@ -23,30 +24,39 @@ sub main() {
         @dirs) = parse_command_line();
 
     my @all_lines;
+    my $total = 0;
+    my $start = time();
+
+    # a: list both files and directories
+    # S: for directories, show the size of the files in the directory,
+    #    but not files in sub-directories
+    # m: show sizes rounded to Megabytes
+    # time: show last modified time of files or directories (for
+    # directories, shows latest modification time of anything in the
+    # directory)
+    my $cmd = 'du -cSa --time';
+    my $unit;
+    if ($in_kb) {
+        $cmd .= ' -k';
+        $unit = 'K';
+    } else {
+        $cmd .= ' -m';
+        $unit = 'M';
+    }
+
     foreach my $dir (@dirs) {
-        # a: list both files and directories
-        # S: for directories, show the size of the files in the directory,
-        #    but not files in sub-directories
-        # m: show sizes rounded to Megabytes
-        # time: show last modified time of files or directories (for
-        # directories, shows latest modification time of anything in the
-        # directory)
-        my $cmd = 'du -Sa --time';
-        if ($in_kb) {
-            $cmd .= ' -k';
-        } else {
-            $cmd .= ' -m';
-        }
         my @lines = run("$cmd $dir");
-        $dir =~ s@/$@@;
 
         # split
         @lines = map { [ split(' ', $_) ] } @lines;
+
+        $total += pop(@lines)->[0];
 
         # files only
         @lines = grep { -f $_->[-1] } @lines;
 
         if ($relative) {
+            $dir =~ s@/$@@;
             foreach my $line (@lines) {
                 $line->[-1] =~ s@^$dir@.@;
             }
@@ -59,15 +69,20 @@ sub main() {
     @all_lines = sort {$b->[0] <=> $a->[0] } (@all_lines);
 
     # print
+    my $n_files = scalar(@all_lines);
     my $last = min($top_n-1, $#all_lines);
     foreach my $line (@all_lines[0..$last]) {
         if ($in_kb) {
-            $line->[0] .= "K";
+            $line->[0] .= $unit;
         } else {
-            $line->[0] .= "M";
+            $line->[0] .= $unit;
         }
         print join(' ', @$line) . "\n";
     }
+    my $ave = sprintf('%0.2f', $n_files == 0 ? 0 : $total / $n_files);
+    my $median = median(map { $_->[0] } @all_lines);
+    my $time = time() - $start;
+    print "$n_files files in $time seconds, total size ${total}${unit}, ave ${ave}${unit}, median ${median}${unit}\n";
 }
 
 # -----------------------------------------
