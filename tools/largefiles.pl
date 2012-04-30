@@ -3,6 +3,9 @@
 # largefiles.pl
 # @desc: list large files (wrapper around du)
 #
+# same as:
+# du -Sam --time $args | perl -ane '$F[0] .= "M"; print join(" ", @F) . "\n" if (-f $F[-1])' | sort -rn | head -$top_n
+#
 
 # -----------------------------------------
 
