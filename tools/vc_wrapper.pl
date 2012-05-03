@@ -1583,6 +1583,9 @@ sub customize_subcmd_options($$$$$$$$) {
             # which is better.  We just avoid the issue of having the
             # understand that -r requires an argument.            
             unshift(@$subcmd_options, '-u'); 
+            if ($diff_arg_w) {
+                unshift(@$subcmd_options, '-w') 
+            }
         } elsif (($action eq "up" || $action eq "update") && ($up_arg_d || $up_arg_P)) {
             if ($up_arg_d) {
                 unshift(@$subcmd_options, '-d');
