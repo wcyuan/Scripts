@@ -283,8 +283,11 @@ sub main() {
         $lastrev_arg_revno,
         $lastrev_arg_revs_back,
         $grep_hist_arg_missing,
+        $grep_hist_arg_all_revs,
+        $grep_hist_arg_start_rev,
         $grep_hist_arg_first_occur,
         $grep_hist_arg_last_occur,
+        $grep_hist_arg_show_log,
        ) = parse_command_line();
 
     my $repo_type = get_repo_type($cmd_name, $action, $files);
@@ -342,8 +345,11 @@ sub main() {
             
             grep_hist($repo_type, $action, $subcmd_options, $files, 
                       $grep_hist_arg_missing, 
+                      $grep_hist_arg_all_revs, 
+                      $grep_hist_arg_start_rev, 
                       $grep_hist_arg_first_occur,
-                      $grep_hist_arg_last_occur);
+                      $grep_hist_arg_last_occur,
+                      $grep_hist_arg_show_log);
             return;
         } elsif ($action eq "bisect-all") {
             
@@ -425,8 +431,11 @@ sub parse_command_line() {
     my $lastrev_arg_revno;
     my $lastrev_arg_revs_back;
     my $grep_hist_arg_missing;
+    my $grep_hist_arg_all_revs;
+    my $grep_hist_arg_start_rev;
     my $grep_hist_arg_first_occur;
     my $grep_hist_arg_last_occur;
+    my $grep_hist_arg_show_log;
     if (scalar(@ARGV) > 0) {
         $action = shift(@ARGV);
 
@@ -456,9 +465,14 @@ sub parse_command_line() {
                 or pod2usage();
         } elsif ($action eq "grep-hist") {
             Getopt::Long::Configure("no_pass_through");
-            GetOptions( "missing" => \$grep_hist_arg_missing,
-                        "first"   => \$grep_hist_arg_first_occur,
-                        "last"    => \$grep_hist_arg_last_occur,
+            GetOptions( "missing!" => \$grep_hist_arg_missing,
+                        "all|all_revs!" => 
+                                      \$grep_hist_arg_all_revs,
+                        "start_rev|r=s" => 
+                                      \$grep_hist_arg_start_rev,
+                        "first!"   => \$grep_hist_arg_first_occur,
+                        "last!"    => \$grep_hist_arg_last_occur,
+                        "log!"     => \$grep_hist_arg_show_log,
                       )
                 or pod2usage();
         } else {
@@ -498,8 +512,11 @@ sub parse_command_line() {
             $lastrev_arg_revno,
             $lastrev_arg_revs_back,
             $grep_hist_arg_missing,
+            $grep_hist_arg_all_revs,
+            $grep_hist_arg_start_rev,
             $grep_hist_arg_first_occur,
             $grep_hist_arg_last_occur,
+            $grep_hist_arg_show_log,
            );
 }
 
@@ -932,6 +949,95 @@ sub git_revision_list {
         $email =~ s/@(.*)$//;
         [$hash, $email, $date, $msg, $time, $tz];
     } split(/\n/, $log)]
+}
+
+sub revision_list($$) {
+    my ($repo_type, $file) = @_;
+
+    if ($repo_type eq 'rcs' || $repo_type eq 'cvs') {
+        my $last_revision = get_cvs_rcs_last_rev($repo_type, $file);
+        if (!defined($last_revision)) {
+            $LOGGER->warn("Can't find any revisions for file '$file'");
+            return [];
+        }
+        my @rev_nos = split(/\./, $last_revision);
+        my $last_part = pop(@rev_nos);
+        return [reverse(map { join('.', @rev_nos, $_) } (1..$last_part))]
+    }
+    elsif ($repo_type eq 'svn') {
+        return svn_revision_list($file);
+    }
+    elsif ($repo_type eq 'git') {
+        my $list = git_revision_list($file);
+        return [ map {$_->[0]} @$list ];
+    }
+}
+
+sub show_rev_cmd($$$) {
+    my ($repo_type, $rev, $file) = @_;
+    if ($repo_type eq 'rcs') {
+        return "co -p$rev $file";
+    }
+    elsif ($repo_type eq 'cvs') {
+        return "$CVS ann -r$rev $file";
+    }
+    elsif ($repo_type eq 'svn') {
+        return "$SVN cat -r$rev $file";
+    }
+    elsif ($repo_type eq 'git') {
+        return "$GIT cat-file blob $rev:$file";
+    }
+}
+
+sub show_ann_cmd($$$) {
+    my ($repo_type, $rev, $file) = @_;
+    if ($repo_type eq 'rcs') {
+        return "blame -r$rev $file";
+    }
+    elsif ($repo_type eq 'cvs') {
+        return "$CVS ann -r$rev $file";
+    }
+    elsif ($repo_type eq 'svn') {
+        return "$SVN ann -r$rev $file";
+    }
+    elsif ($repo_type eq 'git') {
+        return "$GIT annotate $rev $file";
+    }
+}
+
+sub show_log($$$) {
+    my ($repo_type, $rev, $file) = @_;
+    my $cmd;
+    if ($repo_type eq 'rcs') {
+        $cmd = "rlog -r$rev $file";
+    }
+    elsif ($repo_type eq 'cvs') {
+        $cmd = "$CVS log -r$rev $file";
+    }
+    elsif ($repo_type eq 'svn') {
+        $cmd = "$SVN log -r$rev $file";
+    }
+    elsif ($repo_type eq 'git') {
+        $cmd = "$GIT log $rev $file";
+    }
+    return run($cmd);
+}
+
+sub grep_rev($$$$$) {
+    my ($repo_type, $rev, $patt, $file, $options) = @_;
+    if ($repo_type eq 'git') {
+        my $cmd = $CMDS{$repo_type};
+        return run("$cmd grep $options '$patt' $rev $file", {no_warn => 1});
+    } else {
+        my $cmd = show_rev_cmd($repo_type, $rev, $file);
+        return run("$cmd 2>&1 | grep $options '$patt'", {no_warn => 1});
+    }
+}
+
+sub grep_ann($$$$$) {
+    my ($repo_type, $rev, $patt, $file, $options) = @_;
+    my $cmd = show_ann_cmd($repo_type, $rev, $file);
+    return run("$cmd 2>&1 | grep $options '$patt'", {no_warn => 1});
 }
 
 # ------------------------------------------------------------------------------
@@ -1420,6 +1526,17 @@ sub foreign_merge($$$) {
     }
 }
 
+sub rev_match($$$) {
+    my ($repo_type, $revs, $rev) = @_;
+    
+    return ((scalar(@$revs) > 0) &&
+            (scalar(grep {
+                $_ eq $rev || ($repo_type eq 'git' && 
+                               ($_ =~ /^$rev/ || 
+                                $rev =~ /^$_/))
+            } @$revs) != 0));
+}
+
 #
 # Let's say a line was removed from a file, and you want to know the
 # last time that line existed in the file:
@@ -1429,12 +1546,46 @@ sub foreign_merge($$$) {
 # will go through history from most recent to oldest, and print
 # matches.
 #
+# By default, it will grep the annotated history, so it will print the
+# revision number and user name.  Then, after it finds a match, it
+# will go to the next revision where one of the matching lines
+# changes.  For example, suppose you grep for my_pattern in revision 7
+# and it matches lines X, which was last touched in revision 4, and Y,
+# which was last touched in revision 3.  Then we'll next grep the
+# annotated version of revision 3 (the revision before 4).  This isn't
+# perfect -- it's possible there was another line (neither X nor Y)
+# that matched my_pattern in revision 6 (that line was presumably
+# removed in revision 7).  We'd have no way to know that we should
+# look at that revision.
+#
+# -start <revision>
+#        The revision to start with.  
+#
+# -first 
+#        Will print the first commit where the pattern is found.  
+#
+# -last  
+#        Will print the lastrev for the commit after which the pattern
+#        isn't found.
+#
+# -all_rev 
+#        Will print the result of greping in each revision (from
+#        most recent backwards) rather than jumping to the previous
+#        revision based on annotate.  Also, in this mode, the output
+#        will not be the annotated output.
+#
+# -log   Besides printing the grep output, also print the log message of
+#        that revision.
+#
+# -missing 
+#        Instead of printing revisions where this pattern matches,
+#        print revisions where the pattern doesn't match.  
 sub grep_hist($$$$$$) {
     my ($repo_type, $action, $options, $files, 
-        $show_missing, $first_occur, $last_occur) = @_;
-    if ($repo_type ne 'git') {
-        $LOGGER->logconfess("grep-hist is only implemented for git");
-    }
+        $show_missing, $all_revs, 
+        $start_rev,
+        $first_occur, $last_occur,
+        $show_log) = @_;
     if (scalar(@$files) < 1) {
         $LOGGER->logconfess("grep-hist takes at least one args: " . join(' ', @$files));
     }
@@ -1444,16 +1595,57 @@ sub grep_hist($$$$$$) {
     my $patt = shift(@$files);
     if (scalar(@$files) == 0) {
         push(@$files, "");
-    } else {
+    } elsif ($repo_type eq 'git') {
         cd_to_git_repo($files);
     }
  FILE:
     foreach my $file (@$files) {
-        my $revs = git_revision_list($file);
+        my $revs;
+        if ($repo_type eq 'git') {
+            $revs = git_revision_list($file);
+        } else {
+            $revs = revision_list($repo_type, $file);
+        }
         my $prev;
-        foreach my $rev (@$revs) {
-            my ($hash, $email, $date, $msg) = @$rev;
-            my $output = run("$cmd grep $options '$patt' $hash $file", {no_warn => 1});
+
+        # Skip_to_rev is a list of revisions.  We will actually start
+        # with the revision after the first revision in skip_to_rev.
+        # So we skip all revisions until we hit a revision in
+        # skip_to_revision, then we print the next revision.  
+        my @skip_to_rev;
+        if (defined($start_rev) || $show_missing) {
+            push(@skip_to_rev, $start_rev);
+        }
+        foreach my $rev_info (@$revs) {
+            my ($rev, $email, $date, $msg);
+            if ($repo_type eq 'git') {
+                ($rev, $email, $date, $msg) = @$rev_info;
+            } else {
+                $rev = $rev_info;
+                $email = $date = $msg = '';
+            }
+            if (scalar(@skip_to_rev) > 0) {
+                $LOGGER->debug("skipping $rev");
+                if (rev_match($repo_type, \@skip_to_rev, $rev)) {
+                    @skip_to_rev = ();
+                }
+                next;
+            }
+            my $output;
+            if ($all_revs) {
+                $output = grep_rev($repo_type, $rev, $patt, $file, $options);
+            } else {
+                $output = grep_ann($repo_type, $rev, $patt, $file, $options);
+                @skip_to_rev = map { (split ' ', $_)[0] } (split(/\n/, $output));
+                if (scalar(@skip_to_rev) > 0) {
+                    if ($show_log) {
+                        print show_log($repo_type, $rev, $file);
+                    }
+                    if (rev_match($repo_type, \@skip_to_rev, $rev)) {
+                        @skip_to_rev = ();
+                    }
+                }
+            }
             if ($first_occur || $last_occur) {
                 if (($first_occur && $output eq "") || ($last_occur && $output ne "")) {
                     if (defined($prev)) {
@@ -1461,17 +1653,19 @@ sub grep_hist($$$$$$) {
                         next FILE;
                     }
                 } else {
-                    $prev = $hash;
+                    $prev = $rev;
                 }
             }
             elsif ($show_missing) {
                 if ($output eq "") {
-                    print join(' ', $hash, $email, $date, $msg) . "\n";
+                    print join(' ', $rev, $email, $date, $msg) . "\n";
                 }
             }
             else {
                 if ($output ne "") {
-                    print join(' ', $email, $date) . "\n";
+                    if ($repo_type eq 'git') {
+                        print join(' ', $email, $date, $rev) . "\n";
+                    }
                     print $output;
                 }
             }
