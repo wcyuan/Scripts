@@ -1,0 +1,172 @@
+------------------------------------------------------------------------
+-- Interview advice
+------------------------------------
+
+- Past project.  Think about several projects that you want to talk
+  about, and how you would describe each of them to people of varying
+  technical expertise.  It's a hard balance trying to figure out how
+  to skip enough detail to make it understandable, but include enough
+  detail to make it sound hard and interesting.  
+
+- Technical questions.  Never give up.  Tell the interviewer what
+  you're thinking about, even if it isn't necessarily promising.  Listen
+  very carefully to clues -- remember, the interviewer has asked this
+  hundreds of times and every statement is designed to lead you down a
+  path.
+
+- Ask questions about the firm, about the people, about work, etc.
+  Seem interested.  Don't disparage your current employer or any other
+  companies.  
+
+http://www.indiangeek.net/wp-content/uploads/Programmer%20competency%20matrix.htm
+(now in scratch/recruit)
+
+- what to look for in past projects:
+  - passion.
+    - challenge them on something (wait for them to say something thats probably true and say that couldnt be true)
+  - explain things well at whatever level.  
+  - took a leadership role.  gets things done.  
+- what to look for in programming questions
+  - speed is important.  not just getting the right answer, but being
+    able to answer easy things fast, because you'll have to put that
+    type of stuff together to think about complicated stuff
+  - recursion and pointers
+
+------------------------------------------------------------------------
+
+questions:
+
+    - past project
+      - how many people, how long, basic architecture
+      - specific design decision
+      - how did you test it, metric for judging success
+      - hardest part
+        - what would you do differently if you were doing it again?
+        - if I were hired to make a change to the system, what would be
+	  the part that would be hardest to understand?  
+        - what interesting/tricky bugs did you encounter?  
+      - what did you particularly like, and would want to see in a future job?
+	what did you particularly dislike about the project?
+      - what was a tricky or interesting bug you encountered?  
+
+    - Let's say you are talking to a newly hired programmer just out
+      of school who is smart but inexperienced about how to write
+      good code in a large system.  What advice would you give?  
+      - reusability and avoiding code duplication is good, but
+	actually is overrated -- you have to be very careful.  When
+	something (like a constant) is reused, it can often takes on a
+	slightly different purpose from the original intention, which
+	can create subtle dependencies in the system.
+      - being able to test is very important.  ideally you should be
+	able to test each component separately
+      - keep track of the exact commands that were run to test
+	something, so that you can easily run them again when the code
+	changes.  ideally, you use unit tests, but that's not always
+	easy or practical.  
+      - documentation is good, but knowing what to document and how is
+	more important.  the best thing is to use examples, that way
+	we have the best idea of which code paths were most heavily
+	tested and were part of the original intent.  
+
+    - C++ vs Java 
+      - which would you use for a new app (as if explaining to a CEO)
+      - what does a C++ programmer need to learn about in order to use Java?
+      - why is C++ faster than Java?
+      - why is Java easier to program in?  
+
+    - design a flexible table (usr/design_a_table.txt)
+      - too easy for java programmers?  
+      - pseudocode of the classes, public methods, and maybe important data members
+      - columns have different types
+      - sort by any set of columns
+      - dynamic, user defined fields
+      - what other features would you add to it?  
+      - how would you test it?
+
+    - majority element
+
+    - bidding question
+
+    - write code for dfs
+
+    - virtual function from constructor
+      - find a good example for when you want to do this
+
+    - a function to translate decimal to roman numeral
+      - how easy to add new roman numerals
+      - how easy to change which things can be prefixed (to make them negative)
+
+    - battleship question
+
+    - code sample (mastermind?) - describe what it does in your own
+      words, then review it.  
+      - ask them to refactor some code
+      - cd /u/yuanc/scratch/recruit/zardosht/
+        unsetenv ENSCRIPT
+        enscript -2rGh description main.cpp Animation.h Animation.cpp stdafx.h
+        setenv ENSCRIPT '-2rGh -DDuplex:true'
+        cd -
+      - cd to the directory so that the file's full path isn't in the file header.  
+
+    - What do you like/dislike about programming?  Why did you go into
+      computer science?  
+
+    - What are your strengths and weaknesses?  Do I really want to ask this?
+
+
+criteria:
+    - experience
+      - familiarity with specific language features and idioms
+	(knowing about the virtual function from a constructor)
+	(knowing when to use inheritance vs composition, knowing when
+	 to use multiple inheritance or inner classes, knowing when to use
+	 templates, difference between templates and generics, etc)
+      - familiarity with common bugs and debugging techniques
+	(log files are indispensible, some tough bugs like race conditions just can't be found in a debugger or test environment)
+      - experience working with data
+	(automate what you can automate, and do the rest by hand)
+	(a lot of the project depends on what the data looks like, how clean it is, how much there is, how it is distributed)
+      - able to answer general questions about what works and how good or bad things are
+	(most important thing in choosing between C++ and Java is probably experience of programmers and available libraries)
+      - project management issues
+
+    - hard working, productive
+      - took hard classes, looks for challenges
+      - doesn't mind doing "dirty" work -- working with data, maintaining code
+
+    - creative / entrepreneurial
+      - lots of ideas for ways to improve a project
+      - lots of ideas for evaluating the success of an idea
+      - doesn't get stuck in a rut, always looking for new opportunities
+      - good instincts on the brainteasers
+
+    - communication
+      - able to describe complicated projects and relate only the important information
+      - able to use my hints
+      - able to explain the solution to a brainteaser
+
+    - intelligence
+      - math skills 
+	able to figure out running times of algorithms
+	able to come up with a clever way of finding the majority
+      - design instincts
+	knowing the best data structure for a problem
+	able to reject bad solutions quickly (knowing the best
+	solution or idiom requires experience, but finding flaws in
+	bad solutions is a combination of experience and intelligence)
+	- good interfaces.  what logic should appear in a caller, what
+	  should appear in the callee?  
+	  - can the callee's behavior be summarized in one phrase, and
+	    is it obvious from function's name?
+          - can the caller be oblivious to the details of the
+	    function's behavior or not?  If not, maybe it shouldn't be
+	    a function
+
+    - knows the basics
+      - knows different algorithms and how long they take to run
+      - knows different data structures and basic pros/cons
+
+    - For Options people: describe your data model for options.  do
+      you have nshares and tickunit?  how do you handle multiple
+      underlyings?
+
