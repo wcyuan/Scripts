@@ -106,15 +106,15 @@ defbindings("WFrame", {
 })
 
 -- ** ------------------------------------------------------------------- ** --
--- ** Key Bindings
--- **
--- ** F2 = an xterm with color
+-- ** Change XTERM to have color and run bash
 -- ** ------------------------------------------------------------------- ** --
 
-defbindings("WMPlex", {
-    bdoc("Run a terminal emulator."),
-    kpress(ALTMETA.."F2", "ioncore.exec_on(_, 'xterm -bg `/u/yuanc/bin/my_randcolor`')"),
-})
+--defbindings("WMPlex.toplevel", {
+--    bdoc("Run a terminal emulator."),
+--    kpress(ALTMETA.."F2", "ioncore.exec_on(_, 'xterm -bg `/u/yuanc/bin/my_randcolor`')"),
+--})
+
+XTERM="xterm -bg `/u/yuanc/bin/my_randcolor` -e bash"
 
 -- ** ------------------------------------------------------------------- ** --
 -- ** Menus
