@@ -17,6 +17,9 @@ alias     ltr='ls -lrt'
 alias      sa='unalias -a; . ~/.bashrc'
 alias ipython='python ~/ipython-0.12/ipython.py'
 
+alias     pgm='cd ~/testbed/local/octave/pgmclass/pa8/'
+alias     nlp='cd ~/testbed/local/python/nlpclass/pa8/pa8-jeopardy-v2/python/'
+
 which() {
     args=$*
     if [ "`type -t $args`" == "file" ]
