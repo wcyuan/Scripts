@@ -42,6 +42,11 @@
 -- ** META + x, 0         = Get rid of this frame, collapse into the next one
 -- ** META + x, 1         = Expand this frame, consuming all other frames.  
 -- **
+-- ** Not sure where these are defined:
+-- **
+-- ** META + t            = Tag a window
+-- ** META + k, a         - Move all tagged windows to this frame
+-- **
 -- ** ------------------------------------------------------------------- ** --
 
 -- Caution: these may break the default bindings.
