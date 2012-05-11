@@ -1,0 +1,627 @@
+------------------------------------------------------------------------
+-- PROGRAMMING Very Easy
+------------------------------------
+
+Compare enum, const int, #define, struct
+  - if you are creating flags, you can #define constants for 1, 2, 4,
+    etc., or you can create an enum with values for 1, 2, 4, etc., but
+    the best is probably to create a struct of 1 bit fields:
+	struct {
+	  unsigned int is_foo : 1;
+	  unsigned int is_bar : 1;
+	  unsigned int is_baz : 1;
+          : 1;  // provides padding
+	  : 0;  // forces word boundary
+	} flags;
+    however, struct fields are implementation dependent (whether the
+    fields may overlap a word boundary, etc.), so you may want to use
+    unnamed fields as padding and the special zero width, which forces
+    word boundariess.  
+
+	
+
+OOP: explain virtual, pure virtual.  what are they for? given class B
+and class D : B
+	B b();
+	b.foo();
+Which foo runs?  (depends only on if b's foo is virtual)
+
+Three uses of the word 'static'
+
+Given a list of numbers, 1-100, find out which number is missing
+
+What are constructors, destructors, what are they for.  Given an
+inheritance tree, in what order are constructors called?  (base class
+before derived class).  In what order are destructors called? (derived 
+class before base class -- should always be virtual).  If you have
+garbage collecting, why do you need a destructor?  (to close open
+filestreams and other resources).  
+
+What are member initializers for?  Why don't you just initialize
+members in the constructor body?  
+If you have a member which is itself a class, its constructor is
+called before the class's constructor.  Then, when you initialize the
+member, you might initialize it to another instance of the member's
+class, so the member's copy constructor may be called.  This is
+inefficient.  If you call it in the initialization list, only the copy
+constructor is called.
+
+What is amortized time?  How does a vector work?  
+
+When would you want to use a macro?  What are the dangers?
+  - compile-time options
+  - generating simple code (e.g. writing gettors and settors)
+  - things that templates can't handle
+    - give a bunch of different classes each a static variable, e.g. a count
+  - no type checking
+  - may be difficult to debug since it is done in the preprocessor
+
+Write a function to give the permutations of a list.  How about
+iteratively (harder)?  
+
+------------------------------------------------------------------------
+-- PROGRAMMING Easy
+------------------------------------
+
+Reverse a linked list. (constant space, linear time)
+
+Find a value in a binary tree.
+
+If I define for you:
+void swap(int* arr, int i, int j) 
+{
+    int t = arr[i];
+    arr[i] = arr[j];
+    arr[j] = t;
+}
+Write quicksort and bubblesort for integer arrays (in place).
+
+What does the following do:
+void mystery(int* arr, int size) 
+{
+    int i, j = 1, t;
+    if (size < 2) return;
+    for (i = 1; i < size; i++) 
+	if (arr[i] < arr[0]) 
+	{
+	    t = arr[i];
+	    arr[i] = arr[j];
+	    arr[j] = t;
+	    j++;
+	}
+    t = arr[0];
+    arr[0] = arr[j-1];
+    arr[j-1] = t;
+    mystery(arr+j,size-j);
+    mystery(arr,j);
+}
+void mystery2(int* arr, int size) 
+{
+    int i, j, k;
+    for(j = size-1; j > 0; j--)
+	for (i = 0; i < j; i++)
+	    if (arr[i] > arr[i+1])
+	    {
+		k = arr[i+1];
+		arr[i+1] = arr[i];
+		arr[i] = k;
+	    }
+}
+
+Explain different sorts: running time, space, difficulty to
+implement.  merge, heap, quick, bubble, selection, insertion, bucket,
+radix.  what assumptions are being made?  
+
+Why is clock speed a good/bad indication of processor performance?  
+
+Given a respectable random number generator, how do you shuffle a deck
+of cards (arbitrary size) so that every card has equal prob chance of 
+being in any given spot.  (linear time).
+
+If you have a good random number generator on the set {0,1} (i.e. a
+coin flip), how do you extend this to any set of integers?
+
+What's the difference between lines 3a and 3b?
+1	double dval;
+2	int ival;
+3a	ival += dval;
+3b	ival += static_cast< int >(dval);
+3b is slightly more efficient.  3a causes ival to be promoted to
+double, then there is an addition of doubles, then the result is
+truncated to an int and stored in ival.  3b avoids the unnecessary
+promotion.  
+
+What is the danger with inline destructors?  
+Would have to add the code to every place that an object could
+potentially go out of scope, e.g., at every return statement.  Could
+get unwieldy if the destructor is large.  
+
+Given a CPU that supports standard bitwise operations (including
+shifting) on an n bit word, what is the fastest way to reverse the
+bits in such a word?  This is evidently currently a staple of the
+nVidia interview, but I think it's a good question for any CS grad.
+Divide and conquer!  Best shown with an example:
+x = (x & 11110000 >> 4) | (x & 00001111 << 4)		(12345678 -> 56781234)
+x = (x & 11001100 >> 2) | (x & 00110011 << 2)		(56781234 -> 78563412)
+x = (x & 10101010 >> 1) | (x & 01010101 << 1)		(78563412 -> 87654321)
+which is log n time.  Note if mask1 = 11110000 and mask2 = 00001111,
+you can generate the next masks with
+tmp = mask2 << 2
+mask1 = mask1 ^ tmp
+mask2 = mask2 ^ tmp
+So: 
+N = wordsize / 2
+mask1 = an entire word full of 0's
+mask2 = an entire word full of 1's
+while N >= 1
+	tmp = mask2 << N
+	mask1 = mask1 ^ tmp
+	mask2 = mask2 ^ tmp
+	x = (x & mask1 >> N) | (x & mask2 << N)
+	N=N/2
+end
+
+------------------------------------------------------------------------
+-- PROGRAMMING Medium
+------------------------------------
+
+what does (*(void(*)())0)() mean?
+
+Show them a piece of code
+	ask them to tell you what it does
+	ask them to add something to it.
+	ask them to find design flaws/traps 
+For example, show them a simple GUI, ask them to add 
+a button, and expect them to identify a code block which should be made a 
+function.  Expect them to identify quicksort.  Show them flags
+implemented as #defines, expect them to suggest enums, consts, or
+structs with bit-sized elements.  Show them C and ask them how they
+would design the code in OO style.  
+
+what happens on a context switch? (save registers, including program
+counter and stack pointer, and load MMU (virtual mem, which takes care
+of page tables)).
+
+what is deadlock?  how do you avoid it? (lock manager, impose an order
+on locks)
+
+Find a cycle in a linked list (linear time, constant space).  
+(two off-speed pointers, reverse it twice).  How do you find the
+beginning of the loop?  
+
+How do you pass multidimensional arrays into a function in C/C++?
+Passing multidimensional arrays into a function requires:
+	void foo(int arg[][10][10]);
+Why?  How could you implement multidimensional arrays so that this
+isn't the case?
+
+What is special about a zero-width field in a struct (see above)?
+
+How do you implement virtual friend functions?  (create a non-virtual
+friend stub function which just calls a virtual member function).
+
+Given an array of numbers, find the subarray with the largest sum in
+O(n^2) (trivial), O(n log n) (divide and conquer), O(n).
+
+Given an array of objects on which there is an equality operator (but
+no comparison operator) how do you find the majority element (if it
+exists) in O(n log n)? O(n)?  Example: you have a bunch of pictures
+and "equality" is if they are pictures of them same thing -- not the
+same picture, just pictures of the same thing (somehow you have a
+smart function that knows this -- it might require user input).  You
+can't compare them, and you can't easily hash them (how do you ensure
+that two pictures that are of the same thing hash to the same value?).
+
+Bit Commitment.  Use a public key/private key where the lowest bit of
+the message is secure.  RSA satisfies this.  Pad your bit with a
+salt.  Encode it with your public key.  Give it to the other person.
+To reveal it, simply reveal the salt -- the can confirm that
+encrypting this with your public key results in the message you gave
+them.  
+
+Calculate average without revealing individual numbers: Bob chooses
+r[B,A], r[B,S], r[B,K] randomly between 0 and 400. He calculates
+r[B,B] so that (r[B,A] + r[B,B] + r[B,S] + r[B,K]) mod 401 is his own
+score, 88.  Bob sends r[B,A] to Alice, receives r[A,B]. He sends
+r[B,S] to Spot, receives r[S,B]. He sends r[B,K] to Krunch, receives
+r[K,B].  Compute c[B] = (r[A,B] + r[B,B] + r[S,B] + r[K,B]) mod
+401. Give c[B] to everybody, get c[A],c[S],c[K].  The total is (c[A] +
+c[B] + c[S] + c[K]) mod 401.
+http://www-2.cs.cmu.edu/~cburch/pgss97/slides/0710-crypto.html (a PGSS site!)
+
+Given a polygon (represented by consecutive/adjacent vertices).  How
+can you tell (efficiently) if a point is inside the polygon
+(alternate solution uses cross products).  
+solution: move everything around until the point is at the
+origin, then see how many edges of the polygon intersect the positive
+x-axis, since this is easy to determine.  
+
+With 25 horses, plus a racetrack on which you can race 5 horses, find
+the 5 fastest.  Assume you can only get faster or slower from a race
+(no more qualitative than that -- i.e. no "80% as fast") and that
+horses always run the same speed.  
+
+------------------------------------------------------------------------
+-- MATH Easy
+------------------------------------
+
+Consider the Fibonacci numbers: 1,1,2,3,5,8,13,21,34, defined by 
+F[i+2] = F[i+1] + F[i].  Calculate: 
+   0.11235 = 1/10 + 1/100 + 2/1000 + 3/10000 + 5/100000 +  + F[i]/10^i + ... 
+
+Alice tosses a fair coin 2000 times.  Bob tosses a fair coin 2001
+times.  What is the prob that B got more heads than A did?
+
+How many games in a single elimination tournament of 100 teams?
+
+There is either a brain or a kidney in a jar.  Put a brain in the
+jar.  Mix it around and pull out a brain.  What is the probability
+that you started with a brain?  
+
+6 pencils, each touches exactly two others only at the ends.  How many 
+vertices?  What shape?  (tetrahedron)
+
+Number of trailing zeros on 100! (24)? 120! (28)?
+
+4 people to cross a dark bridge which holds 2 people at a time.  Only
+one flashlight is available.  The people take 1,2,5,10 minutes to
+cross.  What is minimum total time?  How?
+
+Number of shortest paths from one corner of an N x M grid to the
+opposite corner (N+M choose N).  
+
+Number of ways of putting N (identical) balls in M bins?  (N+M choose N)
+
+Simulate a fair coin with a biased one. Probability that experiment
+terminates in finite time must be 1.  (too hard for interview
+question?) Simulate a biased coin with bias 0 < alpha < 1 with a fair
+coin. Experiment must terminate in finite time with probability 1.
+Flip the coin twice.  If you get HT -> H, if you get TH -> T.  If you
+get HH or TT, repeat.  Note, HHT does not map to H, it is incomplete.
+
+Which is bigger: (exp (X+Y))/2 or exp ((X+Y)/2) ?
+
+Two people in a garden. One says, "The product of the ages of my three
+sons is 36 and the sum is equal to the number of trees you see in the
+garden". The other one thinks about it for a while and then says,
+"Sorry I cant tell you how old your sons are, I do not have enough
+information". The first one replies, "My eldest son has blue
+eyes". How old are the sons? 
+
+You have two mirrors set at a 15 degree angle.  A beam of light comes
+in and hits one mirror, it is travelling parallel to the other
+mirror.  How many times does that beam hit the mirrors?  Think of the
+beam as a particle, so if it hits in point A, hits point B, then
+bounces back and hits point A again before escaping forever, that's 3
+hits.  
+       (answer: 11.  The beam hits the first mirror at an angle of 15
+	deg, then hits the second at 30 deg, then hits the first again
+	at 45 deg, etc., always adding 15 deg, until it hits at 90, at
+	which point it bounces back and hits all of the previous spots
+	again.)
+
+------------------------------------------------------------------------
+-- MATH Medium
+------------------------------------
+
+Imagine a ring with a bunch of colored marbles travelling around
+inside it. The marbles start off travelling at the same speed but in
+different directions. They collide perfectly elastically and can be
+condiered points. Show that after some finite time each marble returns
+to its original position with its original velocity (speed and
+direction). 
+
+----- Susquehanna questions ----------
+
+Drunkard leaves bar. Home is 50 paces to the North, the cliff is 30
+paces to the south. Drunkard walks randomly 1 pace N/S. What is
+probability that he gets home before he falls of cliff?
+At every step it is equally likely that he goes N as S.  For each
+step, the expected value of his position is the origin (the bar).  So
+after N steps, the expected value of his position still has to be the
+bar.  So 50 * prob(home) = 30 * prob(cliff) and prob(home) +
+prob(cliff) = 1.  So prob(home) = 3/8 and prob(cliff) = 5/8.
+
+Bank is offering following deal: You give them $10000 at the start of
+the year. At the end of the year they give you your money back if
+stock market has gone down, else 3/4 of the stock market return up to
+a maximum of 15% return on the capital you invested with them. What
+can you deduce about the options market? (Question about
+reconstructing a payoff).
+
+What is rank (A * A_transpose)? (personal favorite - you can either do
+a hand-wavy argument for the reals and the complex numbers, basically
+every matrix is diagonalizable if you perturb it slightly, have to be
+careful to keep this rigorous though. The only fully rigorous proof I
+know goes as follows: without loss of generality you can assume the
+base field is algebraically closed (eg the complex numbers) and then
+use Jordan Canonical form).
+
+You know a family has 2 kids, and one is a girl. What is the
+probability that they are both girls.
+1/3
+
+You know a family has 2 kids; one is called Rachael. What is the
+probability they are both girls? 
+If P is the probability that a girl is named Rachael then the
+probability is (2 - P) / (4 - P).  In the first question, where we
+know the family has a girl, a family with one boy and one girl just as
+easily satisfies the condition as a family with two girls.  In the
+second question, where the family has a Rachael, the family with two
+girls is almost twice as likely to have a Rachael than a family with
+one boy and one girl.  Note, it has nothing to do with the fact that a
+family will probably not have two girls named Rachael, as long as you
+assume that there are infinitely many girls' names -- if there are just
+a few girls' names, then it changes things again.  
+
+Now say you just know they have 2 kids, and that they are home
+alone. You come to the door and ring the bell. Girl answers. What is
+probability both kids are girls?
+
+You see an option for sale with implied vol 30%. You think it is a
+bargain, believing the volatility to be 40%, and hedge as if it had
+40% vol. Actually really the volatility is 30%. What happens? (Not
+sure what the correct answer is here, so comments welcome).
+
+You have an old-fashioned pair of scales (as in the infamous 12-ball
+problem). You need to weigh bags of flour with integer weights from 1
+to 40 lbs. What is the minimum set of weights that you can use to
+achieve this?  (you could use 1, 2, 4, 8, 16, 32 lb weights, but you
+can do better).
+Since you can put weights on either side of the scale, you can use 1,
+3, 9, 27 (supported by the circumstantial evidence that 1+3+9+27=40)
+
+100 lights.  Toggle switches.  Start with all off, toggle multiples of 
+1, 2, 3, ..., 100.  Which are on?  
+
+100 seats.  People arrive in order.  All but first follow the rule:
+If your seat is free, take it.  Otherwise choose a seat at random.
+First sits at random.  What is the probability that the last person
+sits in his/her correct seat? (1/2 by strong induction)
+
+A 4 mile line of soldiers, marching forward.  A runner starts at the
+back of the line, runs to the front of the line, then runs back to the 
+back of the line.  When he is finished, the back of the line of
+soldiers is where the front of the line was when the runner started
+running.  How far did the runner run?  
+
+Equal prob of 1-12 on 2 dice.  (one die normal, one has 3 zeroes and 3 
+sixes).
+
+Rabbit at the bottom of a staircase with N steps.  How many ways for
+the rabbit to reach the top?
+
+6 people in a room.  Each person shakes hands with some (not
+necessarily all) of the other people in the room.  Show that there is
+a group of 3 people all of whom have shaken hands with each other, or
+that there is a group of 3 people, all of whom have shaken hands with
+none of the others.
+
+Two ropes.  Each burn for an hour, unevenly.  How do you measure 45 
+minutes?
+
+Given 24 bottles of pills (all pills look the same).  23 bottles
+contains pills which weigh 1 oz.  1 bottle has pills which weigh .9
+oz.  Given a scale, how do you, with one weighing, figure out which
+bottle has the light pills?  What if there are two bottles of light
+pills?  What if there are an arbitrary number of bottles of light pills?
+
+A couple go to a party with 4 other couples.  Some people shake
+hands.  The wife asks everyone at the party how many people they shook 
+hands with and gets all different answers.  With how many people did
+her husband shake hands?  No one shakes hands with him/herself, no one 
+shakes hands with his/her spouse.  If you shake someone's hand, they
+shake yours.
+
+Cut an arbitrary rectangle out of a rectangular cake.  Split the rest
+in half with one cut.  Split an L shaped cake into portions of equal 
+size.  Split an L shaped cake into two pieces of equal size.
+
+You have a bag with 101 weighted coins.  For each i between 0 and 100,
+there is a coin whose probability of coming up heads is i%.  I
+randomly pick a coin from the bag and flip it n times.  It comes up
+heads every time.  What is the probability that the next flip will
+come up heads (as a function of n)?  
+
+------------------------------------------------------------------------
+-- MATH Hard
+------------------------------------
+
+Take two regular tetrahedrons, bases parallel, points facing each
+other, edges aligned.  Push them together until the point of one is in 
+the centroid of the other.  Turn one of them 60 degrees.  What is the
+shape of the intersection? (how many edges, how many vertices) (square)
+
+Come up with a scheme for you and a partner such that, given 5 cards
+from a normal deck of cards (no jokers), you can show four of them to
+a partner and the partner will know what the last card is. 
+
+Challenger and responder.  The challenger has a distribution on Z+ or
+R+.  Uses this to choose 2 distinct numbers.  Then he flips a coin.
+If heads, he reveals the higher number, if tails he reveals the
+lower.  How do you, as the responder, guess with probability better
+than 50% if the number is the higher one or the lower one?
+
+1000 wires.  For each wire, one end upstairs, one end downstairs.
+Upstairs the wire ends are numbered, downstairs they are
+numbered/lettered such that the numberings don't necessarily match.
+Downstairs there is a battery, upstairs there is a light bulb.  The
+only way to go from downstairs to upstairs is via an elevator that
+costs money.  How do you match the wire ends using the elevator as few 
+times as possible?  
+
+------------------------------------------------------------------------
+-- Design
+------------------------------------
+
+How would you design a date library?  
+
+Distributed system?  E.g. Let's say you have a common resource, and a
+number of machines all need part of that resource, but you don't know
+how much.  How do you distribute it among them?  Specifically, each
+machine uses the resource at a variable rate, how do you dynamically
+allocate the resource?  What if the rate that a machine uses the
+resource depends on its current allocation?  
+
+A locking system?  What are the pros and cons of an object model?
+
+Why no macros in java?  If you have a class with many member variables 
+and you want gettors and settors in each, what do you do?  
+
+What should do you do if you have two scripts in multiple languages
+which use the same constants?  
+
+------------------------------------------------------------------------
+-- Quantitative/Economics 
+------------------------------------
+
+I have an object (e.g. an antique).  You don't know how much it is
+worth, but you know that I think it is worth no more than $100.  You
+also know that some third party wants it.  In fact, the third party
+thinks it is worth 50% more than I think it's worth.  You have one
+chance to bid for the object from me.  If you bid more than I think
+it's worth, we will transact at your price.  Otherwise, there will be
+no transaction.  What is your bid?  the object has no intrinsic value
+to you, maximize expected profit, assume uniform prob over what i
+could think it's worth
+
+I have a revolver pointed at your head and I will spin the chamber and
+shoot.  If you pay me enough, I might remove one bullet from the gun.
+Would you offer me to pay me more if there is 1 bullet in the gun or
+if there are 2 bullets in the gun?
+
+You are one of X bidders for an auction.  You decide to bid V.  Then
+you are told that there is a new bidder.  Does your bid change?  How?
+
+------------------------------------------------------------------------
+-- solution to bidding question
+------------------------------------
+
+Here is the rigorous solution to the bidding question:
+
+
+Part of the difficulty of the question is that it's vague and you have to make a lot of assumptions.  These are the usual assumptions that I use:
+
+1. The object has no intrinsic value to you.  The only reason you to want the object is so you can sell it to the third person.  
+2. Somehow, if you buy the object, the third person will reveal his price to you in order to buy it from you.  Note, you don't know this beforehand because then you would know my price.  
+3. You are risk neutral.  Your only goal is to maximize your expected profit, no matter what the risk.  
+4. Since we have no other information, we assume that it is equally likely for the price to be any value between $0 and $100.  
+
+Here is the common sense solution:
+
+Let's say you bid $30.  Then, if I think the value is more than $30, nothing will happen.  If I think the value is between $20 and $30, you will make something between $0 and $10.  If I think the value is between $10 and $20, you will lose something between $0 and $10.  If I think the value is between $0 and $10, you will lose something between $10 and $20.  All of these possibilities are equally likely, and there are more negatives than positives.  So if you bid $30, you will lose money on average.
+
+
+But, none of the logic relied on the fact that you bid $30.  For any value you bid, one third of the time you will make money, and two thirds of the time you will lose money, and the money you could lose outweighs the money you could make.  So no matter what you bid, you are going to lose money on average.  
+
+So you shouldn't bid anything.  
+
+Here is the mathy solution (sort of tough to read without the proper symbols):
+
+We need to maximize expected profit.  So, figure out the function for profit, take the expected value, and maximize the resulting function.  
+
+Let's call my opinion of the object's value V
+So if you owned the object, you could sell it for 1.5 * V.  
+Let's call your profit P.  P is a function of what you bid and the object's
+value.  Let's say you bid B.  
+
+If V > B, nothing will happen and P=0.
+If V < B, I will sell you the object for B (your cost) and you will sell the object for 1.5 * V (your revenue), so your profit is P(B,V) = 1.5 V - B
+
+So P(B,V) 	= 0 		if V > B
+		= 1.5 V - B	if V <= B
+
+Now we take the expectation by V, which is evenly distributed between 0 and 100.  Note that since we are taking the expectation by V, we will eliminate V from the function.  The resulting function should be a function of B only.  
+
+E_v[P(B,V)] 	= f(B)
+			= integral from 0 to 100 of P(B,V)
+			= integral from 0 to B of (1.5 V - B) + integral from B to 100 of 0
+			= integral from 0 to B of (1.5 V - B) 
+			= (0.75 V^2 - BV) evalulated at v = B minus (0.75 V^2 - BV)  evaluated at v = 0
+			= 0.75 B^2 - B^2 minus 0
+			= 0.75 B^2 - B^2
+			= -0.25 B^2
+
+Now we have to maximize f(B) = -0.25 B^2.  But since B^2 is never negative, -0.25 B^2 is never positive.  So the value B=0, f(B) = 0, is the maximum value.  If you really want to convince yourself, look for the maximum value of f at these points: 
+	1. when the derivative is zero 
+df/dB = 2*(-0.25)*B = 0 
+	<==> B = 0 
+	<==> f(B) = 0 
+	(this also takes care of one boundary condition) 
+
+	2. at the boundary conditions (B = 0 and B = 100, the first of which is above)
+B = 100 
+	<==> f(B) = -0.25 * 10,000 = -2,500 < 0
+
+So your bid should be zero. 
+
+------------------------------------------------------------------------
+-- Data structure with random access, where you can reset all values in
+   constant time
+------------------------------------
+
+Call the structure ResetArray.  You want to be able to set or access
+ResetArray[x], but also run ResetArray.reset() to set everything back
+to a default value.  
+
+Three arrays (Data, Index, ReverseIndex) and a counter initialized to
+zero.  
+
+To set a value, "ResetArray[x] = v":
+   Index[x] = counter;
+   RevIndex[counter] = x;
+   Data[counter] = v;
+   counter++;
+
+To look up a value, "ResetArray[x]":
+   index = Index[x]
+   if (index >= counter) 
+      // This value was left over from before the last time we reset it
+      return default_value;
+   if (RevIndex[index] != x)
+      return default_value;
+   return Data[index];
+
+To reset the array to value d, "ResetArray.reset(d)", do:
+   default_value = d;
+   counter = 0;
+
+The reason you need to check the RevIndex, is because let's say you do
+this:
+   ResetArray[4] = 1
+   // Now Index[4] = 0, RevIndex[0] = 4, Data[0] = 1, counter = 1
+   ResetArray.reset();
+   // Now Index[4] = 0, RevIndex[0] = 4, Data[0] = 1, counter = 0
+   ResetArray[7] = 3
+   // Now Index[4] = 0, Index[7] = 0, RevIndex[0] = 7, Data[0] = 3, counter = 1
+
+   // If you didn't have RevIndex, you'd look up the Index of 4 and
+   // get 0, then you'd look up the data for 0 and get 3, which is
+   // actually the value for 7.  So you have to double check with
+   // RevIndex.  
+   print ResetArray[4]
+
+------------------------------------
+
+Another way to do it:
+
+Two arrays (Data, Version) and a current_version initialized to 1.  All values
+in Version are initialized to zero.  
+
+To set a value, "ResetArray[x] = v":
+   Data[x] = v
+   Version[x] = current_version
+
+To look up a value, "ResetArray[x]":
+   if Version[x] == current_version:
+      return Data[x]
+   elif Version[x] > current_version:
+      throw an error
+   else:
+      return default_value
+
+To reset the array to value d, "ResetArray.reset(d)", do:
+   default_value = d
+   current_version++
+
+
