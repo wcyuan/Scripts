@@ -1,0 +1,47 @@
+Instructions for building Ion3.  
+
+Caveat: ion3 is no longer actively supported, so it may be better to
+use a different WM anyway.
+
+1. Download ion-3-20090110.tar.gz from http://tuomov.iki.fi/software/
+
+2. Download ion-scripts-3-20090527.tar.gz from http://tuomov.iki.fi/software/
+
+3. Download lua-5.1.5.tar.gz from http://www.lua.org/ftp/
+   Note that though lua 5.2 is available, ion3 requires lua 5.1.  
+
+4. Install lua.  
+   a. Unzip and untar lua.  
+   b. Follow the directions in INSTALL
+   c. Run: make linux
+      or whatever the appropriate target is.  
+   d. Run: make local
+      This will tell lua to install into the local directory, and not
+      into the whole system, assuming you don't have permission to
+      install into the whole system.
+
+5. Build ion3.  
+   a. Unzip and untar ion3
+   b. Build instructions are in the README file
+   c. Modify ion3/system.mk
+      i.   Change the PREFIX variable at the top which indicates where to
+           install, assuming again that you want to install it locally, and
+           not in the whole system.
+      ii.  Change LUA_DIR to point to whereever you installed lua.  
+      iii. Run: make
+           to build
+      iv.  Run: make install
+           to install to the PREFIX directory
+
+6. Build ion3 scripts
+   a. Unzip and untar ion3-scripts
+
+   b. Run install-scripts.sh to create links in $HOME/.ion3/lib to the
+      location of the scripts.  Looks like this has to be run while
+      you are in the ion-scripts directory, not sure.  Also, you may
+      only want to do this if you .ion3 directory is currently empty.
+
+   c. In .ion3/, link cfg_ion.lua and conans_bindings.lua.  
+      All cfg_ion.lua does is set META to Control + Alt, load
+      emacs_bindings, and load conans_bindings.
+
