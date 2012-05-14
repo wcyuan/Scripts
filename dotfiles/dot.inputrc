@@ -26,12 +26,12 @@ $if mode=emacs
 #
 # 1. control whether history reverts after a newline:
 #
-#set revert-all-at-newline on
+set revert-all-at-newline on
 #
 # Instead, just learn to use 
 #    Ctrl-G (cancel a search)
 #    Meta-> (go to the end of the history)
-#
+# I can't seem to learn to use these, so I'll just turn this on.  
 #
 # 2. In tcsh: control-w deletes from the beginning of the line to the
 # cursor.  
