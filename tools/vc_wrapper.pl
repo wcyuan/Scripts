@@ -140,6 +140,11 @@ fdiff and fmerge work for both SVN and CVS
 
 package Logger;
 
+#
+# Use this simple Logger class instead of Log::Log4perl because
+# Log::Log4perl doesn't seem to be installed by default on cygwin.
+#
+
 use Carp;
 use Data::Dumper;
 
@@ -151,39 +156,40 @@ our %LEVELS = (DEBUG      => 50,
 our %REVLEVELS = map { $LEVELS{$_} => $_ } keys(%LEVELS);
 
 sub new($;$) {
-  my ($this, $level) = @_;
-  my $class = ref($this) || $this;
-  my $self = {};
-  $level //= 'WARN';
-  bless $self, $class;
-  return $self;
+    my ($this, $level) = @_;
+    my $class = ref($this) || $this;
+    my $self = {};
+    $level //= 'WARN';
+    $self->{level} = $level;
+    bless $self, $class;
+    return $self;
 }
 
 sub level($;$) {
-  my ($self, $level) = @_;
-  if (defined($level)) {
-    if (defined($LEVELS{$level})) {
-      $self->{level} = $level;
-    } elsif (defined($REVLEVELS{$level})) {
-      $self->{level} = $REVLEVELS{$level};
-    } else {
-      confess("Unknown level: $level");
+    my ($self, $level) = @_;
+    if (defined($level)) {
+        if (defined($LEVELS{$level})) {
+            $self->{level} = $level;
+        } elsif (defined($REVLEVELS{$level})) {
+            $self->{level} = $REVLEVELS{$level};
+        } else {
+            confess("Unknown level: $level");
+        }
     }
-  }
-  return $self->{level};
+    return $self->{level};
 }
 
 sub output($$$) {
-  my ($self, $level, $msg) = @_;
-  if ($LEVELS{$self->{level}} >= $LEVELS{$level}) {
-    my ($pack, $fn, $line, $sub) = caller(2);
-    my $str = "[$level][$sub:$line] $msg";
-    if ($level eq 'LOGCONFESS') {
-      confess($str);
-    } else {
-      print STDERR "$str\n";
+    my ($self, $level, $msg) = @_;
+    if ($LEVELS{$self->{level}} >= $LEVELS{$level}) {
+        my ($pack, $fn, $line, $sub) = caller(2);
+        my $str = "[$level][$sub:$line] $msg";
+        if ($level eq 'LOGCONFESS') {
+            confess($str);
+        } else {
+            print STDERR "$str\n";
+        }
     }
-  }
 }
 
 sub debug($$)      { $_[0]->output('DEBUG',      $_[1]) }
