@@ -1586,6 +1586,10 @@ sub rev_match($$$) {
 # -missing 
 #        Instead of printing revisions where this pattern matches,
 #        print revisions where the pattern doesn't match.  
+#
+#
+# For git, you can also try this:
+# git log --pretty=format:"COMMIT %h (%ci) %s" --follow -p -U0 <file> | egrep 'COMMIT|<pattern>' | less
 sub grep_hist($$$$$$) {
     my ($repo_type, $action, $options, $files, 
         $show_missing, $all_revs, 
