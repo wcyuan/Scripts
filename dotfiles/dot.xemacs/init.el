@@ -294,6 +294,7 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;;; I probably want these
 ;;;
 ;
+;(setq-default show-trailing-whitespace t) ;; highlight trailing whitespace
 ;(setq frame-title-format mode-line-buffer-identification)
 ;(setq enable-local-variables t)		;; let files specify major-mode
 ;;;; Indent with spaces, not tabs
@@ -303,6 +304,8 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;; customize mode line
 ;(setq display-time-string-forms '((format "%s:%s%s" 12-hours minutes am-pm)))
 ;(display-time)				;; show current time
+;(put 'narrow-to-region 'disabled nil)	;; enable C-x-n-n
+;(setq diff-switches "-wu")              ;; switches to pass to diff
 ;
 ;;; ---------------------------------------------------------------- ;;
 ;; I don't think I need these
@@ -455,3 +458,5 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 
 ;; (if window-system
 ;;     (fontify))
+
+;; ---------------------------------------------------------------- ;;
