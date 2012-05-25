@@ -74,6 +74,8 @@
 ;; M-l       -- make the next word all lowercase
 ;; M-c       -- make the next word title (first letter capital, rest lower)
 ;;
+;; M-space   -- collapse whitespace into a single space
+;;
 ;; -- Advanced --
 ;;
 ;;   You only need these occasionally, but when you do, they are awesome
