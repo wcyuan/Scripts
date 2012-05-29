@@ -51,6 +51,7 @@ alias   ruinterm="echo -n ^N"
 alias    fixterm="echo -n "
 alias        hex='printf "%x\n"'
 alias       beep='perl -e "print \"\a\";"'
+alias        fep=rlwrap
 
 # ----------------------------------------------------
 # Completion
