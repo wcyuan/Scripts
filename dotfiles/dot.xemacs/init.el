@@ -131,6 +131,8 @@
 (setq dired-listing-switches (concat dired-listing-switches "F"))
 (put 'narrow-to-region 'disabled nil)	;; Enable C-x-n-n
 (setq diff-switches "-wu")              ;; Switches to pass to diff
+(setq require-final-newline t)          ;; Always make sure files end
+                                        ;; with newlines
 
 ;; customize mode line
 (setq display-time-string-forms '((format "%s:%s%s" 12-hours minutes am-pm)))
@@ -171,6 +173,22 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 (setq auto-mode-alist (append '(("\\.bashrc\\'" . bash-mode)
                                 )
                               auto-mode-alist))
+
+;; ---------------------------------------------------------------- ;;
+;; Perl
+;;
+; http://www.emacswiki.org/emacs/CPerlMode
+;; cperl-mode is preferred to perl-mode
+;; "Brevity is the soul of wit" <foo at acm.org>
+(defalias 'perl-mode 'cperl-mode)
+
+; http://www.emacswiki.org/emacs/IndentingPerl
+(setq cperl-indent-level 4
+      cperl-continued-statement-offset 4
+      ;cperl-close-paren-offset -4
+      ;cperl-indent-parens-as-block t
+      ;cperl-tab-always-indent t
+      )
 
 ;; ---------------------------------------------------------------- ;;
 ;; VC
@@ -243,11 +261,6 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 	(t (self-insert-command (or arg 1)))))
 
 (global-set-key "%" 'goto-match-paren)
-
-;; ---------------------------------------------------------------- ;;
-;; Always make sure files end with newlines
-;;
-(setq require-final-newline t)
 
 ;; ---------------------------------------------------------------- ;;
 ;; Matlab mode
