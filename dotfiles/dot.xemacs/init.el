@@ -103,24 +103,63 @@
 
 
 ;; ---------------------------------------------------------------- ;;
-;; Macros for determining whether we are in emacs or xemacs
+;; Macros for determining whether we are in emacs or xemacs, etc.
 ;;
-;(defmacro GNUEmacs (&rest x)
-;  (list 'if (string-match "GNU Emacs" (version)) (cons 'progn x)))
-;(defmacro XEmacs (&rest x)
-;  (list 'if (string-match "XEmacs" (version)) (cons 'progn x)))
-;(defun emacs-number ()
-;  "Return emacs version as a number"
-;  (interactive)
-;  (+ emacs-major-version (/ emacs-minor-version 10.0)))  
-;(defmacro Unix (&rest x)
-;  (list 'if (not (eq system-type 'windows-nt)) (cons 'progn x)))
-;(defmacro Windows (&rest x)
-;  (list 'if (eq system-type 'windows-nt) (cons 'progn x)))
+(defmacro GNUEmacs (&rest x)
+  (list 'if (string-match "GNU Emacs" (version)) (cons 'progn x)))
+(defmacro XEmacs (&rest x)
+  (list 'if (string-match "XEmacs" (version)) (cons 'progn x)))
+(defun emacs-number ()
+  "Return emacs version as a number"
+  (interactive)
+  (+ emacs-major-version (/ emacs-minor-version 10.0)))
+(defmacro Unix (&rest x)
+  (list 'if (not (eq system-type 'windows-nt)) (cons 'progn x)))
+(defmacro Windows (&rest x)
+  (list 'if (eq system-type 'windows-nt) (cons 'progn x)))
+
+;; ---------------------------------------------------------------- ;;
+;; Various configuration
+;;
+(setq-default show-trailing-whitespace t) ;; highlight trailing
+					  ;; whitespace (only works in
+					  ;; emacs, not xemacs)
+(setq frame-title-format mode-line-buffer-identification)
+(setq enable-local-variables t)		;; Let files specify major-mode
+(setq-default indent-tabs-mode nil)     ;; Indent with spaces, not tabs
+(setq inhibit-startup-message t)	;; No emacs start-up message
+(setq dired-listing-switches (concat dired-listing-switches "F"))
+(put 'narrow-to-region 'disabled nil)	;; Enable C-x-n-n
+(setq diff-switches "-wu")              ;; Switches to pass to diff
+
+;; customize mode line
+(setq display-time-string-forms '((format "%s:%s%s" 12-hours minutes am-pm)))
+(display-time)				;; Show current time
+
+;; ---------------------------------------------------------------- ;;
+;; Turn off the toolbar
+;;
+(if (featurep 'toolbar)                 ;; XEmacs
+    (set-specifier default-toolbar-visible-p nil)) ;; turn off toolbar
+(if (functionp 'tool-bar-mode)          ;; GNUEmacs 21.3
+    (tool-bar-mode -1))                 ;; turn off toolbar
+
+;; ---------------------------------------------------------------- ;;
+;; Make C-xC-c kill this frame before killing all of emacs
+;;
+;; Otherwise, if you just want to kill a frame, use C-x 5 0
+;;
+(global-set-key "\C-x\C-c" 'close-frame-or-exit)
+(defun close-frame-or-exit ()
+  "If multiple frames, close a frame, otherwise exit emacs."
+  (interactive)
+  (if (= (length (frame-list)) 1)
+      (save-buffers-kill-emacs)
+    (delete-frame)))
 
 ;; ---------------------------------------------------------------- ;;
 ;; Bash mode
-
+;;
 (defun bash-mode ()
   "Major mode for editing bash shell scripts.
 Enters shell-script[bash] mode (see `shell-script-mode')."
@@ -135,6 +174,7 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 
 ;; ---------------------------------------------------------------- ;;
 ;; VC
+;;
 
 ;;
 ;; C-x v v    -- check in/out
@@ -183,17 +223,14 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 
 ;; ---------------------------------------------------------------- ;;
 ;; Parens
+;;
+(GNUEmacs (show-paren-mode 1)                   ;; highlight matching parens
+          (setq show-paren-style 'expression))  ;; highlight entire expression
 
 ; sexp mode will highlight the entire block contained in the parens,
 ; when the cursor is placed right after a paren
-; (This is xemacs specific, it's a different command in emacs)
-(require 'paren)
-(paren-set-mode 'sexp)
-
-;(GNUEmacs (show-paren-mode 1)			;; highlight matching parens
-;	   (setq show-paren-style 'expression))	;; highlight entire expression
-;(XEmacs (require 'paren)			;; XEmacs
-;	 (paren-set-mode 'sexp))		;; highlight entire expression
+(XEmacs (require 'paren)                        ;; XEmacs
+        (paren-set-mode 'sexp))                 ;; highlight entire expression
 
 ; From http://www.emacswiki.org/emacs/ParenthesisMatching#toc6
 (defun goto-match-paren (arg)
@@ -209,19 +246,17 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 
 ;; ---------------------------------------------------------------- ;;
 ;; Always make sure files end with newlines
+;;
 (setq require-final-newline t)
 
 ;; ---------------------------------------------------------------- ;;
 ;; Matlab mode
-
+;;
 (add-to-list 'load-path "~/.xemacs/matlab-emacs/matlab-emacs/")
 (require 'matlab-load)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; These work in emacs, have to check to see if they work in xemacs
-;;
 ;;; ---------------------------------------------------------------- ;;
 ;;;
 ;;; Tags
@@ -273,47 +308,10 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;    (setq truncate-lines 1)))
 ;
 ;;; ---------------------------------------------------------------- ;;
-;;;
-;;; Turn off the toolbar
-;;;
-;(if (featurep 'toolbar)                 ;; XEmacs
-;    (set-specifier default-toolbar-visible-p nil))      ;; turn off toolbar
-;(if (functionp 'tool-bar-mode)          ;; GNUEmacs 21.3
-;    (tool-bar-mode -1))                 ;; turn off toolbar
-;
-;;;
-;;; ---------------------------------------------------------------- ;;
-;;; Make C-xC-c kill this frame before killing all of emacs
-;
-;(global-set-key "\C-x\C-c" 'close-frame-or-exit)
-;(defun close-frame-or-exit ()
-;  "If multiple frames, close a frame, otherwise exit emacs."
-;  (interactive)
-;  (if (= (length (frame-list)) 1)
-;      (save-buffers-kill-emacs)
-;    (delete-frame)))
-;;; ---------------------------------------------------------------- ;;
-;;; I probably want these
-;;;
-;
-;(setq-default show-trailing-whitespace t) ;; highlight trailing whitespace
-;(setq frame-title-format mode-line-buffer-identification)
-;(setq enable-local-variables t)		;; let files specify major-mode
-;;;; Indent with spaces, not tabs
-;(setq-default indent-tabs-mode nil)
-;(setq inhibit-startup-message t)	;; no emacs start-up message
-;(setq dired-listing-switches (concat dired-listing-switches "F"))
-;; customize mode line
-;(setq display-time-string-forms '((format "%s:%s%s" 12-hours minutes am-pm)))
-;(display-time)				;; show current time
-;(put 'narrow-to-region 'disabled nil)	;; enable C-x-n-n
-;(setq diff-switches "-wu")              ;; switches to pass to diff
-;
-;;; ---------------------------------------------------------------- ;;
 ;; I don't think I need these
 ;
 ;(setq search-highlight t)		;; highlight search strings
-;; (Windows (require 'cygwin32-mount))	;; read cygwin mount points
+;;(Windows (require 'cygwin32-mount))	;; read cygwin mount points
 ;(GNUEmacs (transient-mark-mode 1))      ;; highlight region when mark is active
 ;(setq next-line-add-newlines nil)	;; no newlines at end of buffer
 ;(setq scroll-step 3)			;; set scrolling
@@ -326,7 +324,7 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;(setq default-major-mode 'text-mode)	;; text mode as default
 ;(setq find-file-existing-other-name t)	;; handle symbolic links
 ;(setq-default mode-line-mule-info "-")
-;(setq display-time-mail-file t)		;; don't check for new mail
+;(setq display-time-mail-file t)	;; don't check for new mail
 ;
 ;; ---------------------------------------------------------------- ;;
 ;; Cscope
