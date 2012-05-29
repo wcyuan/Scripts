@@ -190,36 +190,46 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;; from http://snarfed.org/gnu_emacs_backup_files
 ;;
 
+;; For Emacs
+;; Put autosave files (ie #foo#) and backup files (ie foo~) in ~/.emacs.d/.
+(GNUEmacs (custom-set-variables
+           '(auto-save-file-name-transforms '((".*" "~/.emacs.d/autosaves/\\1" t)))
+           '(backup-directory-alist '((".*" . "~/.emacs.d/backups/"))))
+
+          ;; create the autosave dir if necessary, since emacs won't.
+          (make-directory "~/.emacs.d/autosaves/" t))
+
+;; For XEmacs
 ;; Auto-save
 ;; Load the auto-save.el package, which lets you put all of your autosave
 ;; files in one place, instead of scattering them around the file system.
 ;; M-x recover-all-files or M-x recover-file to get them back
-(defvar temp-directory "~/.xemacs/tmp")
-(make-directory temp-directory t)
+(XEmacs (defvar temp-directory "~/.xemacs/tmp")
+        (make-directory temp-directory t)
 
-(setq auto-save-directory (concat temp-directory "/autosave")
-      auto-save-hash-directory (concat temp-directory "/autosave-hash")
-      auto-save-directory-fallback "/tmp"
-      auto-save-list-file-prefix (concat temp-directory "/autosave-")
-      auto-save-hash-p nil
-      auto-save-timeout 100
-      auto-save-interval 300)
-(make-directory auto-save-directory t)
-(require 'auto-save)
+        (setq auto-save-directory (concat temp-directory "/autosave")
+              auto-save-hash-directory (concat temp-directory "/autosave-hash")
+              auto-save-directory-fallback "/tmp"
+              auto-save-list-file-prefix (concat temp-directory "/autosave-")
+              auto-save-hash-p nil
+              auto-save-timeout 100
+              auto-save-interval 300)
+        (make-directory auto-save-directory t)
+        (require 'auto-save)
 
-;;; Put backups in another directory.  With the directory-info
-;;; variable, you can control which files get backed up where.
-(require 'backup-dir)
-(setq bkup-backup-directory-info
-      `(
-        (t ,(concat temp-directory "/backups") ok-create full-path)
-        ))
-(setq make-backup-files t)
-(setq backup-by-copying t)
-(setq backup-by-copying-when-mismatch t)
-(setq backup-by-copying-when-linked t)
-(setq version-control t)
-(setq-default delete-old-versions t)
+        ;; Put backups in another directory.  With the directory-info
+        ;; variable, you can control which files get backed up where.
+        (require 'backup-dir)
+        (setq bkup-backup-directory-info
+              `(
+                (t ,(concat temp-directory "/backups") ok-create full-path)
+                ))
+        (setq make-backup-files t)
+        (setq backup-by-copying t)
+        (setq backup-by-copying-when-mismatch t)
+        (setq backup-by-copying-when-linked t)
+        (setq version-control t)
+        (setq-default delete-old-versions t))
 
 ;; ---------------------------------------------------------------- ;;
 ;; Parens
