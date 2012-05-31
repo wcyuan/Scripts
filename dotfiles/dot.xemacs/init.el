@@ -102,6 +102,7 @@
 ;;              buffer and makes the rest inaccessible.
 ;; C-x n w   -- Widen.  Un-narrow, so you can see thw whole buffer again
 ;;
+;; M-!       -- Run a shell command
 ;; ---------------------------------------------------------------- ;;
 
 
