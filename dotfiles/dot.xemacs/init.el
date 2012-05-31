@@ -103,6 +103,10 @@
 ;; C-x n w   -- Widen.  Un-narrow, so you can see thw whole buffer again
 ;;
 ;; M-!       -- Run a shell command
+;;
+;; http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html
+;; http://www.emacswiki.org/emacs/EmacsWiki
+;;
 ;; ---------------------------------------------------------------- ;;
 
 
@@ -208,37 +212,64 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;;
 ;; from http://snarfed.org/gnu_emacs_backup_files
 ;;
+;; http://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Save.html#Auto-Save
+;; http://www.gnu.org/software/emacs/manual/html_node/emacs/Backup.html#Backup
+;;
+;; Auto-save: emacs automatically saves the buffer periodically, every
+;; 300 (auto-save-interval) characters or auto-save-timeout seconds.
+;; It also auto-saves every time there is a fatal error.  Force an
+;; auto-save with do-auto-save.  Whether you auto-save is controled by
+;; auto-save-default.
+;;
+;; Backups: The first time you save a file, the previous version of
+;; that file is saved as a backup.  After that, the backup doesn't
+;; change, no matter how many times you save it, until you revisit the
+;; file.  There are no backups for files controlled by version
+;; control.  Whether you have backups is controled by
+;; make-backup-files (or vc-make-backup-files, for version controlled
+;; files).
+;;
 
-;; Auto-save
-;; Load the auto-save.el package, which lets you put all of your autosave
-;; files in one place, instead of scattering them around the file system.
-;; M-x recover-all-files or M-x recover-file to get them back
-(defvar temp-directory "~/.xemacs/tmp")
-(make-directory temp-directory t)
+(GNUEmacs
+ ;; Put autosave files (ie #foo#) and backup files (ie foo~) in ~/.emacs.d/.
+ (custom-set-variables
+  '(auto-save-file-name-transforms '((".*" "~/.emacs.d/autosaves/\\1" t)))
+  '(backup-directory-alist '((".*" . "~/.emacs.d/backups/"))))
 
-(setq auto-save-directory (concat temp-directory "/autosave")
-      auto-save-hash-directory (concat temp-directory "/autosave-hash")
-      auto-save-directory-fallback "/tmp"
-      auto-save-list-file-prefix (concat temp-directory "/autosave-")
-      auto-save-hash-p nil
-      auto-save-timeout 100
-      auto-save-interval 300)
-(make-directory auto-save-directory t)
-(require 'auto-save)
+ ;; create the autosave dir if necessary, since emacs won't.
+ (make-directory "~/.emacs.d/autosaves/" t))
 
-;;; Put backups in another directory.  With the directory-info
-;;; variable, you can control which files get backed up where.
-(require 'backup-dir)
-(setq bkup-backup-directory-info
-      `(
-        (t ,(concat temp-directory "/backups") ok-create full-path)
-        ))
-(setq make-backup-files t)
-(setq backup-by-copying t)
-(setq backup-by-copying-when-mismatch t)
-(setq backup-by-copying-when-linked t)
-(setq version-control t)
-(setq-default delete-old-versions t)
+(XEmacs
+ ;; Auto-save
+ ;; Load the auto-save.el package, which lets you put all of your autosave
+ ;; files in one place, instead of scattering them around the file system.
+ ;; M-x recover-all-files or M-x recover-file to get them back
+ (defvar temp-directory "~/.xemacs/tmp")
+ (make-directory temp-directory t)
+
+ (setq auto-save-directory (concat temp-directory "/autosave")
+       auto-save-hash-directory (concat temp-directory "/autosave-hash")
+       auto-save-directory-fallback "/tmp"
+       auto-save-list-file-prefix (concat temp-directory "/autosave-")
+       auto-save-hash-p nil
+       auto-save-timeout 100
+       auto-save-interval 300)
+ (make-directory auto-save-directory t)
+ (require 'auto-save)
+
+ ;; Put backups in another directory.  With the directory-info
+ ;; variable, you can control which files get backed up where.
+ (require 'backup-dir)
+ (setq bkup-backup-directory-info
+       `(
+         (t ,(concat temp-directory "/backups") ok-create full-path)
+         ))
+ (setq make-backup-files t)
+ (setq backup-by-copying t)
+ (setq backup-by-copying-when-mismatch t)
+ (setq backup-by-copying-when-linked t)
+ (setq version-control t)
+ (setq-default delete-old-versions t))
 
 ;; ---------------------------------------------------------------- ;;
 ;; Parens
@@ -288,9 +319,10 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;; ---------------------------------------------------------------- ;;
 ;; Matlab mode
 ;;
-(add-to-list 'load-path "~/.xemacs/matlab-emacs/matlab-emacs/")
-(require 'matlab-load)
-
+(if (file-exists-p "~/.xemacs/matlab-emacs/matlab-emacs/")
+    (progn
+      (add-to-list 'load-path "~/.xemacs/matlab-emacs/matlab-emacs/")
+      (require 'matlab-load)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ---------------------------------------------------------------- ;;
