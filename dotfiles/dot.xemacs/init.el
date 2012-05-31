@@ -493,8 +493,8 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;; ---------------------------------------------------------------- ;;
 ;; Flymake
 ;;
-;; http://www.emacswiki.org/emacs/PythonMode#toc8
 ;; http://www.gnu.org/software/emacs/manual/html_mono/flymake.html
+;; http://www.emacswiki.org/emacs/PythonMode#toc8
 ;;
 
 ;; (when (load "flymake" t)
