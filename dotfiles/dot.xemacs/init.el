@@ -80,7 +80,10 @@
 ;;
 ;;   You only need these occasionally, but when you do, they are awesome
 ;;
-;; C-u <n>   -- repeat a command <n> times.  <n> defaults to 4
+;; C-u <n> <cmd>
+;;           -- repeat command <cmd> <n> times.  <n> defaults to 4
+;; C-u is a general "universal argument" that is used to alter the
+;; behavior of many emacs commands.
 ;;
 ;; C-x (     -- start defining a macro
 ;; C-x )     -- finish defining a macro
