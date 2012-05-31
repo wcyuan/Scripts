@@ -281,7 +281,8 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
         (setq show-trailing-whitespace nil))
       (progn
         (message "show-trailing-whitespace ON")
-        (setq show-trailing-whitespace t))))
+        (setq show-trailing-whitespace t)))
+  (redraw-display))
 (global-set-key "\C-cw" 'toggle-trailing-whitespace)
 
 ;; ---------------------------------------------------------------- ;;
