@@ -30,7 +30,7 @@
 ;; M-<down>  -- move backwards a block
 ;; C-a       -- go to beginning of line
 ;; C-e       -- go to end of line
-;; M-g       -- goto line number
+;; M-g g     -- goto line number
 ;; M-<       -- goto beginning of file
 ;; M->       -- goto end of file
 ;;
