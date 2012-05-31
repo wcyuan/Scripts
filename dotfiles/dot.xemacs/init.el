@@ -104,6 +104,9 @@
 ;;
 ;; M-!       -- Run a shell command
 ;;
+;; M-x make-frame-on-display
+;;           -- open a window on a different display
+;;
 ;; http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html
 ;; http://www.emacswiki.org/emacs/EmacsWiki
 ;;
