@@ -17,7 +17,7 @@
 ;;
 ;; -- Basic --
 ;;
-;;   Things any decent editor has to be able to do.  
+;;   Things any decent editor has to be able to do.
 ;;
 ;; C-_       -- undo
 ;; C-x u     -- undo
@@ -121,9 +121,6 @@
 ;; ---------------------------------------------------------------- ;;
 ;; Various configuration
 ;;
-(setq-default show-trailing-whitespace t) ;; highlight trailing
-					  ;; whitespace (only works in
-					  ;; emacs, not xemacs)
 (setq frame-title-format mode-line-buffer-identification)
 (setq enable-local-variables t)		;; Let files specify major-mode
 (setq-default indent-tabs-mode nil)     ;; Indent with spaces, not tabs
@@ -263,6 +260,27 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 (global-set-key "%" 'goto-match-paren)
 
 ;; ---------------------------------------------------------------- ;;
+;; Trailing whitespace
+;;
+;;   only works in emacs, not xemacs
+;;
+
+;; Highlight trailing whitespace by default
+(setq-default show-trailing-whitespace t)
+
+(defun toggle-trailing-whitespace ()
+  "Toggle the trailing whitespace indicator"
+  (interactive)
+  (if show-trailing-whitespace
+      (progn
+        (message "show-trailing-whitespace OFF")
+        (setq show-trailing-whitespace nil))
+      (progn
+        (message "show-trailing-whitespace ON")
+        (setq show-trailing-whitespace t))))
+(global-set-key "\C-cw" 'toggle-trailing-whitespace)
+
+;; ---------------------------------------------------------------- ;;
 ;; Matlab mode
 ;;
 (add-to-list 'load-path "~/.xemacs/matlab-emacs/matlab-emacs/")
@@ -296,7 +314,7 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;;;
 ;(require 'column-marker)
 ;
-;(defun set-eighty-column () 
+;(defun set-eighty-column ()
 ;  "Highlight the 80th column"
 ;  (interactive)
 ;  (if column-marker-1
