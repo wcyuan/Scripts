@@ -491,3 +491,39 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;;     (fontify))
 
 ;; ---------------------------------------------------------------- ;;
+;; Flymake
+;;
+;; http://www.emacswiki.org/emacs/PythonMode#toc8
+;; http://www.gnu.org/software/emacs/manual/html_mono/flymake.html
+;;
+
+;; (when (load "flymake" t)
+;;   (defun flymake-pylint-init ()
+;;     (let* ((temp-file (flymake-init-create-temp-buffer-copy
+;;                        'flymake-create-temp-inplace))
+;;        (local-file (file-relative-name
+;;                     temp-file
+;;                     (file-name-directory buffer-file-name))))
+;;       (list "epylint" (list local-file))))
+
+;;   (add-to-list 'flymake-allowed-file-name-masks
+;;            '("\\.py\\'" flymake-pylint-init)))
+
+;; (setq flymake-allowed-file-name-masks
+;;       '(("\\.py\\'" flymake-pylint-init)
+;;         ("\\.html?\\'" flymake-xml-init)
+;;         ("\\.cs\\'" flymake-simple-make-init)
+;;         ("\\.pl\\'" flymake-perl-init)
+;;         ("[0-9]+\\.tex\\'" flymake-master-tex-init flymake-master-cleanup)
+;;         ("\\.tex\\'" flymake-simple-tex-init)
+;;         ("\\.idl\\'" flymake-simple-make-init)))
+;; ; remove the c, java, and xml flymake hooks since those don't seem to work.
+;;   ;("\\.c\\'" flymake-simple-make-init)
+;;   ;("\\.cpp\\'" flymake-simple-make-init)
+;;   ;("\\.xml\\'" flymake-xml-init)
+;;   ;("\\.h\\'" flymake-master-make-header-init flymake-master-cleanup)
+;;   ;("\\.java\\'" flymake-simple-make-java-init flymake-simple-java-cleanup)
+
+;; (add-hook 'find-file-hook 'flymake-find-file-hook)
+
+;; ---------------------------------------------------------------- ;;
