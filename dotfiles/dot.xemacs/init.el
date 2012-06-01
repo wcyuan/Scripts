@@ -17,7 +17,7 @@
 ;;
 ;; -- Basic --
 ;;
-;;   Things any decent editor has to be able to do.  
+;;   Things any decent editor has to be able to do.
 ;;
 ;; C-_       -- undo
 ;; C-x u     -- undo
@@ -30,7 +30,8 @@
 ;; M-<down>  -- move backwards a block
 ;; C-a       -- go to beginning of line
 ;; C-e       -- go to end of line
-;; M-g       -- goto line number
+;; M-g g     -- goto line number (emacs)
+;; M-g       -- goto line number (xemacs)
 ;; M-<       -- goto beginning of file
 ;; M->       -- goto end of file
 ;;
@@ -80,7 +81,10 @@
 ;;
 ;;   You only need these occasionally, but when you do, they are awesome
 ;;
-;; C-u <n>   -- repeat a command <n> times.  <n> defaults to 4
+;; C-u <n> <cmd>
+;;           -- repeat command <cmd> <n> times.  <n> defaults to 4
+;; C-u is a general "universal argument" that is used to alter the
+;; behavior of many emacs commands.
 ;;
 ;; C-x (     -- start defining a macro
 ;; C-x )     -- finish defining a macro
@@ -98,6 +102,14 @@
 ;; C-x n n   -- narrow to region.  This only shows this portion of the
 ;;              buffer and makes the rest inaccessible.
 ;; C-x n w   -- Widen.  Un-narrow, so you can see thw whole buffer again
+;;
+;; M-!       -- Run a shell command
+;;
+;; M-x make-frame-on-display
+;;           -- open a window on a different display
+;;
+;; http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html
+;; http://www.emacswiki.org/emacs/EmacsWiki
 ;;
 ;; ---------------------------------------------------------------- ;;
 
@@ -121,9 +133,6 @@
 ;; ---------------------------------------------------------------- ;;
 ;; Various configuration
 ;;
-(setq-default show-trailing-whitespace t) ;; highlight trailing
-					  ;; whitespace (only works in
-					  ;; emacs, not xemacs)
 (setq frame-title-format mode-line-buffer-identification)
 (setq enable-local-variables t)		;; Let files specify major-mode
 (setq-default indent-tabs-mode nil)     ;; Indent with spaces, not tabs
@@ -207,47 +216,63 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;;
 ;; from http://snarfed.org/gnu_emacs_backup_files
 ;;
+;; http://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Save.html#Auto-Save
+;; http://www.gnu.org/software/emacs/manual/html_node/emacs/Backup.html#Backup
+;;
+;; Auto-save: emacs automatically saves the buffer periodically, every
+;; 300 (auto-save-interval) characters or auto-save-timeout seconds.
+;; It also auto-saves every time there is a fatal error.  Force an
+;; auto-save with do-auto-save.  Whether you auto-save is controled by
+;; auto-save-default.
+;;
+;; Backups: The first time you save a file, the previous version of
+;; that file is saved as a backup.  After that, the backup doesn't
+;; change, no matter how many times you save it, until you revisit the
+;; file.  There are no backups for files controlled by version
+;; control.  Whether you have backups is controled by
+;; make-backup-files (or vc-make-backup-files, for version controlled
+;; files).
+;;
 
-;; For Emacs
-;; Put autosave files (ie #foo#) and backup files (ie foo~) in ~/.emacs.d/.
-(GNUEmacs (custom-set-variables
-           '(auto-save-file-name-transforms '((".*" "~/.emacs.d/autosaves/\\1" t)))
-           '(backup-directory-alist '((".*" . "~/.emacs.d/backups/"))))
+(GNUEmacs
+ ;; Put autosave files (ie #foo#) and backup files (ie foo~) in ~/.emacs.d/.
+ (custom-set-variables
+  '(auto-save-file-name-transforms '((".*" "~/.emacs.d/autosaves/\\1" t)))
+  '(backup-directory-alist '((".*" . "~/.emacs.d/backups/"))))
+ ;; create the autosave dir if necessary, since emacs won't.
+ (make-directory "~/.emacs.d/autosaves/" t))
 
-          ;; create the autosave dir if necessary, since emacs won't.
-          (make-directory "~/.emacs.d/autosaves/" t))
+(XEmacs
+ ;; Auto-save
+ ;; Load the auto-save.el package, which lets you put all of your autosave
+ ;; files in one place, instead of scattering them around the file system.
+ ;; M-x recover-all-files or M-x recover-file to get them back
+ (defvar temp-directory "~/.xemacs/tmp")
+ (make-directory temp-directory t)
 
-;; For XEmacs
-;; Auto-save
-;; Load the auto-save.el package, which lets you put all of your autosave
-;; files in one place, instead of scattering them around the file system.
-;; M-x recover-all-files or M-x recover-file to get them back
-(XEmacs (defvar temp-directory "~/.xemacs/tmp")
-        (make-directory temp-directory t)
+ (setq auto-save-directory (concat temp-directory "/autosave")
+       auto-save-hash-directory (concat temp-directory "/autosave-hash")
+       auto-save-directory-fallback "/tmp"
+       auto-save-list-file-prefix (concat temp-directory "/autosave-")
+       auto-save-hash-p nil
+       auto-save-timeout 100
+       auto-save-interval 300)
+ (make-directory auto-save-directory t)
+ (require 'auto-save)
 
-        (setq auto-save-directory (concat temp-directory "/autosave")
-              auto-save-hash-directory (concat temp-directory "/autosave-hash")
-              auto-save-directory-fallback "/tmp"
-              auto-save-list-file-prefix (concat temp-directory "/autosave-")
-              auto-save-hash-p nil
-              auto-save-timeout 100
-              auto-save-interval 300)
-        (make-directory auto-save-directory t)
-        (require 'auto-save)
-
-        ;; Put backups in another directory.  With the directory-info
-        ;; variable, you can control which files get backed up where.
-        (require 'backup-dir)
-        (setq bkup-backup-directory-info
-              `(
-                (t ,(concat temp-directory "/backups") ok-create full-path)
-                ))
-        (setq make-backup-files t)
-        (setq backup-by-copying t)
-        (setq backup-by-copying-when-mismatch t)
-        (setq backup-by-copying-when-linked t)
-        (setq version-control t)
-        (setq-default delete-old-versions t))
+ ;; Put backups in another directory.  With the directory-info
+ ;; variable, you can control which files get backed up where.
+ (require 'backup-dir)
+ (setq bkup-backup-directory-info
+       `(
+         (t ,(concat temp-directory "/backups") ok-create full-path)
+         ))
+ (setq make-backup-files t)
+ (setq backup-by-copying t)
+ (setq backup-by-copying-when-mismatch t)
+ (setq backup-by-copying-when-linked t)
+ (setq version-control t)
+ (setq-default delete-old-versions t))
 
 ;; ---------------------------------------------------------------- ;;
 ;; Parens
@@ -273,11 +298,34 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 (global-set-key "%" 'goto-match-paren)
 
 ;; ---------------------------------------------------------------- ;;
+;; Trailing whitespace
+;;
+;;   only works in emacs, not xemacs
+;;
+
+;; Highlight trailing whitespace by default
+(setq-default show-trailing-whitespace t)
+
+(defun toggle-trailing-whitespace ()
+  "Toggle the trailing whitespace indicator"
+  (interactive)
+  (if show-trailing-whitespace
+      (progn
+        (message "show-trailing-whitespace OFF")
+        (setq show-trailing-whitespace nil))
+      (progn
+        (message "show-trailing-whitespace ON")
+        (setq show-trailing-whitespace t)))
+  (redraw-display))
+(global-set-key "\C-cw" 'toggle-trailing-whitespace)
+
+;; ---------------------------------------------------------------- ;;
 ;; Matlab mode
 ;;
-(add-to-list 'load-path "~/.xemacs/matlab-emacs/matlab-emacs/")
-(require 'matlab-load)
-
+(if (file-exists-p "~/.xemacs/matlab-emacs/matlab-emacs/")
+    (progn
+      (add-to-list 'load-path "~/.xemacs/matlab-emacs/matlab-emacs/")
+      (require 'matlab-load)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ---------------------------------------------------------------- ;;
@@ -306,7 +354,7 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;;;
 ;(require 'column-marker)
 ;
-;(defun set-eighty-column () 
+;(defun set-eighty-column ()
 ;  "Highlight the 80th column"
 ;  (interactive)
 ;  (if column-marker-1
@@ -481,5 +529,41 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 
 ;; (if window-system
 ;;     (fontify))
+
+;; ---------------------------------------------------------------- ;;
+;; Flymake
+;;
+;; http://www.gnu.org/software/emacs/manual/html_mono/flymake.html
+;; http://www.emacswiki.org/emacs/PythonMode#toc8
+;;
+
+;; (when (load "flymake" t)
+;;   (defun flymake-pylint-init ()
+;;     (let* ((temp-file (flymake-init-create-temp-buffer-copy
+;;                        'flymake-create-temp-inplace))
+;;        (local-file (file-relative-name
+;;                     temp-file
+;;                     (file-name-directory buffer-file-name))))
+;;       (list "epylint" (list local-file))))
+
+;;   (add-to-list 'flymake-allowed-file-name-masks
+;;            '("\\.py\\'" flymake-pylint-init)))
+
+;; (setq flymake-allowed-file-name-masks
+;;       '(("\\.py\\'" flymake-pylint-init)
+;;         ("\\.html?\\'" flymake-xml-init)
+;;         ("\\.cs\\'" flymake-simple-make-init)
+;;         ("\\.pl\\'" flymake-perl-init)
+;;         ("[0-9]+\\.tex\\'" flymake-master-tex-init flymake-master-cleanup)
+;;         ("\\.tex\\'" flymake-simple-tex-init)
+;;         ("\\.idl\\'" flymake-simple-make-init)))
+;; ; remove the c, java, and xml flymake hooks since those don't seem to work.
+;;   ;("\\.c\\'" flymake-simple-make-init)
+;;   ;("\\.cpp\\'" flymake-simple-make-init)
+;;   ;("\\.xml\\'" flymake-xml-init)
+;;   ;("\\.h\\'" flymake-master-make-header-init flymake-master-cleanup)
+;;   ;("\\.java\\'" flymake-simple-make-java-init flymake-simple-java-cleanup)
+
+;; (add-hook 'find-file-hook 'flymake-find-file-hook)
 
 ;; ---------------------------------------------------------------- ;;
