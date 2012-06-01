@@ -369,8 +369,13 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;;; Tags
 ;;;
 ;
-; ;; M-.     -- search for a tag
-; ;; M-,     -- go to next result in the tag search
+; ;; M-. <tag>       -- search for a tag
+; ;; C-u M-.         -- go to next instance of the tag
+; ;; C-u - M-.       -- go to previous instance of the tag
+; ;; M-*             -- go back to where you were before M-.
+; ;; C-M-. <patt>    -- regexp tag search
+; ;; M-x tags-search -- search for a regexp in all the files that have tags
+; ;; M-,             -- go to next result in the tags-search
 ;
 ;(setq tags-file-name '"/u/yuanc/usr/tags/TAGS")
 ;(setq tags-build-completion-table t)
@@ -382,29 +387,40 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;  (setq revert-without-query '(".*")))	;; always revert tags tables w/o query
 ;
 ;
-;;; ---------------------------------------------------------------- ;;
-;;;
-;;; Column Marker
-;;;
-;;; http://www.emacswiki.org/emacs/ColumnMarker
-;;;
-;(require 'column-marker)
-;
-;(defun set-eighty-column ()
-;  "Highlight the 80th column"
-;  (interactive)
-;  (if column-marker-1
-;      (column-marker-internal 'column-marker-1 nil)
-;      (column-marker-1 80)))
-;
-;; \C-c\C-e seems to be a neat double paren feature, at least in
-;; cperl, so don't override it.
-;;(global-set-key "\C-c\C-e" 'set-eighty-column)
-;;(global-set-key "\M-n" 'just-one-space)
-;;(global-set-key "\M-p" 'fill-paragraph)
-;
-;(global-set-key "\C-c8" 'set-eighty-column)
-;
+
+;; ---------------------------------------------------------------- ;;
+;;
+;; Column Marker
+;;
+;; http://www.emacswiki.org/emacs/ColumnMarker
+;;
+
+;; (require 'column-marker)
+
+;; (defun set-eighty-column ()
+;;   "Highlight the 80th column"
+;;   (interactive)
+;;   (if column-marker-1
+;;     (progn
+;;       (column-marker-internal 'column-marker-1 nil)
+;;       (message "80-column marker OFF")
+;;       )
+;;     (progn
+;;       (column-marker-1 80)
+;;       (message "80-column marker ON")
+;;       )))
+
+;; ; \C-c\C-e seems to be a neat double paren feature, at least in cperl
+;; ;(global-set-key "\C-c\C-e" 'set-eighty-column)
+;; ;(global-set-key "\M-n" 'just-one-space)
+;; ;(global-set-key "\M-p" 'fill-paragraph)
+
+;; (global-set-key "\C-c8" 'set-eighty-column)
+;; (add-hook 'cperl-mode-hook (lambda () (interactive) (column-marker-1 80)))
+;; (add-hook 'python-mode-hook (lambda () (interactive) (column-marker-1 80)))
+;; (add-hook 'java-mode-hook (lambda () (interactive) (column-marker-1 80)))
+;; (add-hook 'c-mode-hook (lambda () (interactive) (column-marker-1 80)))
+
 ;;; ---------------------------------------------------------------- ;;
 ;
 ;(defun toggle-trunc-lines ()
