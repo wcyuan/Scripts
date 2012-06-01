@@ -14,7 +14,7 @@ ovd.pl - print out information about my schedule
 
   ovd.pl [start year] [end year]
 
-  Options: 
+  Options:
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -142,7 +142,7 @@ sub general_days_between($$$) {
         if ($func->($from_year, $from_month, $from_day)) {
             $days++;
         }
-        ($from_year, $from_month, $from_day) = 
+        ($from_year, $from_month, $from_day) =
             Add_Delta_Days($from_year, $from_month, $from_day, 1)
     }
     return $days;
@@ -168,8 +168,9 @@ sub weekdays_between($$) {
     sub _init_current_date() {
         return if $_initialized;
         ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) =
-            localtime(time);
+            localtime();
         $year += 1900;
+        $mon++;
         $_initialized = 1;
     }
 
@@ -192,7 +193,7 @@ sub read_inout_schedule($) {
     my ($inout_schedule) = @_;
     my @retval;
     my $last_to;
-    open (SCHEDULE, $inout_schedule) 
+    open (SCHEDULE, $inout_schedule)
         or $LOGGER->logconfess("Can't open $inout_schedule: $? $! $@");
     while (my $line = <SCHEDULE>) {
         next if $line =~ m/^\s*#/o;
@@ -239,10 +240,10 @@ sub inout_status($;$) {
     return $status;
 }
 
-# Group statuses by reason.  Helper for inout_table.  
+# Group statuses by reason.  Helper for inout_table.
 sub inout_by_reason($$$) {
     my ($schedule, $first, $last) = @_;
-        
+
     my %reasons = ( ALL_REASONS => { ALL_YEARS => 0 } );
     foreach my $info (read_inout_schedule($schedule)) {
         my ($from, $to, $mode, $this_reason, $from_date, $to_date) = @$info;
@@ -274,7 +275,7 @@ sub inout_by_reason($$$) {
     my $nyears = scalar(keys(%{$reasons{ALL_REASONS}})) - 1;
     if ($nyears != 0) {
         foreach my $reason (keys(%reasons)) {
-            $reasons{$reason}{AVERAGE} = 
+            $reasons{$reason}{AVERAGE} =
                 sprintf("%.2f", $reasons{$reason}{ALL_YEARS} / $nyears);
         }
     }
@@ -291,8 +292,8 @@ sub inout_table($;$$) {
         $end_year = $year;
     }
 
-    my $reasons = inout_by_reason($schedule, 
-                                  get_year_start($year), 
+    my $reasons = inout_by_reason($schedule,
+                                  get_year_start($year),
                                   get_year_end($end_year));
 
     my @years = sort keys(%{$reasons->{ALL_REASONS}});
@@ -304,7 +305,7 @@ sub inout_table($;$$) {
     my $table = new Text::Table('reason', @years);
     foreach my $reason (sort {
                             $reasons->{$a}{ALL_YEARS} <=> $reasons->{$b}{ALL_YEARS}
-                        } keys(%$reasons)) 
+                        } keys(%$reasons))
     {
         $table->add($reason, map {
             $reasons->{$reason}{$_} // '-';
