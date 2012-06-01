@@ -17,7 +17,7 @@
 -- ** META + k, left         = Move this window to the frame on the left
 -- ** META + k, right        = Move this window to the frame on the right
 -- ** META + k, up           = Move this window to the frame above
--- ** META + k, down         = Move this window to the frame below 
+-- ** META + k, down         = Move this window to the frame below
 -- **
 -- ** META + Shift + up      = Move the workspace above
 -- ** META + Shift + down    = Move the workspace below
@@ -26,7 +26,7 @@
 -- ** Control + Shift + Tab  = Cycles through elements within a frame
 -- **
 -- ** ------------------------------------------------------------------- ** --
--- ** Other bindings documented listed here for convenience, though they 
+-- ** Other bindings documented listed here for convenience, though they
 -- ** are defined elsewhere:
 -- **
 -- ** Defined in cfg_ioncore.lua:
@@ -40,7 +40,7 @@
 -- ** META + x, 2         = Split the frame vertically
 -- ** META + x, 3         = Split the frame horizontally
 -- ** META + x, 0         = Get rid of this frame, collapse into the next one
--- ** META + x, 1         = Expand this frame, consuming all other frames.  
+-- ** META + x, 1         = Expand this frame, consuming all other frames.
 -- **
 -- ** Not sure where these are defined:
 -- **
@@ -70,7 +70,7 @@ defbindings("WScreen", {
     kpress("Tab+Control", "ioncore.goto_next(_chld, 'next')"),
 })
 
--- WCY: 
+-- WCY:
 --
 -- I don't understand the bdoc below.  As far as I can tell, this
 -- moves between workspaces.
@@ -88,7 +88,7 @@ function move_current.move(ws, dir)
     local frame=ws:current()
     local cwin=frame:current()
     local frame2=ioncore.navi_next(frame,dir)
-    
+
     if frame2 then
         frame2:attach(cwin, { switchto=true })
     end
@@ -135,9 +135,9 @@ defctxmenu("WFrame", "Frame", {
 
     --
     -- Other stuff could appear here, depending on the context
-    -- 
+    --
 
-    -- Low-priority entries will appear at the bottom of the menu.  
+    -- Low-priority entries will appear at the bottom of the menu.
     menuentry("Attach tagged", "ioncore.tagged_attach(_)",     { priority = 0 }),
     menuentry("Clear tags",    "ioncore.tagged_clear()",       { priority = 0 }),
     menuentry("Window info",   "mod_query.show_tree(_, _sub)", { priority = 0 }),
@@ -147,7 +147,7 @@ defctxmenu("WFrame", "Frame", {
 })
 
 defmenu("utilities", {
-    menuentry("Color Xterm",   "ioncore.exec_on(_, 'xterm -bg `/u/yuanc/bin/my_randcolor`')"),
+    menuentry("Color Xterm",   "ioncore.exec_on(_, XTERM)"),
     menuentry("Emacs",         "ioncore.exec_on(_, 'emacs &')"),
 })
 
