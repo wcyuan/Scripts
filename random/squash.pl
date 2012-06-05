@@ -14,7 +14,7 @@ squash.pl - volleyball vs tennis scoring
 
   squash.pl [options] <your_points_to_win> <opp_points_to_win> <prob_win_when_serving> <prob_win_when_receiving>
 
-  Options: 
+  Options:
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -73,10 +73,10 @@ both when serving and receiving.
 Suppose you are challenged to a game of squash by a superior player
 (i.e., you have <50% shot at winning any individual point). However,
 he offers you the choice between tennis scoring and squash
-scoring. Which (if either) gives you a greater chance of winning? 
+scoring. Which (if either) gives you a greater chance of winning?
 Explain your answer intuitively.
 
-Tennis scoring is easier.  
+Tennis scoring is easier.
 
 Suppose that it's best to 1 point, and that no one starts out with the
 serve.  It's sort of like the basketball question.  Tennis style, you
@@ -89,9 +89,9 @@ points to Y points.  In tennis scoring, X won X points and Y won Y
 points.  In volleyball scoring, X won X+N points and Y won Y+N points
 (off by one, depending on who started with the serve).  So the winner
 in volleyball scoring won (X+N)/(X+Y+N+N) of the points.  This number
-is closer to 50% than X/(X+Y) is.  So let's say X won, meaning 
-X/(X+Y) > 50 and so (X+N)/(Y+2N) < X/(X+Y).  That is, in volleyball 
-scoring, the winner won a smaller percentage of the points.  
+is closer to 50% than X/(X+Y) is.  So let's say X won, meaning
+X/(X+Y) > 50 and so (X+N)/(Y+2N) < X/(X+Y).  That is, in volleyball
+scoring, the winner won a smaller percentage of the points.
 
 That means, in the tennis scoring game, the winner won more of the
 points than the winner in the volleyball game, but the score was the
@@ -190,7 +190,7 @@ sub tennis_scoring ( $$$;$ ) {
 		$prob_if_lose = $points[$your_points][$opp_points - 1];
 	    }
 
-	    $points[$your_points][$opp_points] = 
+	    $points[$your_points][$opp_points] =
 		     $prob_win  * $prob_if_win +
 		(1 - $prob_win) * $prob_if_lose;
 	}
@@ -229,16 +229,16 @@ sub volleyball_scoring ( $$$$ ) {
 	    }
 
 	    # solving the two equations below...
-	    $points[$your_points][$opp_points][1] = 
+	    $points[$your_points][$opp_points][1] =
 		((1 - $prob_win_when_serving) * (1 - $prob_win_when_receiving) * $prob_if_lose_point +
-		 $prob_win_when_serving * $prob_if_win_point) / 
+		 $prob_win_when_serving * $prob_if_win_point) /
 		     (1 - $prob_win_when_receiving + $prob_win_when_receiving * $prob_win_when_serving);
 
-	    # $points[$your_points][$opp_points][1] = 
+	    # $points[$your_points][$opp_points][1] =
 	    # 	     $prob_win_when_serving  * $points[$your_points][$opp_points][0] +
 	    # 	(1 - $prob_win_when_serving) * $prob_if_win_point;
 
-	    $points[$your_points][$opp_points][0] = 
+	    $points[$your_points][$opp_points][0] =
 		     $prob_win_when_receiving  * $points[$your_points][$opp_points][1] +
 		(1 - $prob_win_when_receiving) * $prob_if_lose_point;
 
@@ -246,7 +246,7 @@ sub volleyball_scoring ( $$$$ ) {
     }
 
     # 50% chance of starting with the serve
-    return ($points[$your_points_to_win][$opp_points_to_win][1] + 
+    return ($points[$your_points_to_win][$opp_points_to_win][1] +
 	    $points[$your_points_to_win][$opp_points_to_win][0]) / 2;
 }
 

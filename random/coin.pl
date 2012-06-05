@@ -14,7 +14,7 @@ coin.pl - study the coin game
 
   coin.pl [options] <strings>*
 
-  Options: 
+  Options:
     --alpha_sz        alphabet size
     --string_len      default string length
     --fast            use short cuts rather than real brute force
@@ -32,8 +32,8 @@ coin.pl - study the coin game
 The strings to try.
 
  If no strings are provided, find the best string for a given alphabet size and string length.
- If one string is provided, find the best string to counter that string.  Use log_level INFO for details.  
- If more than one string is provided, find the probability the first string beats the other strings.  Use -verbose for more details.  
+ If one string is provided, find the best string to counter that string.  Use log_level INFO for details.
+ If more than one string is provided, find the probability the first string beats the other strings.  Use -verbose for more details.
 
 =back
 
@@ -105,7 +105,7 @@ triplet?
 
 =head1 Examples
 
- $ coin 
+ $ coin
  Len 3 and alpha sz 2
  The best "worst-case" string is 121, which is guaranteed to win with at least probability 0.333333333333333.
  The best competitor against that string is 112
@@ -137,7 +137,7 @@ triplet?
  $ coin 121 111
  121 beats 111 with probability 0.6  (alpha sz 2)
 
- $ coin 121 
+ $ coin 121
  112 beats 121 with probability 0.666666666666667  (alpha sz 2)
  121 wins against the average string with probability 0.48452380952381 (alpha sz 2)
 
@@ -213,7 +213,7 @@ sub compete ( $@ ) {
 	if (length($str) != $string_len) {
 	    $logger->logconfess("Invalid string $str.  len $string_len alpha size $alpha_sz, " . join(',', @strings));
 	}
-	if ($str !~ m/^[$alpha_str]*$/) {	
+	if ($str !~ m/^[$alpha_str]*$/) {
 	    $logger->logconfess("Invalid string $str.  len $string_len alpha size $alpha_sz, " . join(',', @strings));
 	}
 	$str;
@@ -228,20 +228,20 @@ sub compete ( $@ ) {
     }
 
     $logger->debug("String len $string_len, Alpha size $alpha_sz");
-    $logger->debug("Calculating probability that $main_string wins against " . 
+    $logger->debug("Calculating probability that $main_string wins against " .
 	  join(',', keys(%losers)));
 
-    # What is the probability that a given player wins?  
+    # What is the probability that a given player wins?
     # First ask, what is the probability that a given player
     # wins given that we have seen X previous letters
-    # Only the last string_len-1 letters matter.  
+    # Only the last string_len-1 letters matter.
 
     # So take all possible strings of length len-1.  These
     # are our states.  From any given state, we either win
     # or we transition to another state.
     # for every state we have a transition rule, so we
     # have the same number of equations as unknowns, so we
-    # can solve the system of linear equestions.  
+    # can solve the system of linear equestions.
     my $states = generate($string_len-1, $alpha_sz);
     my $nstates = scalar(@$states);
     my %state_to_num;
@@ -254,7 +254,7 @@ sub compete ( $@ ) {
     # transition rules look like
     # P(hh) = 1/2 P(hhh) + 1/2 P(hht)
     # then we transform each rule so that all the Ps are on the
-    # left and the constants are on the right.  
+    # left and the constants are on the right.
     # We also change P(xyz) to P(yz) unless xyz is a winning or losing condition.
     # If neither hhh nor hht are winning conditions, then this becomes
     # 1/2 P(hh) - 1/2 P(ht) = 0
@@ -273,7 +273,7 @@ sub compete ( $@ ) {
 	foreach my $next_step (@alpha) {
 	    my $new_state = $state . $next_step;
 	    if ($new_state eq $main_string) {
-		# winning condition stays on the right 
+		# winning condition stays on the right
 		$result[$ii] = $trans_prob;
 	    } elsif ($losers{$new_state}) {
 		# losing condition is a nop, this term goes to zero
@@ -300,7 +300,7 @@ sub compete ( $@ ) {
     # We assume that the matrix is invertible -- technically when we
     # call inverse we should check to make sure the return value isn't
     # undef.
-    my $solution = $matrix->inverse()->multiply($constants_mat); 
+    my $solution = $matrix->inverse()->multiply($constants_mat);
     if ($is_debug) {
         print("Solutions\n");
 	print $solution;
@@ -323,7 +323,7 @@ sub best_competitor ( $$ ) {
 	# the last n-1 letters of the best competitor will match the
 	# first n-1 letters of the string in question this makes a lot
 	# of sense, though I'm not sure how you prove it
-	
+
 	# there is probably also a way to figure out what the first letter
 	# should be, but I'm not sure how (except in the three letter case)
 	my $str = substr $string, 0, length($string)-1;
@@ -376,7 +376,7 @@ sub best_string ( $$ ) {
     my $best_comp;
     foreach my $string (@$possible_strings) {
 	my ($comp, $prob) = best_competitor($string, $alpha_sz);
-	if (!defined($best) || !defined($best_prob) || !defined($best_comp) 
+	if (!defined($best) || !defined($best_prob) || !defined($best_comp)
 	    || $prob < $best_prob) {
 	    $best = $string;
 	    $best_comp = $comp;

@@ -8,10 +8,10 @@ fix_owner.pl - Change the owner of a file using sudo, mv, and cp
 
   fix_owner.pl [options] <file>*
 
-  Options: 
-    --quiet             Suppress messages about missing files or 
+  Options:
+    --quiet             Suppress messages about missing files or
                         if the file already has the right owner
-    --verbose           Print the commands being run.  Overrides quiet.  
+    --verbose           Print the commands being run.  Overrides quiet.
     --debug             Print the command that would be run without running them
     --user              The user to set the owner to
 
@@ -22,7 +22,7 @@ Change the owner of a file by mv'ing it out of the way, then cp'ing it
 back as the new owner.  If the cp back fails, then we'll mv the file
 back where it was.
 
-You can change the owner of a file as long as 
+You can change the owner of a file as long as
  - you can sudo to the new owner of the file
  - the new owner can write to the directory and /tmp
  - you can write to the file, the directory, and /tmp
@@ -40,7 +40,7 @@ use Pod::Usage;
 
 # ------------------------------------------------------
 
-# Globals - These are set in parse_command_line and never modified again.  
+# Globals - These are set in parse_command_line and never modified again.
 my ($VERBOSE, $DEBUG, $QUIET);
 
 sub main() {
@@ -52,7 +52,7 @@ sub main() {
     # getlogin = user that opened the terminal
     #
     # If user A sudoes to user B, then both $< and $> will return user
-    # B, while getlogin will return user A.  
+    # B, while getlogin will return user A.
     #
     #    $ perl -e 'print join(" ", getlogin(), scalar(getpwuid($>)), scalar(getpwuid($<))) . "\n"'
     #    yuanc yuanc yuanc
@@ -68,7 +68,7 @@ sub main() {
     # context, they return the first element of the array, which is
     # the username or id.  Just as a reminder of that, we wrap the
     # calls in 'scalar', even though we are only using them in scalar
-    # context anyway.  
+    # context anyway.
     #
     # Anyway, hopefully that doesn't matter here because we should
     # only be run interactively on a terminal without having been
@@ -101,7 +101,7 @@ sub main() {
 
         # Create a temp file in the same directory as the existing
         # file.  We don't want to create it in /tmp because moving
-        # things to /tmp could change their permissions.  
+        # things to /tmp could change their permissions.
         #
         # UNLINK is false because we want to control when it is
         # removed.  If there is an error somewhere, we don't want to
@@ -122,7 +122,7 @@ sub main() {
             next;
         }
 
-        run("rm -f $temp_file"); 
+        run("rm -f $temp_file");
     }
 
     if (!$success) {
@@ -164,7 +164,7 @@ sub run_cmd($;$$$$$) {
     } else {
 	if ($verbose) {
 	    print "Running: $cmd\n";
-	} 
+	}
 	chomp($retval = `$cmd`);
 	if ($?) {
 	    my $error = "Error running \"$cmd\": $? $retval";

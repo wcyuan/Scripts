@@ -12,9 +12,9 @@ unslammable.pl - Short description.
 
 =head1 SYNOPSIS
 
-  unslammable.pl [options] 
+  unslammable.pl [options]
 
-  Options: 
+  Options:
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -47,7 +47,7 @@ Print the perldoc page and exit.
 Scrabble slam is a game where every player has a bunch of letters (on
 cards), and you start with a 4-letter word in the middle.  Each player
 can put a letter on one of the word's existing letters, as long as it
-makes a new word.  
+makes a new word.
 
 So the question is, how many words can you start with that you can't
 make any other words from?

@@ -1,6 +1,6 @@
 #!perl -w
 #
-# How many letters remain in a game of Words With Friends?  
+# How many letters remain in a game of Words With Friends?
 #
 
 use strict;
@@ -53,7 +53,7 @@ my @remaining;
 foreach my $letter (sort keys(%FREQ)) {
     $used{$letter} //= 0;
     my $remaining = $FREQ{$letter} - $used{$letter};
-    printf('%s => %d (%d total - %d used)' . "\n", 
+    printf('%s => %d (%d total - %d used)' . "\n",
 	   $letter, $remaining,
 	   $FREQ{$letter}, $used{$letter},
 	  );

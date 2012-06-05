@@ -1,7 +1,7 @@
-#!/usr/local/bin/perl -w 
+#!/usr/local/bin/perl -w
 #############################################################
 ###
-### prints grey code for X bits 
+### prints grey code for X bits
 ### i.e. all binary numbers in an order such that you only flip one bit
 ### between each number
 ###
@@ -32,7 +32,7 @@ sub grey_code ($$$) {
   }
   print "grey_code $bits, $base, $parity\n"
     if ($debug);
-  
+
   # either of these works
   $next_parity = $array[$bits-1] ? -1 : 1;
   $next_parity = $base % 2 ? $parity : 1;

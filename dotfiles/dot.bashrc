@@ -94,7 +94,7 @@ export LESS
 # Runs ssa-add on startup.  This will ask for your passphrase every
 # time it starts up.
 #
-# ssh-agent code from 
+# ssh-agent code from
 # http://help.github.com/ssh-key-passphrases/
 #
 SSH_ENV="$HOME/.ssh/environment"

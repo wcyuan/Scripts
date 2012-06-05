@@ -12,9 +12,9 @@ scrab.pl - Practice finding 7 and 8 letter words
 
 =head1 SYNOPSIS
 
-  scrab.pl [options] 
+  scrab.pl [options]
 
-  Options: 
+  Options:
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -254,12 +254,12 @@ sub score_word($$) {
             }
         }
         $score += $v * $letter_mult;
-        $logger->debug("letter $l, " . 
-                       "board $b, " . 
-                       "tile score " . ($tile_scores->{$l} || 0) . ", " . 
-                       "letter mult $letter_mult, " . 
-                       "letter-tile score $v, " . 
-                       "word mult $word_mult, " . 
+        $logger->debug("letter $l, " .
+                       "board $b, " .
+                       "tile score " . ($tile_scores->{$l} || 0) . ", " .
+                       "letter mult $letter_mult, " .
+                       "letter-tile score $v, " .
+                       "word mult $word_mult, " .
                        "score $score\n");
     }
     return $score *= $word_mult;

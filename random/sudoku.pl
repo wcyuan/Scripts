@@ -12,9 +12,9 @@ sudoku.pl - solve sodukus
 
 =head1 SYNOPSIS
 
-  sudoku.pl [options] 
+  sudoku.pl [options]
 
-  Options: 
+  Options:
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -141,7 +141,7 @@ sub valid_val ( $ ) {
     my ($val) = @_;
     return (defined($val) &&
 	    $val =~ m/^\d+$/ &&
-	    $val >= 1 && 
+	    $val >= 1 &&
 	    $val <= $MAX_DIGIT);
 }
 
@@ -168,7 +168,7 @@ sub val_to_output ( $ ) {
 # groups
 #
 sub row_groups () {
-    return map { 
+    return map {
 	my $start = ($_-1) * $MAX_DIGIT;
 	my $end = $start+$MAX_DIGIT-1;
 	[ $start..$end ];
@@ -231,14 +231,14 @@ sub all_groups () {
 	    }
 	    # sanity check
 	    if (scalar(@elt_to_groups) != $MAX_DIGIT * $MAX_DIGIT) {
-		$logger->logconfess("Error mapping element to group, not all elements are covered: " . 
+		$logger->logconfess("Error mapping element to group, not all elements are covered: " .
 		      scalar(@elt_to_groups));
 	    }
 	    for (my $elt = 0; $elt < $MAX_DIGIT * $MAX_DIGIT; $elt++) {
 		# hard code the sanity check that each element should
 		# be in three groups
 		if (scalar(@{$elt_to_groups[$elt]}) != 3) {
-		    $logger->error("Error mapping element to group, element $elt in " . 
+		    $logger->error("Error mapping element to group, element $elt in " .
                                    scalar(@{$elt_to_groups[$elt]}) . " groups");
 		    print Dumper(map {group_by_id($_)} $elt_to_groups[$elt]) . "\n";
 		    $logger->logconfess();
@@ -320,7 +320,7 @@ sub possible_vals ( $$ ) {
 
 # ----------------------
 # strategies
-# modify the board in place.  
+# modify the board in place.
 
 sub trial_and_error ( $;$$$$ ) {
     my ($board, $poss_values, $depth, $elt, $n_solutions) = @_;
@@ -333,7 +333,7 @@ sub trial_and_error ( $;$$$$ ) {
     }
 
     # Rather than just go through the elements in order
-    # it would be better to do the one with the fewest 
+    # it would be better to do the one with the fewest
     # possible values first
     while ($elt < $MAX_DIGIT * $MAX_DIGIT && valid_val($board->[$elt])) {
 	$elt++;
@@ -459,7 +459,7 @@ sub standard($;$) {
 		$missing_group_values{$group_id} = $missing;
 		$unfilled_group_values{$group_id} = $unfilled;
 		# for each value that is missing from the group,
-		# check all the empty spots in the group and see 
+		# check all the empty spots in the group and see
 		# for which spots have that value is a possible value.
 		# if there is only one possble spot for a given value,
 		# fill that spot in with that value
@@ -487,8 +487,8 @@ sub standard($;$) {
 			    my $dummy = <>;
 			}
 			if ($slow) {
-			    # This "next" can be removed.  It's only here because I want to see all 
-			    # RULE 1 changes before all RULE 2 changes  
+			    # This "next" can be removed.  It's only here because I want to see all
+			    # RULE 1 changes before all RULE 2 changes
 			    next LOOP;
 			}
 		    }
@@ -554,8 +554,8 @@ sub standard($;$) {
 			    }
 			    $changes = 1;
 			    if ($slow) {
-				# This "next" can be removed.  It's only here because I want to see all 
-				# RULE 1 changes before all RULE 3 changes  
+				# This "next" can be removed.  It's only here because I want to see all
+				# RULE 1 changes before all RULE 3 changes
 				next LOOP;
 			    }
 			}
@@ -574,13 +574,13 @@ sub standard($;$) {
 	# RULE 4
 	#
 	# If in a particular group, N of the missing values each must go in N possible places,
-	# then nothing else can go in those places.  
+	# then nothing else can go in those places.
 	# E.g. if the possible values for a row are:
 	# 1-2 1-2 1-2-3 3-4-5 3-4-5
 	# Then 4 and 5 must go in the last two places, and therefore
 	# 3 cannot go in those places, so it must go in the third place.
 	#
-	# The program seems to be faster without this rule.  
+	# The program seems to be faster without this rule.
 	#
 	@groups = keys %unfilled_group_values;
 	foreach my $group_id (@groups) {
@@ -609,7 +609,7 @@ sub standard($;$) {
 			    next unless $possible_values[$elt]{$val};
 			    $possible_values[$elt]{$val} = 0;
 			    if ($slow && ($depth == 0)) {
-				$logger->debug("$val can't go into $elt because these spots " . join(",", @spots) . 
+				$logger->debug("$val can't go into $elt because these spots " . join(",", @spots) .
                                                " must contain these values " . join(',', @match_values));
 				my @copy = @$board;
 				foreach my $s (@spots) {
@@ -620,8 +620,8 @@ sub standard($;$) {
 			    }
 			    $changes = 1;
 			    if ($slow) {
-				# This "next" can be removed.  It's only here because I want to see all 
-				# RULE 1 changes before all RULE 3 changes  
+				# This "next" can be removed.  It's only here because I want to see all
+				# RULE 1 changes before all RULE 3 changes
 				next LOOP;
 			    }
 			}
@@ -634,11 +634,11 @@ sub standard($;$) {
 	#
 	# RULE 5
 	# If in a particular group, N of the unfilled spots must contain N possible values,
-	# then none of those values can go in other spots.  
+	# then none of those values can go in other spots.
 	# 1-2 1-2 1-2-3 3-4-5 3-4-5
 	# Then 1 and 2 must go in the first two places and therefore
 	# cannot go in the third place.  Thus, the third place
-	# must be a 3.  
+	# must be a 3.
 	#
 	@groups = keys %unfilled_group_values;
 	foreach my $group_id (@groups) {
@@ -668,7 +668,7 @@ sub standard($;$) {
 			    next unless $possible_values[$elt]{$val};
 			    $possible_values[$elt]{$val} = 0;
 			    if ($slow && ($depth == 0)) {
-				$logger->debug("$val can't go into $elt because these vals " . join(",", @vals) . 
+				$logger->debug("$val can't go into $elt because these vals " . join(",", @vals) .
                                                " must go in these spots " . join(',', @match_spots));
 				my @copy = @$board;
 				$copy[$elt] = "Y";
@@ -680,8 +680,8 @@ sub standard($;$) {
 			    }
 			    $changes = 1;
 			    if ($slow) {
-				# This "next" can be removed.  It's only here because I want to see all 
-				# RULE 1 changes before all RULE 3 changes  
+				# This "next" can be removed.  It's only here because I want to see all
+				# RULE 1 changes before all RULE 3 changes
 				next LOOP;
 			    }
 			}
@@ -793,7 +793,7 @@ sub poss_vals_string ( $$ ) {
 	}
     }
     return $board_string;
-    
+
 }
 
 # ----------------------
@@ -876,9 +876,9 @@ sub generate_board() {
 # main
 
 # some examples
-# can be solved with just rules 1 and 2.  
+# can be solved with just rules 1 and 2.
 my $easy = "-3------9 ----8723- 6-9-4-7-- -1--5-4-- --51-96-- --8-7--9- --4-2-3-8 -6381---- 8------1-";
-# can be solved with just rules 1, 2, and 3.  
+# can be solved with just rules 1, 2, and 3.
 my $hard = "--89-1--- 1-74--8-- -9-36---- 67------- --4---5-- -------26 ----37-8- --5--96-3 ---5-29--";
 my $hard2 = "275-----6------7-5-4---7--3 --2968---------------1425-- 1--5---9-4-8------3-----461";
 # needs more than 3 rules:
@@ -915,8 +915,8 @@ if ($infile) {
     $boards = [$input];
 }
 my @stats;
-for (my $ii = 1; 
-     (!defined($num_to_do) || $ii <= $num_to_do) && scalar(@$boards) > 0; 
+for (my $ii = 1;
+     (!defined($num_to_do) || $ii <= $num_to_do) && scalar(@$boards) > 0;
      $ii++) {
     my $board = read_board($boards);
     print board_string($board);

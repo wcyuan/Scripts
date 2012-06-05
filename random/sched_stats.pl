@@ -15,9 +15,9 @@ sched_stats.pl - Print some information about the tennis schedule.
 
 =head1 SYNOPSIS
 
-  sched_stats.pl [options] 
+  sched_stats.pl [options]
 
-  Options: 
+  Options:
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -64,7 +64,7 @@ use Text::Table;
 # ----------------------
 # data for 2007
 my $cost_per_season2007 = 5120;
-# holidays == days when we don't expect to have 4 people.  
+# holidays == days when we don't expect to have 4 people.
 my %holidays2007 = (8 => 1, # thanksgiving,
 		    20 => 1, # not really a holiday, but no one can make it
 		   );
@@ -77,8 +77,8 @@ my %paid2007 = ("lawryj" => 360 + 400,
 		"reiss" => 720, # actually he paid $680, since I subbed for him once, so it's as if he paid $720 and I paid him $40 for the sub
 	       );
 
-my %is_regular2007 = ("aizenman" => 1, 
-		      "boguslaa" => 1, 
+my %is_regular2007 = ("aizenman" => 1,
+		      "boguslaa" => 1,
 		      "elassalk" => 1,
 		      "lawryj"   => 1,
 		      "reiss"    => 1,
@@ -87,7 +87,7 @@ my %is_regular2007 = ("aizenman" => 1,
 
 
 # XXX not sure what happened on the 20th -- could have been andy and peter playing singles
-my $actual2007 = 
+my $actual2007 =
 'week date      aizenman boguslaa elassalk lawryj reiss starka yuanc sub none none2
 1  20071004	       1	0	 1	0     X	     1     1   0    0     0
 2  20071011	       0	1	 0	1     1	     0     1   0    0     0  (peter hurt)
@@ -108,7 +108,7 @@ my $actual2007 =
 ';
 
 # unused
-my $separate_by_ability2007 = 
+my $separate_by_ability2007 =
 'week date      aizenman boguslaa elassalk lawryj reiss starka yuanc sub
 1  20071004	       0	0	 0	1     1	     1     1   0
 2  20071011	       1	1	 1	0     0	     0     1   0
@@ -129,7 +129,7 @@ my $separate_by_ability2007 =
 ';
 
 # unused
-my $evenly_spaced2007 = 
+my $evenly_spaced2007 =
 'week date      aizenman boguslaa elassalk lawryj reiss starka yuanc sub
 1  20071004	       0	0	 0	1     1	     1     1   0
 2  20071011	       1	1	 1	0     0	     0     1   0
@@ -149,7 +149,7 @@ my $evenly_spaced2007 =
 16 20080117	       0	1	 0	1     X	     1	   1   0  right before mlk day
 ';
 
-my $second_half_conflicts2007 = 
+my $second_half_conflicts2007 =
 'week date      aizenman boguslaa elassalk lawryj reiss starka yuanc sub
 17 20080124	       .	.	 .	.     X	     .	   .   .
 18 20080131	       X	.	 X	.     .	     X	   .   .
@@ -169,78 +169,78 @@ my $second_half_conflicts2007 =
 32 20080508	       .	.	 .	.     .	     .	   .   .
 ';
 
-my $second_half2007 = 
+my $second_half2007 =
 'week date      aizenman boguslaa elassalk lawryj reiss starka yuanc sub sub2 sub3 none1 none2 none3
 17 20080124	       1	0	 X	0     1	     1	   $   P    0    0     0     0     0  to SFO
 18 20080131	       X	$	 X	$     1	     X	   1   0    0    0     0     0     0
 19 20080207	       X	X	 X	1     1	     1	   1   0    0    0     0     0     0
 20 20080214	       X	X	 X	$     P	     X	   1   0    0    0     1     1     0  Harvard interviews
 21 20080221	       X	0	 0	1     1	     1	   1   0    0    0     0     0     0
-22 20080228	       1	1	 0	$     X	     $	   P   0    0    0     0     0     0 
-23 20080306	       1	1	 1	0     1	     X	   0   0    0    0     0     0     0 
-24 20080313	       0	1	 $	0     1	     X	   1   P    0    0     0     0     0 
+22 20080228	       1	1	 0	$     X	     $	   P   0    0    0     0     0     0
+23 20080306	       1	1	 1	0     1	     X	   0   0    0    0     0     0     0
+24 20080313	       0	1	 $	0     1	     X	   1   P    0    0     0     0     0
 25 20080320	       1	1	 1	1     0	     0	   0   0    0    0     0     0     0  night before purim, ops
 26 20080327	       1	0	 1	0     1	     0	   $   P    0    0     0     0     0  Dinner w/ Karen and Jim
-27 20080403	       P	0	 0	1     1	     $	   1   0    0    0     0     0     0  
+27 20080403	       P	0	 0	1     1	     $	   1   0    0    0     0     0     0
 28 20080410	       1	$	 1	0     X	     P	   1   0    0    0     0     0     0  HGC alum weekend
 29 20080417	       0	1	 0	1     0	     1	   $   P    0    0     0     0     0  to Ithaca for Pesach
 30 20080424	       $	X	 X	1     1	     1	   X   0    0    0     0     0     0  passover
-31 20080501	       1	$	 X	0     1	     0	   1   0    0    0     0     0     0 
-32 20080508	       0	0	 0	1     1	     1	   1   0    0    0     0     0     0  
+31 20080501	       1	$	 X	0     1	     0	   1   0    0    0     0     0     0
+32 20080508	       0	0	 0	1     1	     1	   1   0    0    0     0     0     0
 ';
 
 
 # ----------------------
 # data for 2008
 my $cost_per_season = 5344;
-# holidays == days when we don't expect to have 4 people.  
+# holidays == days when we don't expect to have 4 people.
 my %holidays = (8 => 1, # thanksgiving,
 		12 => 1, # christmas,
 		#13 => 1, # new year's,
 	       );
 
-my %is_regular = ("boguslaa" => 1, 
+my %is_regular = ("boguslaa" => 1,
 		  "fulenwiw" => 1,
 		  "lawryj"   => 1,
 		  "reiss"    => 1,
 		  "starka"   => 1,
 		  "yuanc"    => 1);
 
-my %paid = ("fulenwiw" => 431.32 + 417.50, 
-	    "lawryj"   => 431.42 + 417.50, 
+my %paid = ("fulenwiw" => 431.32 + 417.50,
+	    "lawryj"   => 431.42 + 417.50,
 	    "boguslaa" => 389.67 + 417.50,
 	    "starka" => 848.92,
 	    "sub1" => 42);
 
-my $just_conflicts2008 = 
+my $just_conflicts2008 =
 'week date        boguslaa chenjo fulenwiw lawryj reiss starka yuanc sub
 1  20081009              X      0        0      X     1      X     X   0  Yom Kippur
 2  20081016              0      0        0      0     0      X     0   0  Sukkot (not yuntiff)
-3  20081023              X      0        0      0     0      0     0   0  
-4  20081030              0      0        0      0     0      0     0   0  
-5  20081106              0      0        0      0     0      0     0   0  
-6  20081113              0      0        0      0     0      0     0   0  
-7  20081120              0      0        0      0     0      X     0   0  
+3  20081023              X      0        0      0     0      0     0   0
+4  20081030              0      0        0      0     0      0     0   0
+5  20081106              0      0        0      0     0      0     0   0
+6  20081113              0      0        0      0     0      0     0   0
+7  20081120              0      0        0      0     0      X     0   0
 8  20081127              X      X        X      X     X      X     X   0  Thanksgiving
 9  20081204              0      0        0      0     0      0     X   0  Honeymoon?
 10 20081211              0      X        0      0     0      0     X   0  Honeymoon?
 11 20081218              0      0        0      0     0      0     X   0  Honeymoon?
 12 20081225              0      X        X      X     X      X     ?   0  Christmas/Chanukah
 13 20080101              X      0        0      1     1      X     ?   0  New Years Day
-14 20090108              0      0        0      0     0      0     0   0  
+14 20090108              0      0        0      0     0      0     0   0
 15 20090115              0      0        0      0     X      0     0   0  Before MLK day weekend
-16 20090122              0      0        0      0     X      X     0   0  
+16 20090122              0      0        0      0     X      X     0   0
 ';
 
 
-my $actual2008 = 
+my $actual2008 =
 'week date        boguslaa fulenwiw lawryj reiss starka yuanc   sub1 sub
 1  20081009              X        1      X     1      X     1      1   0  Yom Kippur
 2  20081016              1        1      1     0      X     1      0   0  Sukkot (not yuntiff)
-3  20081023              X        0      1     1      1     1      0   0  
+3  20081023              X        0      1     1      1     1      0   0
 4  20081030              $        1      0     0      1     1      P   0  Murali subs for Alisa
-5  20081106              0        0      1     1      1     1      0   0  
-6  20081113              1        1      0     0      1     1      0   0  
+5  20081106              0        0      1     1      1     1      0   0
+6  20081113              1        1      0     0      1     1      0   0
 7  20081120              1        0      1     $      X     1      P   0  Jo Chen subs for Peter because of annual Poker outing
 8  20081127              X        X      X     X      X     X      X   0  Thanksgiving
 9  20081204              1        1      0     1      1     X      0   0  Honeymoon
@@ -248,48 +248,48 @@ my $actual2008 =
 11 20081218              1        0      1     1      1     X      0   0  Honeymoon
 12 20081225              0        X      X     X      X     ?      X   0  Christmas/Chanukah
 13 20080101              X        $      1     1      X     1      0   0  New Years Day
-14 20090108              1        0      0     1      1     1      0   0  
+14 20090108              1        0      0     1      1     1      0   0
 15 20090115              0        1      1     P      $     1      0   0  Before MLK day weekend
 16 20090122              $        1      $     X      X     1      P   P  Tom de Swardt subs for James, Melanie Eisen subs for Alisa
 ';
 
-my $second_half_conflicts2008 = 
+my $second_half_conflicts2008 =
 'week date        boguslaa fulenwiw lawryj reiss starka yuanc   sub1 sub
-17 20090129              0        0      X     0      X     0      X   0  
+17 20090129              0        0      X     0      X     0      X   0
 18 20090205              0        X      0     0      X     0      0   0  Ellie in India
 19 20090212              X        0      X     0      0     0      0   0  Before Presidents day weekend; Ellie in India
-20 20090219              X        0      0     0      0     0      0   0  
-21 20090226              0        0      0     0      0     0      0   0  
-22 20090305              0        0      ?     X      0     0      0   0  
+20 20090219              X        0      0     0      0     0      0   0
+21 20090226              0        0      0     0      0     0      0   0
+22 20090305              0        0      ?     X      0     0      0   0
 23 20090312              0        0      ?     0      0     0      0   0  After "poker tells" talk
-24 20090319              0        0      0     0      X     0      0   0  
-25 20090326              0        0      0     0      0     0      0   0  
-26 20090402              0        0      0     0      0     0      0   0  
+24 20090319              0        0      0     0      X     0      0   0
+25 20090326              0        0      0     0      0     0      0   0
+26 20090402              0        0      0     0      0     0      0   0
 27 20090409              X        0      0     X      X     X      X   0  Second night of Passover
 28 20090416              0        0      0     0      0     ?      0   0  Right after the end of Passover
-29 20090423              0        0      0     0      0     0      0   0  
-30 20090430              0        0      0     0      0     0      0   0  
-31 20090507              0        0      0     0      0     0      0   0  
-32 20090514              0        0      0     0      0     0      0   0  
+29 20090423              0        0      0     0      0     0      0   0
+30 20090430              0        0      0     0      0     0      0   0
+31 20090507              0        0      0     0      0     0      0   0
+32 20090514              0        0      0     0      0     0      0   0
 ';
 
-my $second_half2008 = 
+my $second_half2008 =
 'week date        boguslaa fulenwiw lawryj reiss starka yuanc   sub1 sub
-17 20090129              1        1      X     1      X     1      X   0  
+17 20090129              1        1      X     1      X     1      X   0
 18 20090205              $        X      1     1      P     1      0   0  Ellie in India
 19 20090212              X        1      X     $      $     $      P   P  Before Presidents day weekend; Both in India; je-luen li subbed for peter
-20 20090219              X        0      1     1      1     1      0   0  
-21 20090226              $        1      1     0      0     1      0   0  
+20 20090219              X        0      1     1      1     1      0   0
+21 20090226              $        1      1     0      0     1      0   0
 22 20090305              $        $      ?     X      1     1      P   0  Je Li played for Wendy
 23 20090312              $        1      ?     1      P     1      0   0  After "poker tells" talk
 24 20090319              $        0      1     $      P     1      0   0  Peter looking for a sub
 25 20090326              $        1      1     0      1     0      0   0  * To SF
-26 20090402              0        0      1     1      $     1      0   0  * 
+26 20090402              0        0      1     1      $     1      0   0  *
 27 20090409              X        1      1     X      X     X      1   1  * (jochen is busy) Second night of Passover
 28 20090416              $        1      1     0      1     ?      0   0  * Right after the end of Passover
-29 20090423              0        0      1     1      1     1      0   0  
-30 20090430              $        1      0     0      1     1      0   0  * 
-31 20090507              0        0      1     1      1     1      0   0  
+29 20090423              0        0      1     1      1     1      0   0
+30 20090430              $        1      0     0      1     1      0   0  *
+31 20090507              0        0      1     1      1     1      0   0
 32 20090514              $        1      0     1      1     0      0   0  *I can probably play
 ';
 

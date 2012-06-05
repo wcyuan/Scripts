@@ -4,31 +4,31 @@
 -- **
 -- ** The standard rc.lua file is here:
 -- ** /usr/local/pkgs/awesome-3.4.10/etc/xdg/awesome/rc.lua
--- ** 
+-- **
 -- ** Accompanying lua scripts are at:
 -- ** /usr/local/pkgs/awesome-3.4.10/share/awesome/lib
--- ** 
+-- **
 -- ** ------------------------------------------------------------------- ** --
--- ** 
+-- **
 -- ** Mod4 = Windows key
 -- ** "Client" means window
 -- ** "Tag" means desktop
--- ** 
+-- **
 -- ** Mod4 + Control + r                  Restart WM
 -- ** Mod4 + Enter                        Start xterm
--- ** 
+-- **
 -- ** Mod4 + j                            Move focus to "next" window
--- ** Mod4 + k                            Move focus to "previous" window 
+-- ** Mod4 + k                            Move focus to "previous" window
 -- **   (Frankly, these seem backwards to me...)
--- ** 
+-- **
 -- ** Mod4 + Shift + j                    Move window to the "next" position
 -- ** Mod4 + Shift + k                    Move window to the "previous" position
--- ** 
--- ** 
--- ** 
--- ** 
--- ** 
--- ** 
+-- **
+-- **
+-- **
+-- **
+-- **
+-- **
 -- ** ------------------------------------------------------------------- ** --
 
 -- Standard awesome library

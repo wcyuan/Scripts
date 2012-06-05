@@ -14,7 +14,7 @@ shorten.pl - shorten lines
 
   shorten.pl [options] <length>
 
-  Options: 
+  Options:
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -75,7 +75,7 @@ GetOptions( "offset|o=i" => \$OFFSET,
 
 if (scalar(@ARGV) > 0 &&
     ! -f $ARGV[0] &&
-    looks_like_number($ARGV[0])) 
+    looks_like_number($ARGV[0]))
 {
     $WIDTH = shift(@ARGV);
 }
@@ -91,7 +91,7 @@ $logger->debug("FILES  = " . join(', ', @FILES));
 sub shorten($) {
     my ($line) = @_;
     # expand tabs.  otherwise substr sees the tab as a
-    # single character, and won't shorten the line enough.  
+    # single character, and won't shorten the line enough.
     $line = expand($line);
     $line = substr($line, $OFFSET, $WIDTH);
     # trim trailing whitespace

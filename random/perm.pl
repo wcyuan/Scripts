@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w 
+#!/usr/local/bin/perl -w
 #############################################################
 ###
 ### print all permutations of a list
@@ -76,7 +76,7 @@ if ($do_iterative) {
     #
     # To put it another way, once you've figured out the first i
     # columns, you basically keep printing those as prefixes to a
-    # complete permutation of the remaining n-i columns.  
+    # complete permutation of the remaining n-i columns.
     #
     # How do you increment a permutation to the next permutation?
     # Basically, the idea is that one of the columns should be ready
@@ -96,10 +96,10 @@ if ($do_iterative) {
     #
     # 1 2 4 3
     #
-    # Let's take a more complicated example.  
+    # Let's take a more complicated example.
     #
     # 2 1 4 3
-    # 
+    #
     # Start on the right, with the 3.  That can't be incremented.
     # Then go to the 4.  The remaining digits and 3 and 4, and 4 is
     # the highest of these, so that can't be incremented either.  So
@@ -107,7 +107,7 @@ if ($do_iterative) {
     # incremented to 3.  That leaves (1, 4), so print those out in
     # order to get:
     #
-    # 2 3 1 4 
+    # 2 3 1 4
     #
     # This next_permutation logic is n^2 (worst case).  Haven't
     # figured out the amortized time (when you go through a complete

@@ -14,9 +14,9 @@ sortdiff.pl - diff two files unordered (sort them first).
 
   sortdiff.pl [options] <file1> <file2>
 
-  Options: 
+  Options:
     --col 1=1,2 --col 2=1,5
-                      compare the first and second columns of the first file 
+                      compare the first and second columns of the first file
                       with the first and fifth columns of the second file
                       column numbers are zero indexed
     --debug           create temporary files, but don't run the diff command
@@ -34,12 +34,12 @@ sortdiff.pl - diff two files unordered (sort them first).
 
 =item I<file1>
 
-the first file.  "-" indicates stdin.  
+the first file.  "-" indicates stdin.
 
 =item I<file2>
 
-the second file.  "-" indicates stdin.  If both files are stdin, the script will 
-probably hang (rather than die with an error).  
+the second file.  "-" indicates stdin.  If both files are stdin, the script will
+probably hang (rather than die with an error).
 
 =back
 
@@ -79,7 +79,7 @@ are passed onto diff
 
 =head1 DESCRIPTION
 
-sort files, then diff them.  
+sort files, then diff them.
 
 =cut
 
@@ -164,10 +164,10 @@ foreach my $fileno (keys %file) {
     # what if it's stdin?
     close($infd);
     my $outfd;
-    open($outfd, ">" . $file{$fileno}{temp}) 
+    open($outfd, ">" . $file{$fileno}{temp})
         or $logger->logconfess("Can't overwrite $file{$fileno}{temp}: $! $@ ?");
     print $outfd sort(@lines);
-    close($outfd) 
+    close($outfd)
         or $logger->logconfess("Can't close $file{$fileno}{temp}: $? $! $@");
 }
 

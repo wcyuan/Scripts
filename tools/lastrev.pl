@@ -172,7 +172,7 @@ foreach my $file (@ARGV) {
 		}
 		elsif ($var eq "date") {
 		    $date = $val;
-		} 
+		}
 	    }
 	    $date =~ s@/@@g;
 	    next LOG unless (defined($date));
@@ -180,9 +180,9 @@ foreach my $file (@ARGV) {
 	    last LOG if ($fast);
 	}
 	unless(close(LOG)) {
-	    # this can happen if we just close the pipe before it 
-	    # is done running.  we ignore the error since we just 
-	    # want to close the pipe anyway.  
+	    # this can happen if we just close the pipe before it
+	    # is done running.  we ignore the error since we just
+	    # want to close the pipe anyway.
 	    # warn "Can't close $log_cmd: $? $!";
 	    next;
 	}
@@ -230,7 +230,7 @@ foreach my $file (@ARGV) {
 		$rev_nos[$#rev_nos]++;
 		$last_revision = join(".", @rev_nos);
 	    }
-	
+
             if (repository_type($file) eq RCS) {
                 system "rlog -r$last_revision $file";
                 system "rcsdiff -u -r$prev_revision -r$last_revision $file";
@@ -241,4 +241,4 @@ foreach my $file (@ARGV) {
 	}
     }
 }
- 
+

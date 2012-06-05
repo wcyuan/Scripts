@@ -6,7 +6,7 @@
 #
 # http://www.gnu.org/software/readline/
 # http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#SEC10
-# 
+#
 # You can re-read the inputrc file with C-x C-r.
 # Lines beginning with '#' are comments.
 #
@@ -15,7 +15,7 @@
 # /etc/.inputrc (only seems to exist on linux)
 $include /etc/.inputrc
 
-set editing-mode emacs 
+set editing-mode emacs
 
 set mark-symlinked-directories on
 
@@ -28,14 +28,14 @@ $if mode=emacs
 #
 set revert-all-at-newline on
 #
-# Instead, just learn to use 
+# Instead, just learn to use
 #    Ctrl-G (cancel a search)
 #    Meta-> (go to the end of the history)
-# I can't seem to learn to use these, so I'll just turn this on.  
+# I can't seem to learn to use these, so I'll just turn this on.
 #
 # 2. In tcsh: control-w deletes from the beginning of the line to the
-# cursor.  
-# 
+# cursor.
+#
 # In bash, we have:
 #
 # unix-word-rubout (C-w)
@@ -49,12 +49,12 @@ set revert-all-at-newline on
 # unix-line-discard (C-u)
 #   Kill backward from the cursor to the beginning of the current line.
 #
-# So, learn to use C-u instead.  
+# So, learn to use C-u instead.
 #
 #
 # 3. In tcsh, alt-b moves back by a word. In bash, it will move to the
 # previous underscore or period.  This is probably better, but it will
-# take some getting used to.  Anyway, I don't know how to change it.  
+# take some getting used to.  Anyway, I don't know how to change it.
 #
 #
 # 4. In tcsh, when tab-complete has multiple matches, it shows the

@@ -8,16 +8,16 @@
 #
 # The input should look like this:
 #
-# 20120223 06:30:33.322 EST   30.772 
-# 20120223 06:30:33.322 EST   31.752 
-# 20120223 06:32:12.536 EST   19.591 
-# 20120223 06:32:44.017 EST    0.496 
-# 20120223 06:33:07.912 EST    0.399 
-# 20120223 06:33:08.440 EST    0.121 
-# 20120223 06:33:08.872 EST    0.162 
-# 20120223 06:33:10.636 EST    0.105 
-# 20120223 06:33:11.222 EST    0.118 
-# 20120223 06:33:11.451 EST    0.101 
+# 20120223 06:30:33.322 EST   30.772
+# 20120223 06:30:33.322 EST   31.752
+# 20120223 06:32:12.536 EST   19.591
+# 20120223 06:32:44.017 EST    0.496
+# 20120223 06:33:07.912 EST    0.399
+# 20120223 06:33:08.440 EST    0.121
+# 20120223 06:33:08.872 EST    0.162
+# 20120223 06:33:10.636 EST    0.105
+# 20120223 06:33:11.222 EST    0.118
+# 20120223 06:33:11.451 EST    0.101
 #
 #
 # The output should look lik this:
@@ -53,8 +53,8 @@ use Getopt::Long;
 use Scalar::Util qw(looks_like_number);
 
 sub main() {
-    my ($idx, 
-        $val, 
+    my ($idx,
+        $val,
         $cap,
        ) = parse_command_line();
     my ($data, $total) = collect_data($idx, $val, $cap);
@@ -79,7 +79,7 @@ sub parse_command_line() {
 
 sub bucket($$) {
     my ($val, $cap) = @_;
-    
+
     my $b = floor($val);
     $b = $cap if $b >= $cap;
     return $b;
@@ -95,10 +95,10 @@ sub collect_data($$$) {
         my $id  = $F[$id_idx];
         my $val = $F[$val_idx];
 
-        if (!defined($id) || 
+        if (!defined($id) ||
             !looks_like_number($id) ||
             !defined($val) ||
-            !looks_like_number($val)) 
+            !looks_like_number($val))
         {
             warn("Skipping malformed line $line");
             next;
@@ -107,8 +107,8 @@ sub collect_data($$$) {
         $total{$id}++;
         $total{all}++;
         my $b = bucket($val, $cap);
-        $data[$b]{$id}++; 
-        $data[$b]{all}++; 
+        $data[$b]{$id}++;
+        $data[$b]{all}++;
     }
     return (\@data, \%total);
 }
@@ -143,14 +143,14 @@ sub print_data($$) {
     my $table = new Text::Table("id", "tot", @buckets);
 
     foreach my $id (sort grep {$_ ne 'all'} keys %$total) {
-        $table->add($id, $total->{$id}, 
-                    map { 
-                        get_data($data, $total, $_, $id) 
+        $table->add($id, $total->{$id},
+                    map {
+                        get_data($data, $total, $_, $id)
                     } @buckets);
     }
 
     # show percentages when summed up over all ids
-    $table->add('all', $total->{all}, 
+    $table->add('all', $total->{all},
                 map {
                     get_data($data, $total, $_, 'all', 1)
                 } @buckets);

@@ -19,7 +19,7 @@ autoflush STDOUT 1;
 use Memoize;
 memoize('better_guess');
 
-getopts("a:d:n:m:t:w:") || 
+getopts("a:d:n:m:t:w:") ||
   die "usage: fep $0 [-m(ax dig)] [-t(ries)] [-w(idth)] [-a(uto) <type>]";
 
 # some default values
@@ -83,7 +83,7 @@ sub get_guess ( $$$$$@ ) {
 	# this optimization only works because we know that
 	# our guesses are going in order, which is only the case
 	# if the guesses have all been automatic
-	# or if the manual guess matches what we would have automatically chosen, 
+	# or if the manual guess matches what we would have automatically chosen,
 	# but we don't catch that case
 	if (!$seen_an_unordered_guess && scalar(@history) > 0) {
 	    $guess = next_guess($width, $max_dig, $history[$#history][0], @history);
@@ -92,13 +92,13 @@ sub get_guess ( $$$$$@ ) {
 	}
 	$was_unordered_guess = 0;
 	print "Automatically guessing $guess\n";
-    } 
+    }
     elsif (defined($auto) && $auto eq "better") {
       BETTER:
 	$guess = better_guess($width, $max_dig, @history);
 	$was_unordered_guess = 1;
 	print "Automatically guessing $guess\n";
-    } 
+    }
     else {
 	do {
 	    if ($guess !~ /^\d+$/) {
@@ -113,8 +113,8 @@ sub get_guess ( $$$$$@ ) {
 		}
 		print "Invalid guess, try again.\n";
 	    }
-	    print "You have $guesses_remaining guess" 
-	      . ($guesses_remaining > 1 ? "es" : "") 
+	    print "You have $guesses_remaining guess"
+	      . ($guesses_remaining > 1 ? "es" : "")
 		. " remaining.\n";
 	    print "Please enter a guess: ";
 	    $guess = <STDIN>;
@@ -205,7 +205,7 @@ sub next_guess ( $$$@ ) {
 	    }
 	}
 	return $guess;
-      GUESS: 
+      GUESS:
 	$guess = increment($width, $max_dig, $guess);
     } while ($guess != $min_val);
     # Can't find a valid guess
@@ -214,34 +214,34 @@ sub next_guess ( $$$@ ) {
     return -1;
 }
 
-# 
-# Define a value V and a guess G, both numbers with width digits.  
+#
+# Define a value V and a guess G, both numbers with width digits.
 # The result is the number of digits
 # that V and G have in common in the same place and the number of digits
-# in common in the wrong place (the output of eval_guess).  
+# in common in the wrong place (the output of eval_guess).
 #
 # The problem is to find V with the fewest number of guesses, where after
-# each guess, you are given a result.  
-# 
-# After X guesses and X results, there is a set S of possible values. 
+# each guess, you are given a result.
+#
+# After X guesses and X results, there is a set S of possible values.
 # This is also the set of possible guesses since each value is equally likely.
 #
-# After our next guess and result, there will be a set S' of possible values.  
+# After our next guess and result, there will be a set S' of possible values.
 #
 # Suppose we guess G.  Then we can look at all the possible values in S and
 # determine the possible results that we get.  Each value will give one result.
 # Many of the values would give the same result.  For each result, there is a set
-# S' of possible values.  
+# S' of possible values.
 #
-# This next algorithm attempts to minimize the expected size of S'.  
-# So foreach G in S, we can find the expected size of S' 
+# This next algorithm attempts to minimize the expected size of S'.
+# So foreach G in S, we can find the expected size of S'
 #    (by taking the expectation over all possibilities in S)
 # Then we can choose the G which results in the smallest |S'|
 #
-# If a smaller set of possibilities is directly correlated to fewer guesses 
-# required, this is an optimal strategy.  
+# If a smaller set of possibilities is directly correlated to fewer guesses
+# required, this is an optimal strategy.
 #
-# This is not necessarily an efficient implementation of that strategy.  
+# This is not necessarily an efficient implementation of that strategy.
 #
 sub get_possible_values ( $$@ ) {
     my ($width, $max_dig, @history) = @_;
@@ -300,7 +300,7 @@ sub better_guess ( $$@ ) {
     my $min_expected_number_of_values_per_result;
     my %equivalent_guess_seen;
     foreach my $guess (@possible_values) {
-	# optimize based on the fact that digits that haven't 
+	# optimize based on the fact that digits that haven't
 	# appeared in any guess so far are equivalent
 	if ($unseen_digs_equivalent) {
 	    my $equivalence_class = get_equivalence_class($guess, \%digs_seen);
@@ -309,7 +309,7 @@ sub better_guess ( $$@ ) {
 	    }
 	    $equivalent_guess_seen{$equivalence_class} = 1;
 	}
-	# if you guess $guess 
+	# if you guess $guess
 	# %all_possible_results holds the number of values which
 	# would give each result (a result being an exact/close pair)
 	my %all_possible_results = ();
@@ -321,7 +321,7 @@ sub better_guess ( $$@ ) {
 	    #
 	    # There is a possibility that we don't have to count, the one where
 	    # the guess is correct, because every guess has the same chance
-	    # of being correct.  
+	    # of being correct.
 	    #else {
 	    #	@{$all_possible_results{$guess_exact}{$guess_close}} = ();
 	    #}
@@ -338,9 +338,9 @@ sub better_guess ( $$@ ) {
 	#foreach my $num_exact (keys %all_possible_results) {
 	#    foreach my $num_close (keys %{$all_possible_results{$num_exact}}) {
 	#	# size of |S'| = num_values_for_this_result
-	#	my $num_values_for_this_result = 
+	#	my $num_values_for_this_result =
 	#	  scalar(@{$all_possible_results{$num_exact}{$num_close}});
-	#	my $probability_of_this_result = 
+	#	my $probability_of_this_result =
 	#	  $num_values_for_this_result / $num_possible_values;
 	#	$expectation{$guess} += $num_values_for_this_result * $probability_of_this_result;
 	#    }
@@ -351,20 +351,20 @@ sub better_guess ( $$@ ) {
 		# size of |S'| = num_values_for_this_result
 		# probablility of getting this result is the num_values_for_this_result
 		# divided by the total number of possible values.
-		# but the total number of possible values is the same for each guess, 
-		# so we'll leave it out.  
-		my $num_values_for_this_result = 
+		# but the total number of possible values is the same for each guess,
+		# so we'll leave it out.
+		my $num_values_for_this_result =
 		  scalar(@{$all_possible_results{$num_exact}{$num_close}});
 		$expectation += $num_values_for_this_result * $num_values_for_this_result;
 	    }
 	}
-	if (!defined($min_expected_number_of_values_per_result) 
+	if (!defined($min_expected_number_of_values_per_result)
 	    || $expectation < $min_expected_number_of_values_per_result) {
 	    $best_guess = $guess;
 	    $min_expected_number_of_values_per_result = $expectation;
 	    debug(5,"new best guess: $guess, $expectation\n");
 	}
-	debug(3, sprintf("%8d %8d %8d %8d\r", $guess, $expectation, 
+	debug(3, sprintf("%8d %8d %8d %8d\r", $guess, $expectation,
 			 $best_guess, $min_expected_number_of_values_per_result));
     }
     debug(3, "\n");
@@ -393,7 +393,7 @@ while (1) {
     print("--------------------------------------------------------------\n");
     print("$wins wins out of $ngames games\n");
     printf("%.4g%% win rate\n", ($wins/$ngames*100));
-    printf("%d guesses (%.2g tries per game)\n", 
+    printf("%d guesses (%.2g tries per game)\n",
 	   $total_tries, ($total_tries/$ngames));
     print("--------------------------------------------------------------\n");
 }

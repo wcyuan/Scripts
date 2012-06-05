@@ -14,7 +14,7 @@ mailattach.pl - Mail files as attachments
 
   mailattach.pl [options] <mailto> <files>
 
-  Options: 
+  Options:
     --attach          file to attach
     --mailto          recipients
     --help, -?        shows brief help message

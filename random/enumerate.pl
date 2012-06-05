@@ -12,9 +12,9 @@ enumerate.pl - Enumerate ways to choose one element from N buckets where each bu
 
 =head1 SYNOPSIS
 
-  enumerate.pl [options] 
+  enumerate.pl [options]
 
-  Options: 
+  Options:
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -119,7 +119,7 @@ sub enumerate_r ( @ ) {
 	return (map {[$_]} @{$buckets[0]});
     }
     my $bucket = $buckets[0];
-    # copy all the buckets?  inefficient!  oh well.  
+    # copy all the buckets?  inefficient!  oh well.
     my @rest = @buckets[1..($n_buckets-1)];
     my @choices;
     map {
@@ -162,8 +162,8 @@ sub enumerate_i ( @ ) {
 	for (my $jj = scalar(@buckets) - 1; $jj >= 0; $jj--) {
 	    # starting with the last bucket, take the next element
 	    $which[$jj]++;
-	    
-	    # overflow, we've reached the end of this bucket, 
+
+	    # overflow, we've reached the end of this bucket,
 	    # go back to the first element, then ripple on
 	    # to the next bucket
 	    if ($which[$jj] >= scalar(@{$buckets[$jj]})) {
@@ -210,7 +210,7 @@ sub enumerate_g_i ( @ ) {
 		$direction[$jj] = 1;
 	    }
 
-	    # overflow, we've reached the end of this bucket, 
+	    # overflow, we've reached the end of this bucket,
 	    # ripple on to the next bucket
 	    if (($direction[$jj] > 0 && $which[$jj] >= $#{$buckets[$jj]}) ||
 		($direction[$jj] < 0 && $which[$jj] <= 0))

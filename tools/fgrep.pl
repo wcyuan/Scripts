@@ -14,12 +14,12 @@ fgrep.pl - like fgrep without the wordlist size restriction
 
   fgrep.pl [options] [patternlist -- required if -f is not used]
 
-  Options: 
+  Options:
     -v               reverse
     -i               case insensitive
     -f <patternlist> the pattern list, if you'd rather specify it this way
     -w               match words only
-    -e               exact matching 
+    -e               exact matching
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -124,7 +124,7 @@ while(my $line = <$wfd>) {
     }
     $patterns{$line} = $line;
 }
-close($wfd) 
+close($wfd)
     or $logger->error("Can't close $PATTERNLIST: $? !$ $@");
 
 # ----------------------

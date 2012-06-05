@@ -9,7 +9,7 @@
 # ^A 1  - move to first window
 # ^A d  - detach
 #
-# screen -D -R to reattach, deattaching any other users, and creating a session if necessary.  
+# screen -D -R to reattach, deattaching any other users, and creating a session if necessary.
 #
 
 # automatically detach the screen session when the screen process receives a
@@ -28,7 +28,7 @@ defbce on
 ## files are installed)
 # bindkey -d -k kD stuff "\010"
 
-## The default action key is Ctrl-A.  
+## The default action key is Ctrl-A.
 # Here's the command to rebind Ctrl-V to action key
 #defescape ^Vv
 #escape ^Vv
