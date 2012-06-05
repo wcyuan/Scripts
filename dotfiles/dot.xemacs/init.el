@@ -302,6 +302,9 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;;
 ;;   only works in emacs, not xemacs
 ;;
+;; command to remove all trailing whitespace from a file:
+;;   perl -i -pne 's/\s+$/\n/' <file>
+;;
 
 ;; Highlight trailing whitespace by default
 (setq-default show-trailing-whitespace t)
