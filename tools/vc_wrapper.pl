@@ -12,9 +12,9 @@ vc_wrapper.pl - wrapper around cvs and svn
 
 =head1 SYNOPSIS
 
-  vc_wrapper.pl [options] 
+  vc_wrapper.pl [options]
 
-  Options: 
+  Options:
     --help, -?        shows brief help message
     --perldoc         shows full documentation
 
@@ -27,27 +27,27 @@ vc_wrapper.pl - wrapper around cvs and svn
 =item I<switchrel>
 
 change a file from the trunk version to the latest release version
-only prints the command to run, unless -run is specified.  
+only prints the command to run, unless -run is specified.
 
 =item I<switchtrunk>
 
 change a file from the latest release version to the trunk version
-only prints the command to run, unless -run is specified.  
+only prints the command to run, unless -run is specified.
 
 =item I<uptrunk>
 
 merge the last changes made to the trunk into the release version
-only prints the command to run, unless -run is specified.  
+only prints the command to run, unless -run is specified.
 
 =item I<rmsg>
 
 print the commit message that should be used when commiting to the
 release branch.  The message will take the commit message from the
-trunk and add to it a line pointing to the trunk revision.  
+trunk and add to it a line pointing to the trunk revision.
 
 =item I<fdiff> and I<fmerge>
 
-Aka foreign_diff and foreign_merge.  
+Aka foreign_diff and foreign_merge.
 
 Let's say you made some changes to file foo that you didn't check in.
 Then you want to make an unrelated change to foo that you do want to
@@ -75,7 +75,7 @@ print out all the commands being run and other debugging information
 
 =item I<--run>
 
-for uptrunk, switchrel, and switchtrunk, not only print the command, but run it.  
+for uptrunk, switchrel, and switchtrunk, not only print the command, but run it.
 
 =item I<--help>
 
@@ -265,7 +265,7 @@ my %CMDS = ("svn" => $SVN,
 
 sub main() {
     my (# the command that was passed in:
-        $cmd_name, 
+        $cmd_name,
         $cmd_options,
         $action,
         $subcmd_options,
@@ -299,8 +299,8 @@ sub main() {
     my $repo_type = get_repo_type($cmd_name, $action, $files);
 
     customize_subcmd_options($repo_type, $action, $subcmd_options,
-                             $diff_arg_u, $diff_arg_w, 
-                             $ann_arg_v, 
+                             $diff_arg_u, $diff_arg_w,
+                             $ann_arg_v,
                              $up_arg_d, $up_arg_P);
 
     if (defined($action)) {
@@ -317,19 +317,19 @@ sub main() {
             switch_to_trunk($repo_type, $action, $files, $run_cmds);
             return;
 
-        } elsif ($action eq "update_from_trunk" || 
+        } elsif ($action eq "update_from_trunk" ||
                  $action eq "uptrunk") {
 
             update_from_trunk($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision);
             return;
 
-        } elsif ($action eq "release_message" || 
+        } elsif ($action eq "release_message" ||
                  $action eq "rmsg") {
 
             release_message($repo_type, $action, $files);
             return;
 
-        } elsif ($action eq "foreign_diff" || 
+        } elsif ($action eq "foreign_diff" ||
                  $action eq "fdiff") {
 
             foreign_diff($repo_type, $action, $files,
@@ -338,35 +338,35 @@ sub main() {
                          $foreign_arg_version);
             return;
 
-        } elsif ($action eq "foreign_merge" || 
+        } elsif ($action eq "foreign_merge" ||
                  $action eq "fmerge") {
 
             foreign_merge($repo_type, $action, $files);
             return;
         } elsif ($action eq "lastrev" || $action eq 'rlastrev') {
-            
+
             lastrev($repo_type, $action, $cmd_options, $files, $lastrev_arg_revs_back, $lastrev_arg_revno);
             return;
         } elsif ($action eq "grep-hist") {
-            
-            grep_hist($repo_type, $action, $subcmd_options, $files, 
-                      $grep_hist_arg_missing, 
-                      $grep_hist_arg_all_revs, 
-                      $grep_hist_arg_start_rev, 
+
+            grep_hist($repo_type, $action, $subcmd_options, $files,
+                      $grep_hist_arg_missing,
+                      $grep_hist_arg_all_revs,
+                      $grep_hist_arg_start_rev,
                       $grep_hist_arg_first_occur,
                       $grep_hist_arg_last_occur,
                       $grep_hist_arg_show_log);
             return;
         } elsif ($action eq "bisect-all") {
-            
+
             bisect_all($repo_type, $action, $subcmd_options, $files);
             return;
         }
     }
 
     run_modified_command($repo_type, $cmd_options, $action, $subcmd_options, $files,
-                         $diff_arg_u, $diff_arg_w, 
-                         $ann_arg_v, 
+                         $diff_arg_u, $diff_arg_w,
+                         $ann_arg_v,
                          $up_arg_d, $up_arg_P);
 }
 
@@ -379,7 +379,7 @@ sub main() {
 # It separates the arguments into leading options and regular args.
 # Options are anything that starts with '-' (even '--').  Leading
 # options are all the options that appear before any non-option.
-# This changes the input array in place.  
+# This changes the input array in place.
 #
 # We are trying to do this without knowing what the actual options are
 # and what they mean.  If there is an option that takes an argument,
@@ -403,11 +403,11 @@ sub parse_command_line() {
     # Parse any general options
     # Since we want to parse the command's options separately from the
     # sub-command's arguments, use "require order" so that as soon as it
-    # sees a non-option, it treats everything else as an argument.  
+    # sees a non-option, it treats everything else as an argument.
     #
     # use pass_through, since we want basic options, but other options
     # should just be passed through.
-    Getopt::Long::Configure("pass_through", "require_order", "noauto_abbrev", 
+    Getopt::Long::Configure("pass_through", "require_order", "noauto_abbrev",
                             "noignore_case");
     GetOptions( "run" => \my $run_cmds,
                 "no_write" => \$NO_WRITE,
@@ -447,10 +447,10 @@ sub parse_command_line() {
 
         $LOGGER->debug("Action = $action");
 
-        if ($action eq "fdiff" || 
-            $action eq "foreign_diff" || 
-            $action eq "foreign_merge" || 
-            $action eq "fmerge") 
+        if ($action eq "fdiff" ||
+            $action eq "foreign_diff" ||
+            $action eq "foreign_merge" ||
+            $action eq "fmerge")
         {
             Getopt::Long::Configure("no_pass_through");
             GetOptions( "repository|r=s" => \$foreign_arg_repos,
@@ -472,9 +472,9 @@ sub parse_command_line() {
         } elsif ($action eq "grep-hist") {
             Getopt::Long::Configure("no_pass_through");
             GetOptions( "missing!" => \$grep_hist_arg_missing,
-                        "all|all_revs!" => 
+                        "all|all_revs!" =>
                                       \$grep_hist_arg_all_revs,
-                        "start_rev|r=s" => 
+                        "start_rev|r=s" =>
                                       \$grep_hist_arg_start_rev,
                         "first!"   => \$grep_hist_arg_first_occur,
                         "last!"    => \$grep_hist_arg_last_occur,
@@ -500,7 +500,7 @@ sub parse_command_line() {
     $LOGGER->debug("subcmd_options = '" . join(', ', @subcmd_options) . "'");
     $LOGGER->debug("files = '" . join(', ', @files) . "'");
 
-    return ($cmd_name, 
+    return ($cmd_name,
             \@cmd_options,
             $action,
             \@subcmd_options,
@@ -543,7 +543,7 @@ sub my_dirname($) {
     #
     # Unsuccessful stat on filename containing newline at /u/yuanc/bin/cvs line 228.
     #
-    # It's otherwise harmless, though.  
+    # It's otherwise harmless, though.
     if ($file_or_dir !~ m/\n/ && -d $file_or_dir) {
 	return $file_or_dir;
     } else {
@@ -553,7 +553,7 @@ sub my_dirname($) {
 
 sub get_git_top($) {
     my ($file) = @_;
-    
+
     my $dirname = my_dirname($file);
     for (my $ii = 0; -d $dirname && $ii < 100; $dirname .= "/..", $ii++) {
         if (-d "$dirname/.git") {
@@ -565,7 +565,7 @@ sub get_git_top($) {
 
 sub get_repo_type($$$) {
     my ($cmd_name, $action, $files) = @_;
-    if (defined($action) && 
+    if (defined($action) &&
         ($action eq "co" || $action eq "checkout")) {
         # nop
 
@@ -658,7 +658,7 @@ sub run ( $;$ ) {
     if (ref($cmd) eq 'ARRAY') {
 	$LOGGER->debug(join(' ', @$cmd));
     } else {
-	$LOGGER->debug($cmd);	
+	$LOGGER->debug($cmd);
     }
     if ($always || !$NO_WRITE) {
 	if ($exec) {
@@ -692,7 +692,7 @@ sub run ( $;$ ) {
 # call svn info on a file and return the fields as a hash
 #
 # expecting something like this:
-# yuanc@casqa1:/u/yuanc/proj/guas/release/src/lib/jsh 2:53pm> svn info gtpub_interface.tcl 
+# yuanc@casqa1:/u/yuanc/proj/guas/release/src/lib/jsh 2:53pm> svn info gtpub_interface.tcl
 # Path: gtpub_interface.tcl
 # Name: gtpub_interface.tcl
 # URL: file:///proj/guas/svn/repository/guas/branches/rel_20090417/src/lib/jsh/gtpub_interface.tcl
@@ -743,7 +743,7 @@ sub match_repository_root ( $$ ) {
     if ($file_root ne $root) {
 	return;
     } else {
-	my $file_rest = substr $file, $root_len; 
+	my $file_rest = substr $file, $root_len;
 	return $file_rest;
     }
 }
@@ -761,7 +761,7 @@ sub match_repository_root ( $$ ) {
 sub get_trunk_file ( $$ ) {
     my ($root, $file) = @_;
 
-    # First, compare the beginning of the file to $root 
+    # First, compare the beginning of the file to $root
     my $file_rest = match_repository_root($root, $file);
     if (!$file_rest) {
 	$LOGGER->error("Can't parse release file $file, doesn't start with root $root");
@@ -824,7 +824,7 @@ sub get_latest_release ( $ ) {
 sub get_release_file ( $$ ) {
     my ($root, $file) = @_;
 
-    # First, compare the beginning of the file to $root 
+    # First, compare the beginning of the file to $root
     my $file_rest = match_repository_root($root, $file);
     if (!$file_rest) {
 	$LOGGER->error("Can't parse trunk file $file, doesn't start with root $root");
@@ -938,7 +938,7 @@ sub svn_revision_list($;$) {
     return \@revs;
 }
 
-# Returns git log information.  
+# Returns git log information.
 #
 # Returns an array of arrays.  Each element of the array is a
 # 6-element array:
@@ -950,7 +950,7 @@ sub svn_revision_list($;$) {
 sub git_revision_list {
     my $format = '"%h %ce %ci %s"';
     my $log = run("$GIT log --pretty=format:$format " . join(' ', @_), {always => 1});
-    return [map { 
+    return [map {
         my ($hash, $email, $date, $time, $tz, $msg) = split(' ', $_, 6);
         $email =~ s/@(.*)$//;
         [$hash, $email, $date, $msg, $time, $tz];
@@ -1124,13 +1124,13 @@ sub get_version ( $$ ) {
 	$repository = "";
     }
 
-    $LOGGER->debug(join('', map { $_ . "\n" } ("data       => $data", 
+    $LOGGER->debug(join('', map { $_ . "\n" } ("data       => $data",
 				      "repository => $repository",
-				      "fn         => $fn", 
-				      "version    => $version", 
-				      "date       => $date", 
-				      "time       => $time", 
-				      "user       => $user", 
+				      "fn         => $fn",
+				      "version    => $version",
+				      "date       => $date",
+				      "time       => $time",
+				      "user       => $user",
 				      "other      => $other")));
     return ($repository, $fn, $version);
 }
@@ -1140,7 +1140,7 @@ sub get_version ( $$ ) {
 #
 
 sub lastrev($$$$$$) {
-    my ($repo_type, $action, $cmd_options, $files, 
+    my ($repo_type, $action, $cmd_options, $files,
         $lastrev_arg_revs_back, $lastrev_arg_revno) = @_;
 
     $lastrev_arg_revs_back //= 1;
@@ -1156,7 +1156,7 @@ sub lastrev($$$$$$) {
         # run get_repo_type again on each file, so we can handle files
         # on different repositories.
         my $repo_type = get_repo_type($repo_type, $action, [$file]);
-        
+
         if ($repo_type eq 'svn') {
             my $prev;
             my $revno = $lastrev_arg_revno;
@@ -1206,7 +1206,7 @@ sub lastrev($$$$$$) {
                 $rev_nos[$#rev_nos]++;
                 $last_revision = join(".", @rev_nos);
             }
-	
+
             if ($repo_type eq 'rcs') {
                 my $output = run("rlog -r$last_revision $file");
                 print $output if defined($output);
@@ -1259,7 +1259,7 @@ sub lastrev($$$$$$) {
 
 sub switch_to_release($$$$) {
     my ($repo_type, $action, $files, $run_cmds) = @_;
-    
+
     if ($repo_type ne "svn") {
 	$LOGGER->logconfess("$action is only valid with svn");
     }
@@ -1365,7 +1365,7 @@ sub release_message($$$) {
     }
 
     # print out a message for committing into the release branch.  get
-    # the commit message of the normal branch, then add 
+    # the commit message of the normal branch, then add
     # "pushing <revision> into production" to the front
 
     foreach my $file (@$files) {
@@ -1400,7 +1400,7 @@ sub release_message($$$) {
 }
 
 sub foreign_diff ($$$$$$) {
-    my ($repo_type, $action, $files, 
+    my ($repo_type, $action, $files,
         $foreign_arg_repos,
         $foreign_arg_fn,
         $foreign_arg_version) = @_;
@@ -1446,8 +1446,8 @@ sub foreign_diff ($$$$$$) {
 sub foreign_merge($$$) {
     my ($repo_type, $action, $files) = @_;
     if (scalar(@$files) < 2) {
-	$LOGGER->logconfess("'$action' requires at least two arguments: \n" . 
-              "  $0 $action [repository_file]* [foreign_file_or_dir]\n" . 
+	$LOGGER->logconfess("'$action' requires at least two arguments: \n" .
+              "  $0 $action [repository_file]* [foreign_file_or_dir]\n" .
               "got: " .  join(',', @$files));
     }
 
@@ -1471,13 +1471,13 @@ sub foreign_merge($$$) {
 	# don't clobber any local changes.
 	#
 	if ($repo_type eq "cvs") {
-	    chomp(my $line = run("$cmd status $repository_file | grep Status | grep Up-to-date", 
+	    chomp(my $line = run("$cmd status $repository_file | grep Status | grep Up-to-date",
                                  {always => 1, no_warn => 1}));
 	    if ($line eq "") {
 		$LOGGER->logconfess("$repository_file is not up to date");
 	    }
 	} else {
-	    chomp(my $line = run("$cmd status -u $repository_file | grep -v 'Status against revision'", 
+	    chomp(my $line = run("$cmd status -u $repository_file | grep -v 'Status against revision'",
                                  {always => 1, no_warn => 1}));
 	    if ($line ne "") {
 		$LOGGER->logconfess("$repository_file is not up to date");
@@ -1486,7 +1486,7 @@ sub foreign_merge($$$) {
 
 	#
 	# Assert that the foreign file exists and is readable
-	# 
+	#
 	my $foreign_file = $foreign_file_or_dir;
 	if (-d $foreign_file_or_dir) {
 	    $foreign_file .= '/' . basename($repository_file);
@@ -1507,7 +1507,7 @@ sub foreign_merge($$$) {
 	# If we don't own the foreign file, it's ok, but only copy the
 	# foreign file to our local checkout, don't remove the
 	# original foreign file.
-	# 
+	#
 	my $copy_instead_of_move = 0;
 	if (! -o $foreign_file) {
 	    $copy_instead_of_move = 1;
@@ -1516,7 +1516,7 @@ sub foreign_merge($$$) {
 	#
 	# Now the meat of it: update to the original version, move the
 	# file over, then update to the Head revision
-	# 
+	#
 	my ($repository, $fn, $version) = get_version($foreign_file, $repo_type);
 	run("$cmd up -r $version $repository_file");
 	if ($copy_instead_of_move) {
@@ -1534,11 +1534,11 @@ sub foreign_merge($$$) {
 
 sub rev_match($$$) {
     my ($repo_type, $revs, $rev) = @_;
-    
+
     return ((scalar(@$revs) > 0) &&
             (scalar(grep {
-                $_ eq $rev || ($repo_type eq 'git' && 
-                               ($_ =~ /^$rev/ || 
+                $_ eq $rev || ($repo_type eq 'git' &&
+                               ($_ =~ /^$rev/ ||
                                 $rev =~ /^$_/))
             } @$revs) != 0));
 }
@@ -1565,16 +1565,16 @@ sub rev_match($$$) {
 # look at that revision.
 #
 # -start <revision>
-#        The revision to start with.  
+#        The revision to start with.
 #
-# -first 
-#        Will print the first commit where the pattern is found.  
+# -first
+#        Will print the first commit where the pattern is found.
 #
-# -last  
+# -last
 #        Will print the lastrev for the commit after which the pattern
 #        isn't found.
 #
-# -all_rev 
+# -all_rev
 #        Will print the result of greping in each revision (from
 #        most recent backwards) rather than jumping to the previous
 #        revision based on annotate.  Also, in this mode, the output
@@ -1583,16 +1583,16 @@ sub rev_match($$$) {
 # -log   Besides printing the grep output, also print the log message of
 #        that revision.
 #
-# -missing 
+# -missing
 #        Instead of printing revisions where this pattern matches,
-#        print revisions where the pattern doesn't match.  
+#        print revisions where the pattern doesn't match.
 #
 #
 # For git, you can also try this:
 # git log --pretty=format:"COMMIT %h (%ci) %s" --follow -p -U0 <file> | egrep 'COMMIT|<pattern>' | less
 sub grep_hist($$$$$$) {
-    my ($repo_type, $action, $options, $files, 
-        $show_missing, $all_revs, 
+    my ($repo_type, $action, $options, $files,
+        $show_missing, $all_revs,
         $start_rev,
         $first_occur, $last_occur,
         $show_log) = @_;
@@ -1621,7 +1621,7 @@ sub grep_hist($$$$$$) {
         # Skip_to_rev is a list of revisions.  We will actually start
         # with the revision after the first revision in skip_to_rev.
         # So we skip all revisions until we hit a revision in
-        # skip_to_revision, then we print the next revision.  
+        # skip_to_revision, then we print the next revision.
         my @skip_to_rev;
         if (defined($start_rev) || $show_missing) {
             push(@skip_to_rev, $start_rev);
@@ -1691,7 +1691,7 @@ sub grep_hist($$$$$$) {
 #
 # For example, to find the first time a line appears in a file, run
 # this:
-# 
+#
 #   vc bisect-all true_if_failure git grep <pattern> <file>
 #
 # (the only problem is that this might not work if the command
@@ -1724,11 +1724,11 @@ sub bisect_all($$$$) {
 # subcommands.  But we still modify the arguments a little.
 #
 
-# Modifies in place the array that $subcmd_options is a reference to.  
+# Modifies in place the array that $subcmd_options is a reference to.
 sub customize_subcmd_options($$$$$$$$) {
     my ($repo_type, $action, $subcmd_options,
-        $diff_arg_u, $diff_arg_w, 
-        $ann_arg_v, 
+        $diff_arg_u, $diff_arg_w,
+        $ann_arg_v,
         $up_arg_d, $up_arg_P) = @_;
 
     if (!defined($action)) {
@@ -1785,10 +1785,10 @@ sub customize_subcmd_options($$$$$$$$) {
             #   cvs diff -u -r A -r B
             #
             # which is better.  We just avoid the issue of having the
-            # understand that -r requires an argument.            
-            unshift(@$subcmd_options, '-u'); 
+            # understand that -r requires an argument.
+            unshift(@$subcmd_options, '-u');
             if ($diff_arg_w) {
-                unshift(@$subcmd_options, '-w') 
+                unshift(@$subcmd_options, '-w')
             }
         } elsif (($action eq "up" || $action eq "update") && ($up_arg_d || $up_arg_P)) {
             if ($up_arg_d) {
@@ -1803,7 +1803,7 @@ sub customize_subcmd_options($$$$$$$$) {
             if (!$diff_arg_u) {
                 $LOGGER->warn("Adding -u argument to rcs diff");
             }
-            unshift(@$subcmd_options, '-u'); 
+            unshift(@$subcmd_options, '-u');
         }
     }
 
@@ -1811,10 +1811,10 @@ sub customize_subcmd_options($$$$$$$$) {
         unshift(@$subcmd_options, '-u') if ($diff_arg_u);
         unshift(@$subcmd_options, '-w') if ($diff_arg_w);
     }
-    if ($action ne "ann" && 
-        $action ne "praise" && 
-        $action ne "blame" && 
-        $action ne "annotate") 
+    if ($action ne "ann" &&
+        $action ne "praise" &&
+        $action ne "blame" &&
+        $action ne "annotate")
     {
         unshift(@$subcmd_options, '-v') if ($ann_arg_v);
     }
@@ -1873,7 +1873,7 @@ sub cd_to_git_repo($) {
 }
 
 #
-# Some git commands must be run from the top of the git repository.  
+# Some git commands must be run from the top of the git repository.
 #
 # This command changes the contents of the $files array ref that it is
 # given.  It converts paths so they are relative to the git top so
@@ -1905,13 +1905,13 @@ sub cd_to_git_top($) {
 
 sub run_modified_command($$$$$$$$$$) {
     my ($repo_type, $cmd_options, $action, $subcmd_options, $files,
-        $diff_arg_u, $diff_arg_w, 
-        $ann_arg_v, 
+        $diff_arg_u, $diff_arg_w,
+        $ann_arg_v,
         $up_arg_d, $up_arg_P) = @_;
 
     my $cmd;
     ($cmd, $action) = get_command($repo_type, $action);
-    
+
     my @cmd = ($cmd, @$cmd_options);
     if (defined($action)) {
         push(@cmd, $action);
