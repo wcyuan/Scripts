@@ -1587,9 +1587,6 @@ sub rev_match($$$) {
 #        Instead of printing revisions where this pattern matches,
 #        print revisions where the pattern doesn't match.
 #
-#
-# For git, you can also try this:
-# git log --pretty=format:"COMMIT %h (%ci) %s" --follow -p -U0 <file> | egrep 'COMMIT|<pattern>' | less
 sub grep_hist($$$$$$) {
     my ($repo_type, $action, $options, $files,
         $show_missing, $all_revs,
@@ -1608,6 +1605,32 @@ sub grep_hist($$$$$$) {
     } elsif ($repo_type eq 'git') {
         cd_to_git_repo($files);
     }
+
+    # Getting the revision list for the whole repo is too slow in git,
+    # so just run this more efficient command.
+    #
+    #    git log --pretty=format:"COMMIT %h (%ci) %s" --follow -p -U0 <file> | egrep 'COMMIT|<pattern>' | less
+    #
+    # The log command will print out all commits and the diff from
+    # that commit.  The egrep will save all commit messages and all
+    # lines from the diff that match the pattern.  So if you pipe this
+    # to less and search for the pattern, you'll be able to see all
+    # the commits and messages where lines contain that pattern were
+    # changed.  You'll also see commit messages where the pattern
+    # weren't changed, so you just need to ignore those.
+    if ($repo_type eq 'git') {
+        my $full_cmd = $cmd;
+        $full_cmd .= ' log --pretty=format:"COMMIT %h (%ci) %s" -p -U0 ';
+        # Can only follow if there is only one file
+        if (scalar(@$files) == 1 && $files->[0] ne '') {
+            $full_cmd .= '--follow ';
+        }
+        $full_cmd .= join(' ', @$files);
+        $full_cmd .= " | egrep 'COMMIT|$patt'";
+        $LOGGER->info("Exec'ing: $full_cmd");
+        exec($full_cmd);
+    }
+
  FILE:
     foreach my $file (@$files) {
         my $revs;
