@@ -15,7 +15,7 @@ alias      la='ls -alF'
 alias     lsd='ls -dlF'
 alias     ltr='ls -lrt'
 alias      sa='unalias -a; . ~/.bashrc'
-alias ipython='python ~/ipython-0.12/ipython.py'
+alias ipython='python ~/usr/pkgs/ipython-0.12/ipython.py'
 
 alias     pgm='cd ~/testbed/local/octave/pgmclass/pa9/'
 
