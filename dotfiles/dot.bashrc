@@ -18,7 +18,12 @@ alias      sa='unalias -a; . ~/.bashrc'
 alias ipython='python ~/ipython-0.12/ipython.py'
 
 alias     pgm='cd ~/testbed/local/octave/pgmclass/pa9/'
-alias    saas='ssh -L *:3000:localhost:3000 -i ~/testbed/saas/AWSEC2.pem ubuntu@ec2-23-22-197-139.compute-1.amazonaws.com'
+
+saas() {
+    # e.g. ec2-23-22-197-139.compute-1.amazonaws.com
+    host=$1
+    ssh -L *:3000:localhost:3000 -i ~/testbed/classes/saas/AWSEC2.pem ubuntu@$host
+}
 
 which() {
     args=$*
