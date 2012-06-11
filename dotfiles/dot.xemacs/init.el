@@ -38,7 +38,8 @@
 ;; C-s       -- search
 ;; C-r       -- backwards search
 ;;
-;; M-<del>   -- kill (cut) previous word
+;; M-<backspace>
+;;           -- kill (cut) previous word
 ;; M-d       -- kill next word
 ;; C-k       -- kill rest of line
 ;; C-y       -- yank (paste)
@@ -110,6 +111,19 @@
 ;;
 ;; http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html
 ;; http://www.emacswiki.org/emacs/EmacsWiki
+;;
+;; ---------------------------------------------------------------- ;;
+;;
+;; When definine new key bindings, consider the emacs key binding
+;; conventions:
+;;
+;; http://www.gnu.org/software/emacs/manual/html_node/elisp/Key-Binding-Conventions.html#Key-Binding-Conventions
+;;
+;; \C-c-letter is reserved for users
+;; <F5>-<F9> are reserved for users
+;; \C-c-non-letter is reserved for major or minor modes
+;; Don't bind \C-h (help), \C-g (exit); don't end with <ESC>
+;; Careful when binding \C-u
 ;;
 ;; ---------------------------------------------------------------- ;;
 
@@ -198,6 +212,15 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
       ;cperl-indent-parens-as-block t
       ;cperl-tab-always-indent t
       )
+
+;; ---------------------------------------------------------------- ;;
+;; Ruby
+;;
+
+; I don't know whose idea it was to bind Meta-Backspace to
+; "ruby-mark-defun" in ruby-mode, but I really need it to be
+; backwards-kill-word.
+(define-key ruby-mode-map (kbd "M-BS") 'backward-kill-word)
 
 ;; ---------------------------------------------------------------- ;;
 ;; VC
@@ -418,7 +441,7 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;; ;(global-set-key "\M-n" 'just-one-space)
 ;; ;(global-set-key "\M-p" 'fill-paragraph)
 
-;; (global-set-key "\C-c8" 'set-eighty-column)
+;; (global-set-key "\C-ce" 'set-eighty-column)
 ;; (add-hook 'cperl-mode-hook (lambda () (interactive) (column-marker-1 80)))
 ;; (add-hook 'python-mode-hook (lambda () (interactive) (column-marker-1 80)))
 ;; (add-hook 'java-mode-hook (lambda () (interactive) (column-marker-1 80)))
