@@ -217,10 +217,23 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 ;; Ruby
 ;;
 
-; I don't know whose idea it was to bind Meta-Backspace to
-; "ruby-mark-defun" in ruby-mode, but I really need it to be
-; backwards-kill-word.
-(define-key ruby-mode-map (kbd "M-BS") 'backward-kill-word)
+(add-hook 'ruby-mode-hook
+          (lambda()
+            (add-hook 'local-write-file-hooks
+                      '(lambda()
+                         (save-excursion
+                           (untabify (point-min) (point-max))
+                           (delete-trailing-whitespace)
+                           )))
+            (set (make-local-variable 'indent-tabs-mode) 'nil)
+            (set (make-local-variable 'tab-width) 2)
+            (imenu-add-to-menubar "IMENU")
+            (define-key ruby-mode-map "\C-m" 'newline-and-indent)
+            ;; I don't know whose idea it was to bind Meta-Backspace to
+            ;; "ruby-mark-defun" in ruby-mode, but I really need it to be
+            ;; backwards-kill-word.
+            (define-key ruby-mode-map (kbd "M-BS") 'backward-kill-word)
+            ))
 
 ;; ---------------------------------------------------------------- ;;
 ;; VC
