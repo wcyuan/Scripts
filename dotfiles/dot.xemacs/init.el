@@ -358,6 +358,16 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
   (redraw-display))
 (global-set-key "\C-cw" 'toggle-trailing-whitespace)
 
+
+(defun untabify-and-delete-trailing-whitespace ()
+  "untabify and delete trailing whitespace"
+  (interactive)
+  (message "Removing tabs and trailing whitespace")
+  (untabify (point-min) (point-max))
+  (delete-trailing-whitespace)
+  )
+(global-set-key "\C-ct" 'untabify-and-delete-trailing-whitespace)
+
 ;; ---------------------------------------------------------------- ;;
 ;; Flymake (only works for emacs, not xemacs)
 ;;
