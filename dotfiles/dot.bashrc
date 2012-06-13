@@ -45,12 +45,16 @@ alias      egrep='egrep --color'
 # -H forces printing of the file name, even if there is only one file
 alias      xgrep='xargs -d"\n" grep -H --color'
 alias     xegrep='xargs -d"\n" egrep -H --color'
-# Should use ack instead
+# Should use ack instead?
 alias   findgrep='find . -name .svn -prune -o -type f  -print0 | xargs -0 grep -H --color'
 
 # find
 alias   findtext='find . -name .svn -prune -o -type f -print'
 alias   findpath='find . $path -type f'
+findname() {
+    pattern="$*"
+    find . -iname "*$pattern*" | grep -i "$pattern"
+}
 
 # rarely used
 alias   ruinterm="echo -n ^N"
