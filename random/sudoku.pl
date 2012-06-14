@@ -69,6 +69,7 @@ use strict;
 use warnings 'all';
 use Pod::Usage;
 use Data::Dumper;
+use Memoize qw(memoize);
 
 use Getopt::Long;
 use Log::Log4perl qw(:levels);
@@ -208,20 +209,29 @@ sub box_groups () {
     #} (0, 3, 6, 27, 30, 33, 54, 57, 60);
 }
 
-# Here's the grid:
-# 6 5 2 3 1 4
-# 2 4 1 6 3 5
-# 3 1 4 2 5 6
-# 5 6 3 4 2 1
-# 4 2 5 1 6 3
-# 1 3 6 5 4 2
 sub tscube_groups() {
-    return ([4,  8, 13, 23, 27, 30],
-            [2,  6, 15, 22, 25, 35],
-            [3, 10, 12, 20, 29, 31],
-            [5,  7, 14, 21, 24, 34],
-            [1, 11, 16, 18, 26, 33],
-            [0,  9, 17, 19, 28, 32]);
+    my $grid = join('',
+                    '6 5 2 3 1 4',
+                    '2 4 1 6 3 5',
+                    '3 1 4 2 5 6',
+                    '5 6 3 4 2 1',
+                    '4 2 5 1 6 3',
+                    '1 3 6 5 4 2');
+    $grid =~ s/\s*//g;
+    my @groups;
+    foreach (my $ii  = 0; $ii < length($grid); $ii++) {
+        push(@{$groups[substr($grid, $ii, 1)-1]}, $ii);
+    }
+
+    # groups =
+    #([4,  8, 13, 23, 27, 30],
+    # [2,  6, 15, 22, 25, 35],
+    # [3, 10, 12, 20, 29, 31],
+    # [5,  7, 14, 21, 24, 34],
+    # [1, 11, 16, 18, 26, 33],
+    # [0,  9, 17, 19, 28, 32]);
+
+    return @groups;
 }
 
 sub all_groups () {
@@ -231,6 +241,7 @@ sub all_groups () {
         return (row_groups(), column_groups(), box_groups());
     }
 }
+memoize('all_groups');
 {
     my @group_ids = all_groups();
     sub all_group_ids () {
@@ -279,10 +290,12 @@ sub all_groups () {
 	my ($id) = @_;
 	map {group_by_id($_)} elt_group_ids($id);
     }
+    memoize('elt_groups');
     sub elt_in_group ( $$ ) {
 	my ($group, $elt) = @_;
 	return $elt_in_group[$group]{$elt};
     }
+    memoize('elt_in_group');
 }
 
 #
