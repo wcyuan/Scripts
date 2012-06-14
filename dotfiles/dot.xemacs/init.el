@@ -219,12 +219,13 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
 
 (add-hook 'ruby-mode-hook
           (lambda()
-            (add-hook 'local-write-file-hooks
-                      '(lambda()
-                         (save-excursion
-                           (untabify (point-min) (point-max))
-                           (delete-trailing-whitespace)
-                           )))
+            (GNUEmacs
+             (add-hook 'local-write-file-hooks
+                       '(lambda()
+                          (save-excursion
+                            (untabify (point-min) (point-max))
+                            (delete-trailing-whitespace)
+                            ))))
             (set (make-local-variable 'indent-tabs-mode) 'nil)
             (set (make-local-variable 'tab-width) 2)
             (imenu-add-to-menubar "IMENU")
@@ -358,7 +359,8 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
   (redraw-display))
 (global-set-key "\C-cw" 'toggle-trailing-whitespace)
 
-
+; Only works in emacs, not xemacs, because there is no
+; delete-trailing-whitespace in xemacs.
 (defun untabify-and-delete-trailing-whitespace ()
   "untabify and delete trailing whitespace"
   (interactive)
