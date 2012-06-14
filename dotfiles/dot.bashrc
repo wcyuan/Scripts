@@ -99,6 +99,11 @@ export LESS
 
 # ----------------------------------------------------
 
+# turn off cygwin xemacs warning
+nodosfilewarning=1
+
+# ----------------------------------------------------
+
 # ssa
 #
 # Runs ssa-add on startup.  This will ask for your passphrase every
@@ -113,6 +118,9 @@ SSH_ENV="$HOME/.ssh/environment"
 function start_agent {
     echo "Initializing new SSH agent..."
     # spawn ssh-agent
+    if [ -f "$SSH_ENV" ]; then
+        rm -f $SSH_ENV
+    fi
     ssh-agent | sed 's/^echo/#echo/' > "$SSH_ENV"
     echo succeeded
     chmod 600 "$SSH_ENV"
@@ -133,22 +141,24 @@ function test_identities {
     fi
 }
 
-## check for running ssh-agent with proper $SSH_AGENT_PID
-#if [ -n "$SSH_AGENT_PID" ]; then
-#    ps -ef | grep "$SSH_AGENT_PID" | grep ssh-agent > /dev/null
-#    if [ $? -eq 0 ]; then
-#	test_identities
-#    fi
-## if $SSH_AGENT_PID is not properly set, we might be able to load one from
-## $SSH_ENV
-#else
-#    if [ -f "$SSH_ENV" ]; then
-#	. "$SSH_ENV" > /dev/null
-#    fi
-#    ps -ef | grep "$SSH_AGENT_PID" | grep -v grep | grep ssh-agent > /dev/null
-#    if [ $? -eq 0 ]; then
-#        test_identities
-#    else
-#        start_agent
-#    fi
-#fi
+# check for running ssh-agent with proper $SSH_AGENT_PID
+if [ -n "$SSH_AGENT_PID" ]; then
+    ps -ef | grep "$SSH_AGENT_PID" | grep ssh-agent > /dev/null
+    if [ $? -eq 0 ]; then
+	test_identities
+    fi
+# if $SSH_AGENT_PID is not properly set, we might be able to load one from
+# $SSH_ENV
+else
+    if [ -f "$SSH_ENV" ]; then
+	. "$SSH_ENV" > /dev/null
+    fi
+    ps -ef | grep "$SSH_AGENT_PID" | grep -v grep | grep ssh-agent > /dev/null
+    if [ $? -eq 0 ]; then
+        test_identities
+    else
+        # don't start_agent until we need it
+        #start_agent
+        :
+    fi
+fi
