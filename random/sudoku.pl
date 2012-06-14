@@ -62,6 +62,20 @@ $ sudoku.pl -slow -verbose -i '534.2769. 72.9.6... .6954..72    6.32149.7 4927..
 
 $ sudoku.pl -a -slow -verbose -i '..3...652...3621796.....843 3..12.765...6..381.6..539245.6.1...8...4.65.7.9......6'
 
+To solve 36cube, run:
+  sudoku.pl -36cube -input '123456 ------ ------ ------ ------ ------'
+The first row can be set to 123456 without loss of generality.  The
+problem is to assign a color to each spot.  Suppose you come up with a
+solution.  The first row has to have six different colors.  Whatever
+they are, you can rename those colors 123456.  So it's safe to start
+with 123456, and assume that if there is a solution, it can be found
+with that as the first row.
+
+Note, it's correct that there is no solution...
+  http://en.wikipedia.org/wiki/Latin_square
+  http://en.wikipedia.org/wiki/Graeco-Latin_square
+  http://en.wikipedia.org/wiki/36_cube
+  http://en.wikipedia.org/wiki/Thirty-six_officers_problem
 
 =cut
 
@@ -94,8 +108,6 @@ GetOptions( "slow|s!"             => \my $slow,
 	    "generate|g!"         => \my $generate,
             "verbose"             => sub { $logger->level($DEBUG) },
             "log_level=s"         => sub { $logger->level($_[1]) },
-            # http://en.wikipedia.org/wiki/Latin_square
-            # http://en.wikipedia.org/wiki/36_cube
             "36cube!"             => \my $tscube,
 	  )
     or pod2usage();
@@ -741,7 +753,14 @@ sub standard($;$) {
 	    }
 	}
 	my ($solved, $solutions) = trial_and_error($board, \@possible_values, $depth+1);
-	return wantarray ? ($solved+1, $solutions) : $solved+1;
+        if ($solved > 0) {
+            # Solved == 0 means it wasn't solved.  Solved == 1 means
+            # it was solved with rules.  Solved == 2 means it was
+            # solved with guessing.  If we got here, and it was
+            # solved, it was solved with guessing.
+            $solved++;
+        }
+	return wantarray ? ($solved, $solutions) : $solved;
     }
     return wantarray ? (1, [[$board, $depth]]) : 1;
 }
