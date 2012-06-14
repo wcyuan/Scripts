@@ -82,24 +82,30 @@ my $logger = Log::Log4perl->get_logger();
 
 # default values
 
-my $MAX_DIGIT_V = 3;
-my $MAX_DIGIT_H = 3;
-
 # parse command-line options
-GetOptions( "slow|s!" => \my $slow,
-	    "file|f=s" => \my $infile,
-	    "input|i=s" => \my $input,
-	    "max_dig_v|v=i"=> \$MAX_DIGIT_V,
-	    "max_dig_h|h=i"=> \$MAX_DIGIT_H,
-	    "num_to_do|n=i"=> \my $num_to_do,
-	    "check_uniqueness|a!"=> \my $check_uniqueness,
-	    "generate|g!" => \my $generate,
-            "verbose" => sub { $logger->level($DEBUG) },
-            "log_level=s" => sub { $logger->level($_[1]) },
+GetOptions( "slow|s!"             => \my $slow,
+	    "file|f=s"            => \my $infile,
+	    "input|i=s"           => \my $input,
+	    "max_dig_v|v=i"       => \my $MAX_DIGIT_V,
+	    "max_dig_h|h=i"       => \my $MAX_DIGIT_H,
+	    "num_to_do|n=i"       => \my $num_to_do,
+	    "check_uniqueness|a!" => \my $check_uniqueness,
+	    "generate|g!"         => \my $generate,
+            "verbose"             => sub { $logger->level($DEBUG) },
+            "log_level=s"         => sub { $logger->level($_[1]) },
+            # http://en.wikipedia.org/wiki/Latin_square
+            # http://en.wikipedia.org/wiki/36_cube
+            "36cube!"             => \my $tscube,
 	  )
     or pod2usage();
 
+$MAX_DIGIT_V //= $tscube ? 6 : 3;
+$MAX_DIGIT_H //= $tscube ? 6 : 3;
+
 my $MAX_DIGIT = ($MAX_DIGIT_V * $MAX_DIGIT_H);
+if ($tscube) {
+    $MAX_DIGIT = $MAX_DIGIT_V;
+}
 
 if (defined($infile) && $slow && $infile eq "-") {
     $logger->logconfess("slow mode doesn't work when the input file is stdin");
@@ -201,8 +207,29 @@ sub box_groups () {
     #	[ map { $first+$_ } (0, 1, 2, 9, 10, 11, 18, 19, 20)];
     #} (0, 3, 6, 27, 30, 33, 54, 57, 60);
 }
+
+# Here's the grid:
+# 6 5 2 3 1 4
+# 2 4 1 6 3 5
+# 3 1 4 2 5 6
+# 5 6 3 4 2 1
+# 4 2 5 1 6 3
+# 1 3 6 5 4 2
+sub tscube_groups() {
+    return ([4,  8, 13, 23, 27, 30],
+            [2,  6, 15, 22, 25, 35],
+            [3, 10, 12, 20, 29, 31],
+            [5,  7, 14, 21, 24, 34],
+            [1, 11, 16, 18, 26, 33],
+            [0,  9, 17, 19, 28, 32]);
+}
+
 sub all_groups () {
-    return (row_groups(), column_groups(), box_groups());
+    if ($tscube) {
+        return (row_groups(), column_groups(), tscube_groups());
+    } else {
+        return (row_groups(), column_groups(), box_groups());
+    }
 }
 {
     my @group_ids = all_groups();
