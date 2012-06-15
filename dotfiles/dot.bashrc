@@ -101,6 +101,7 @@ export LESS
 
 # turn off cygwin xemacs warning
 nodosfilewarning=1
+export nodosfilewarning
 
 # ----------------------------------------------------
 
