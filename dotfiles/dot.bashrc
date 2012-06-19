@@ -132,12 +132,19 @@ function start_agent {
 # test for identities
 function test_identities {
     # test whether standard identities have been added to the agent already
-    ssh-add -l | grep "The agent has no identities" > /dev/null
-    if [ $? -eq 0 ]; then
-        ssh-add
-        # $SSH_AUTH_SOCK broken so we start a new proper agent
-        if [ $? -eq 2 ];then
-            start_agent
+    idents=`ssh-add -l 2>&1`
+    if [ $? -ne 0 ]; then
+        # We get here if the agent isn't running.  It would say 
+        # Could not open a connection to your authentication agent.
+        start_agent
+    else
+        echo $idents | grep "The agent has no identities" > /dev/null
+        if [ $? -eq 0 ]; then
+            ssh-add
+            # $SSH_AUTH_SOCK broken so we start a new proper agent
+            if [ $? -eq 2 ];then
+                start_agent
+            fi
         fi
     fi
 }
