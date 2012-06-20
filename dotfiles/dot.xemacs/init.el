@@ -192,6 +192,13 @@ Enters shell-script[bash] mode (see `shell-script-mode')."
   (sh-mode)
   (sh-set-shell "bash"))
 
+(defun tcsh-mode ()
+  "Major mode for editing tcsh shell scripts.
+Enters shell-script[tcsh] mode (see `shell-script-mode')."
+  (interactive)
+  (sh-mode)
+  (sh-set-shell "tcsh"))
+
 ;; use bash-mode for .bashrc
 (setq auto-mode-alist (append '(("\\.bashrc\\'" . bash-mode)
                                 )
