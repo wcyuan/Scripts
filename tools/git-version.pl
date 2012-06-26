@@ -22,6 +22,7 @@ sub main() {
     GetOptions("diff!" => \my $diff,
                "verbose" => sub { $LOGGER->level($DEBUG) });
 
+  FILE:
     foreach my $file (@ARGV) {
         if (!-f $file) {
             $file = find_in_path($file);
@@ -30,14 +31,18 @@ sub main() {
             $LOGGER->debug("chdir($repo)");
             chdir($repo);
             my ($path, $commit, $user, $date, $subject) = find_commit($file);
-            if ($diff) {
-                exec("git show -n 1 $commit $path");
-            } else {
-                print "$commit $user $date\n";
-                print "$repo/$path\n";
-                print "$subject\n";
+            if (defined($subject)) {
+                if ($diff) {
+                    exec("git show -n 1 $commit $path");
+                } else {
+                    print "$commit $user $date\n";
+                    print "$repo/$path\n";
+                    print "$subject\n";
+                }
+                next FILE;
             }
         }
+        $LOGGER->error("Can't find $file");
     }
 }
 
@@ -45,6 +50,8 @@ sub main() {
 # Quick git commands
 #
 
+# If cat-file can't find it, it doesn't exist in this repo and we can
+# skip it.
 sub git_present_in_repo($) {
     my ($hash) = @_;
     my $cmd = "git cat-file -t $hash 2>&1";
@@ -99,9 +106,9 @@ sub find_in_path($) {
 
 # --------------------------------------------
 
+# Given a hash of a file, see if that file exists in this commit
 sub check_tree($$$) {
     my ($tree, $hash, $filename) = @_;
-
 
     my $cmd = "git ls-tree -r --full-name $tree";
     $LOGGER->debug($cmd);
