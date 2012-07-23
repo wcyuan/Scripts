@@ -1,0 +1,140 @@
+---------------------------------------------------------------
+
+No. 5   Facades
+
+by Philip Glass
+
+-----------------------------------
+
+Four kinds of lines:
+
+Amin  = Triplets in both hands
+Ab    = Ab-major.  LH plays quarters, RH has Ds in second bar
+Bb    = Bb-major.  LH plays quarters in first bar.  RH goes minor in second bar + LH walk
+Amin* = Like Amin, but LH plays quarters in first bar
+
+-----------------------------------
+I.    Intro
+
+[ 1] Amin                   --- Page 49
+
+-----------------------------------
+II.   No soloists
+
+[ 2] Amin
+[ 3] Ab
+     Amin
+[ 3] Ab
+     Amin
+[ 4] Bb
+     Amin*
+[ 4] Bb
+     Amin*
+[ 5] Bb
+     Amin*                  --- Page 50
+
+-----------------------------------
+III.  1 solist, long-notes + quarters (repeat of first page)
+
+[ 2] Amin
+[ 3] Ab
+     Amin
+[ 3] Ab
+     Amin
+[ 4] Bb
+     Amin*
+[ 4] Bb
+     Amin*
+[ 5] Bb
+     Amin*                  --- Page 50
+
+-----------------------------------
+IV.   1 solist, long-notes + scales
+
+[ 6] Amin
+[ 7] Ab
+     Amin
+[ 7] Ab
+     Amin
+[ 8] Bb
+     Amin*
+[ 8] Bb
+     Amin*
+[ 9] Bb                     --- Page 51
+     Amin*
+
+-----------------------------------
+V.    2 soloists, arpeggios + scales
+
+[10] Amin
+[11] Ab
+     Amin
+[11] Ab
+     Amin
+[12] Bb                     --- Page 52
+     Amin*
+[12] Bb                     --- Page 52
+     Amin*
+[13] Bb
+     Amin*
+
+-----------------------------------
+VI.   Bottom playing arpeggios, top playing long notes + both playing scales
+
+[14] Amin                   --- Page 53
+[15] Ab
+     Amin
+[15] Ab
+     Amin
+[16] Bb
+     Amin*
+[16] Bb
+     Amin*
+[17] Bb                     --- Page 54
+     Amin*
+
+-----------------------------------
+VII.  One soloist, lower long notes
+
+[18] Amin
+[19] Ab
+     Amin
+[19] Ab
+     Amin
+[20] Bb
+     Amin*                  --- Page 55
+[20] Bb
+     Amin*                  --- Page 55
+[21] Bb
+     Amin*
+
+-----------------------------------
+VIII. Coda, 1 solist held notes
+
+[22] Amin
+     Ab
+[22] Amin
+     Ab
+[23] Amin
+[23] Amin
+[23] Amin
+[23] Amin
+
+---------------------------------------------------------------
+
+Notes:
+
+This is the 5th part of the work "Glassworks".  This piece (unlike the
+rest of Glassworks) was originally written for the film score
+Koyaanisqatsi, though it was ultimately not used it that score.
+
+Its structure is similar to a chaconne, where there is a repeated bass
+line, and melodic variation on top of that bass line.  Here there are
+5 different melodic variations on top of the repeated bass.  (Plus one
+repetition with no melody, plus a 2 bar intro, plus a code).
+
+I've written one line for every two bars.  I'm also referring to the
+string part (usually violas and celli) as if it is two hands of a
+piano.  I've also added measure markers and page numbers according to
+the particular version of the sheet music that I have.
+
