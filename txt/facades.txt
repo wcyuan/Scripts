@@ -12,6 +12,7 @@ Amin  = Triplets in both hands
 Ab    = Ab-major.  LH plays quarters, RH has Ds in second bar
 Bb    = Bb-major.  LH plays quarters in first bar.  RH goes minor in second bar + LH walk
 Amin* = Like Amin, but LH plays quarters in first bar
+Bb*   = Like Bb, but the LH plays A-flat as part of its walk.
 
 -----------------------------------
 I.    Intro
@@ -30,7 +31,7 @@ II.   No soloists
      Amin*
 [ 4] Bb
      Amin*
-[ 5] Bb
+[ 5] Bb*
      Amin*                  --- Page 50
 
 -----------------------------------
@@ -45,7 +46,7 @@ III.  1 solist, long-notes + quarters (repeat of first page)
      Amin*
 [ 4] Bb
      Amin*
-[ 5] Bb
+[ 5] Bb*
      Amin*                  --- Page 50
 
 -----------------------------------
@@ -60,7 +61,7 @@ IV.   1 solist, long-notes + scales
      Amin*
 [ 8] Bb
      Amin*
-[ 9] Bb                     --- Page 51
+[ 9] Bb*                    --- Page 51
      Amin*
 
 -----------------------------------
@@ -75,7 +76,7 @@ V.    2 soloists, arpeggios + scales
      Amin*
 [12] Bb                     --- Page 52
      Amin*
-[13] Bb
+[13] Bb*
      Amin*
 
 -----------------------------------
@@ -90,7 +91,7 @@ VI.   Bottom playing arpeggios, top playing long notes + both playing scales
      Amin*
 [16] Bb
      Amin*
-[17] Bb                     --- Page 54
+[17] Bb*                    --- Page 54
      Amin*
 
 -----------------------------------
@@ -105,7 +106,7 @@ VII.  One soloist, lower long notes
      Amin*                  --- Page 55
 [20] Bb
      Amin*                  --- Page 55
-[21] Bb
+[21] Bb*
      Amin*
 
 -----------------------------------
