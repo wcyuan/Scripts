@@ -31,8 +31,11 @@ sub main() {
               )
         or die("Error parsing options");
 
+    my $table = new Text::Table('page', 'price', 'nissues', 'name', 'category', 'desc');
     if ($parse_file) {
-        parse_page(file => $parse_file);
+        parse_page($table, 0, file => $parse_file);
+        $table =~ s/\s*\n/\n/g;
+        print $table;
         return;
     }
 
@@ -54,19 +57,9 @@ sub main() {
 
     $mech->submit_form();
 
-    if ($dump_file) {
-        open(FD, ">$dump_file")
-            or die("Can't write to $dump_file: $? $! $@");
-        print FD $mech->content();
-        close(FD)
-            or warn("Can't close $dump_file: $? $! $@");
-        return;
-    }
-
     # --- Start printing the magazines ---- #
 
     my $pageno = 1;
-    my $table = new Text::Table('page', 'price', 'name', 'desc');
   PAGE:
     while(1) {
         my $uri = $mech->uri();
@@ -80,6 +73,16 @@ sub main() {
             $mech->get($new_uri);
             $pageno = $given_pageno;
         }
+
+        if ($dump_file) {
+            open(FD, ">$dump_file")
+                or die("Can't write to $dump_file: $? $! $@");
+            print FD $mech->content();
+            close(FD)
+                or warn("Can't close $dump_file: $? $! $@");
+            return;
+        }
+
         parse_page($table, $pageno, content => $mech->content());
 
         if (defined($given_pageno)) {
@@ -132,8 +135,9 @@ sub get_text($) {
     dfs($tree, sub {
             my ($node) = @_;
             my $class = $node->attr('class');
+            my %attrs = $node->all_attr();
             push(@text, map {
-                [ $_, $class ]
+                [ $_, $class, \%attrs ]
             } grep {
                 !ref($_)
             } reverse($node->content_list()));
@@ -150,6 +154,13 @@ sub parse_page($$%) {
     } else {
         $tree = HTML::TreeBuilder->new_from_content($opt{content});
     }
+    # Each element of the tree is an HTML::Element.  Perldoc that for
+    # more information.
+    #
+    # My understanding: an element represents an HTML tag --
+    # i.e. every tag on a page is an element.  The content of that
+    # element is a list, where each thing in the list is either an
+    # element or text.
 
     dfs($tree, sub {
             my ($node) = @_;
@@ -164,10 +175,10 @@ sub parse_page($$%) {
                     }
                 }
 
-                my ($name, $ver, $desc, $price);
+                my ($name, $ver, $desc, $price, $category, $nissues);
                 my @texts = get_text($node);
                 foreach my $entry (@texts) {
-                    my ($text, $class) = @$entry;
+                    my ($text, $class, $attrs) = @$entry;
                     $class //= '';
                     if ($class eq 'pub') {
                         $name = $text;
@@ -178,8 +189,20 @@ sub parse_page($$%) {
                     elsif ($class eq 'description_short') {
                         $desc = $text;
                     }
+                    elsif (defined($attrs->{href}) &&
+                           # this just happens to be the links they use for categories
+                           $attrs->{href} =~ /search_handler.cfm\?category/)
+                    {
+                        $category = $text;
+                    }
                     elsif ($text =~ /^\s*\$/) {
                         $price = $text;
+                    }
+                    elsif (defined($attrs->{style}) &&
+                           # this just happens to be the style they use for number of issues
+                           $attrs->{style} =~ /padding-right: 8px; text-align: right;/)
+                    {
+                        $nissues = $text;
                     }
                 }
                 if (defined($name)) {
@@ -187,7 +210,7 @@ sub parse_page($$%) {
                     if (defined($ver)) {
                         $name .= " ($ver)";
                     }
-                    $table->add($pageid, $price, $name, $desc);
+                    $table->add($pageid, $price, $nissues, $name, $category, $desc);
                 }
                 return 0;
             } else {
