@@ -107,11 +107,13 @@ export nodosfilewarning
 
 # ssa
 #
-# Runs ssa-add on startup.  This will ask for your passphrase every
-# time it starts up.
-#
 # ssh-agent code from
 # http://help.github.com/ssh-key-passphrases/
+#
+# This stores the pid of the ssh-agent in a file, so I assume it
+# doesn't work if .ssh is an NFS directory shared by multiple machines
+# (because the file will exist on many machines, but will only contain
+# the pid of one ssh-agent running on one of those machiens)
 #
 SSH_ENV="$HOME/.ssh/environment"
 
@@ -134,7 +136,7 @@ function test_identities {
     # test whether standard identities have been added to the agent already
     idents=`ssh-add -l 2>&1`
     if [ $? -ne 0 ]; then
-        # We get here if the agent isn't running.  It would say 
+        # We get here if the agent isn't running.  It would say
         # Could not open a connection to your authentication agent.
         start_agent
     else
@@ -165,8 +167,116 @@ else
     if [ $? -eq 0 ]; then
         test_identities
     else
-        # don't start_agent until we need it
+        # Don't start_agent until we need it.  Otherwise, it will ask
+        # for your passphrase every time we start a new shell.
+        #
         #start_agent
+        #
         :
     fi
+fi
+
+# ----------------------------------------------------
+
+if false
+then
+
+    # Ansi terminal color codes
+    #    Foreground Colours
+    #    30	Black
+    #    31	Red
+    #    32	Green
+    #    33	Yellow
+    #    34	Blue
+    #    35	Magenta
+    #    36	Cyan
+    #    37	White
+    #
+    #    Background Colours
+    #    40	Black
+    #    41	Red
+    #    42	Green
+    #    43	Yellow
+    #    44	Blue
+    #    45	Magenta
+    #    46	Cyan
+    #    47	White
+
+    function format_prompt
+    {
+        local PREV_EXIT_STATUS=$?
+
+        local LINE_COLOR='\[\e[1;33m\e[44m\]' # Bold Yellow on Blue
+        local PATH_COLOR='\[\e[32m\]'         # Green
+        local FAIL_COLOR='\[\e[1;31m\e[44m\]' # Bold Red on Blue
+        local TIME_COLOR='\[\e[36m\]'         # Cyan
+        local RESET_COLOR='\[\e[0m\]'
+
+        if [[ $PREV_EXIT_STATUS -ne 0 ]]
+        then
+            LINE_COLOR=$FAIL_COLOR
+        fi
+
+        #local pwdmaxlen=30
+        #if [ $HOME == "$PWD" ]
+        #then
+        #    newPWD="~"
+        #elif [ $HOME == ${PWD:0:${#HOME}} ]
+        #then
+        #    newPWD="~${PWD:${#HOME}}"
+        #else
+        #    newPWD=$PWD
+        #fi
+        #if [ ${#newPWD} -gt $pwdmaxlen ]
+        #then
+        #    # .../last/three/dirs
+        #    tmp="${PWD%/*/*/*}";
+        #    if [ ${#tmp} -gt 0 -a "$tmp" != "$PWD" ]
+        #    then
+        #        newPWD=".../${PWD:${#tmp}+1}"
+        #    else
+        #        newPWD="+/\\W"
+        #    fi
+        #fi
+
+        stop=$SECONDS
+        start=${PREEXEC_TIME:-$stop}
+        let elapsed=$(($stop-$start))
+        if [ $elapsed -gt 3600 ]
+        then
+            ETIME=$(printf "%02dh %02dm %02ds" $((elapsed/3600)) $((elapsed/60%60)) $((elapsed%60)))
+        elif [ $elapsed -gt 60 ]
+        then
+            ETIME=$(printf "%02dm %02ds" $((elapsed/60%60)) $((elapsed%60)))
+        else
+            ETIME=$(printf "%02ds" $elapsed)
+        fi
+
+        # This version also shows the username:
+        #TITLE='\[\033]0;\u@\h:\w\007\]'
+        TITLE='\[\033]0;\h:\w\007\]'
+        PS1="${TITLE}${LINE_COLOR}\\! ${TIME_COLOR}[$ETIME][\\t]${PATH_COLOR}[\\h:${PWD}]${RESET_COLOR}\n$ "
+    }
+
+    PROMPT_COMMAND='format_prompt'
+    # Detecting whether in interactive mode:
+    #     http://www.gnu.org/software/bash/manual/html_node/Is-this-Shell-Interactive_003f.html
+    case "$-" in
+        *i*)
+            # get preexec.bash from http://www.twistedmatrix.com/users/glyph/preexec.bash.txt
+            if [ -f preexec.bash ]
+            then
+                . preexec.bash
+                # called before each command and starts stopwatch
+                function preexec () {
+                    export PREEXEC_CMD="$BASH_COMMAND"
+                    export PREEXEC_TIME=$SECONDS
+                }
+                # no precmd for now: we do everything we need in format_prompt
+                preexec_install
+            fi
+            ;;
+        *) # not interactive: do not mess with complicated prompts
+            ;;
+    esac
 fi
