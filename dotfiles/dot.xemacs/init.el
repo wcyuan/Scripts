@@ -423,9 +423,10 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 
 ;; ---------------------------------------------------------------- ;;
 ;; Lilypond
-(add-to-list 'load-path "~/.elisp/lilypond/" t)
-(load-file "~/.elisp/lilypond/lilypond-init.el")
-
+(if (file-exists-p "~/.elisp/lilypond/")
+    (progn
+      (add-to-list 'load-path "~/.elisp/lilypond/" t)
+      (load-file "~/.elisp/lilypond/lilypond-init.el")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ---------------------------------------------------------------- ;;
