@@ -16,12 +16,11 @@
 \relative c'' {
   % Page 1 (56)
   \repeat volta 4 {
-    r2 bes\p~ | bes1 | r2 a |
+    r2 bes\<\p~ | bes1\> | r2\! a\< |
   } \alternative {
-    { bes2. r4 }
+    { bes2.\> r4\! }
     { a1 }
   }
-  \bar "||"
   \break
 
   % Page 2 (57)
@@ -31,8 +30,9 @@
     { f  | a }
     { f~ | f }
   }
+  \once \override Score.RehearsalMark #'break-visibility = #end-of-line-visible
+  \once \override Score.RehearsalMark #'self-alignment-X = #RIGHT
   \mark "Fine"
-  \bar "||"
   \break
 
   % Page 3 (58)
@@ -44,7 +44,6 @@
     { c\mp\> }
     { c2\mf bes }
   }
-  \bar "||"
   \break
 
   % Page 4 (59)
