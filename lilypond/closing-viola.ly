@@ -1,6 +1,7 @@
 %{
 
- $Header: /u/yuanc/testbed/lilypond/RCS/closing-viola.ly,v 1.4 2012/08/01 19:43:54 yuanc Exp $
+Closing
+Viola Part
 
 %}
 
@@ -25,7 +26,6 @@
     { g( bes) g( bes) g( bes) g( bes) }
     { g( bes) g( bes) g( bes) g( bes) }
   }
-  \bar "||"
   \break
 
   % Page 2 (57)
@@ -48,10 +48,12 @@
     }
     {
       \times 2/3 { bes( ees bes) } \times 2/3 { ees( bes ees) }
-      \times 2/3 { bes( ees bes) } \times 2/3 { ees( bes ees^\markup {"Fine"}) } |
+      \times 2/3 { bes( ees bes) } \times 2/3 { ees( bes ees) } |
     }
   }
-  \bar "||"
+  \once \override Score.RehearsalMark #'break-visibility = #end-of-line-visible
+  \once \override Score.RehearsalMark #'self-alignment-X = #RIGHT
+  \mark "Fine"
   \break
 
   % Page 3 (58)
@@ -63,7 +65,6 @@
     { c\>( ees) c( ees) c( ees) c( ees\!) }
     { c\!( ees) c( ees) c( ees) c( ees) }
   }
-  \bar "||"
   \break
 
   % Page 4 (59)
