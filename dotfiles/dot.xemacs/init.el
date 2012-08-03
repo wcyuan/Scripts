@@ -421,6 +421,12 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
       (add-to-list 'load-path "~/.xemacs/matlab-emacs/matlab-emacs/")
       (require 'matlab-load)))
 
+;; ---------------------------------------------------------------- ;;
+;; Lilypond
+(add-to-list 'load-path "~/.elisp/lilypond/" t)
+(load-file "~/.elisp/lilypond/lilypond-init.el")
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ---------------------------------------------------------------- ;;
 ;;;
