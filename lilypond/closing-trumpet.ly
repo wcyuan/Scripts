@@ -1,7 +1,6 @@
 %{
-
- $Header: /u/yuanc/testbed/lilypond/RCS/closing-trumpet.ly,v 1.3 2012/08/01 15:40:39 yuanc Exp $
-
+  Closing
+  Trumpet Part
 %}
 
 \version "2.14.1"
