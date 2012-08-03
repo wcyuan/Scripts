@@ -30,59 +30,49 @@ Flute Part
 
         % Page 1 (49)
         r1. | r |
-        %\break
 
         % -----------------------------------------
         % Repetition 1 & 2
         % XXX note: tacit first time
         \mark \default
         e | e |
-        %\break
         \repeat volta 2 {
           r2. f~| f~ f4 f-_ f-_ |
           e1.~ | e2. r |
         }
-        %\break
         \repeat volta 2 {
           r d~ | d4. r d2. |
           e1.~ | e2. r|
         }
-        %\break
         r2. r4. d~ | d2.~ d4 d d |
         \once \override Score.RehearsalMark #'break-visibility = #end-of-line-visible
         \once \override Score.RehearsalMark #'self-alignment-X = #RIGHT
         \mark "D.C."
-        %\break
+        \break
         % Page 2 (50)
         c2.~ c4. c4.~ | c2. r |
-        %\break
 
         % -----------------------------------------
         % Repetition 3
         \mark \default
         r2. e~ | e r8 a,( b c d e |
-        %\break
         \repeat volta 2 {
           f1.~)  | f2. r8 aes,( bes c d ees |
           e!1.~) | e2. r8 a,( b c d e |
         }
-        %\break
         \repeat volta 2 {
           d1.~)  | d2. r8 aes( bes c d ees |
           e!1.~) | e2.~ e4. r |
         }
-        %\break
         % Page 3 (51)
         d1. | d2. r8 aes( bes c d ees |
         e!2.~) e4. c~ | c2.~ c4. r |
-        %\break
 
         % -----------------------------------------
         % Repetition 4
         \mark \default
         c8( a c) e( dis e) c( a  c) e( dis e) |
         c(  a c) e( dis e) c  a( b  c  d   e) |
-        %\break
         \repeat volta 2 {
           c( aes c) e( d   e) c( aes  c)  e( d   e)   |
           c( aes c) e( d   e) c  aes( bes c  d   ees) |
@@ -142,9 +132,8 @@ Flute Part
           f~ | f |
         }
         \repeat volta 4 {
-          e~ | e |
+          e~^\markup { "Repeat 4 times" } | e |
         }
-        \bar "|."
       }
 
       \new Staff \with { instrumentName = #"Flute 2" } {
@@ -219,11 +208,8 @@ Flute Part
         \repeat unfold 4 { r }
         % Coda
         \mark \default
-        \repeat unfold 2 { r }
         \repeat volta 2 { \repeat unfold 4 { r } }
         \repeat volta 4 { \repeat unfold 2 { r } }
-
-        \bar "|."
       }
     >>
   }
