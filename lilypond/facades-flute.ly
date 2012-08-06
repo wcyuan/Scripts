@@ -6,6 +6,8 @@ Flute Part
 %}
 
 \version "2.14.1"
+%\include "english.ly"
+#(set-default-paper-size "letter")
 
 \header {
   title = "No. 5 Facades"
@@ -27,6 +29,8 @@ Flute Part
       \new Staff \with { instrumentName = #"Flute 1" } {
         \clef treble
         \time 12/8
+        \set Staff.midiInstrument = #"flute"
+        \tempo 4=89
 
         % Page 1 (49)
         r1. | r |
@@ -139,6 +143,8 @@ Flute Part
       \new Staff \with { instrumentName = #"Flute 2" } {
         \clef treble
         \time 12/8
+        \set Staff.midiInstrument = #"viola"
+        \tempo 4=89
 
         r1. | r
         % Repetition 1 & 2
@@ -213,5 +219,7 @@ Flute Part
       }
     >>
   }
+
+  \midi { }
 }
 
