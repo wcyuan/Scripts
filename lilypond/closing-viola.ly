@@ -14,7 +14,7 @@ Viola Part
   piece = "Viola"
 }
 
-\relative c' {
+violaPt = \relative c' {
   \clef alto
 
   % Page 1 (56)
@@ -79,3 +79,15 @@ Viola Part
   \bar "||"
   \break
 }
+
+\score {
+  \new Staff {
+    \set Staff.midiInstrument = #"viola"
+    \tempo 4=75
+    \violaPt
+  }
+
+  \layout { }
+  \midi { }
+}
+
