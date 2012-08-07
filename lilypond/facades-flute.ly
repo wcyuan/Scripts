@@ -78,8 +78,8 @@ Flute Part
         c8( a c) e( dis e) c( a  c) e( dis e) |
         c(  a c) e( dis e) c  a( b  c  d   e) |
         \repeat volta 2 {
-          c( aes c) e( d   e) c( aes  c)  e( d   e)   |
-          c( aes c) e( d   e) c  aes( bes c  d   ees) |
+          c( aes c) f( e   f) c( aes  c)  f( e   f)   |
+          c( aes c) f( e   f) c  aes( bes c  d   ees) |
           c( a   c) e( dis e) c( a    c)  e( dis e)   |
           c( a   c) e( dis e) c  a(   b   c  d   e)   |
         }
@@ -220,6 +220,7 @@ Flute Part
     >>
   }
 
+  \layout { }
   \midi { }
 }
 
