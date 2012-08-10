@@ -8,10 +8,12 @@ use strict;
 use Getopt::Long;
 use Log::Log4perl qw(:levels);
 use File::Basename qw(basename);
+use Cwd qw(abs_path);
 
 # --------------------------------------------
 
-my @REPOS = qw(/proj/tools/build/periodic/guas/master);
+my @REPOS = qw(/proj/tools/build/periodic/guas/master
+               /proj/tools/build/periodic/base/master);
 Log::Log4perl->easy_init($ERROR);
 my $LOGGER = Log::Log4perl->get_logger();
 
@@ -26,6 +28,8 @@ sub main() {
     foreach my $file (@ARGV) {
         if (!-f $file) {
             $file = find_in_path($file);
+        } else {
+            $file = abs_path($file);
         }
         foreach my $repo (@REPOS) {
             $LOGGER->debug("chdir($repo)");
@@ -158,7 +162,8 @@ sub find_commit($@) {
     my @retval;
     while (my $line = <$log>) {
         chomp($line);
-        my ($tree, $commit, $user, $date, $time, $tz, $subject) = split " ", $line, 7;
+        my ($tree, $commit, $user, $date, $time, $tz, $subject)
+            = split " ", $line, 7;
         my $path = check_tree($tree, $hash, $base);
         if ($path) {
             $user =~ s/\@deshaw.com$//;
