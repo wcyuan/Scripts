@@ -136,9 +136,15 @@ sub parse_command_line() {
         }
     }
 
-    pod2usage("Wrong number of arguments") unless @ARGV == 1;
+    pod2usage("Wrong number of arguments") unless @ARGV <= 1;
 
     my ($rev) = @ARGV;
+
+    if (!defined($rev)) {
+        $rev = run('git log --pretty=format:%H -n 1',
+                   {always => 1, return_output => 1});
+    }
+    print "Pushing rev $rev\n";
 
     return ($rev, $master, $release, $release_tree);
 }
