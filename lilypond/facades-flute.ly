@@ -30,7 +30,7 @@ Flute Part
         \clef treble
         \time 12/8
         \set Staff.midiInstrument = #"flute"
-        \tempo 4=89
+        \tempo 4.=84
 
         % Page 1 (49)
         r1. | r |
@@ -144,7 +144,7 @@ Flute Part
         \clef treble
         \time 12/8
         \set Staff.midiInstrument = #"viola"
-        \tempo 4=89
+        \tempo 4.=84
 
         r1. | r
         % A - Repetition 1 & 2
