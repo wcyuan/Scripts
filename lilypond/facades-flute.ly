@@ -36,7 +36,7 @@ Flute Part
         r1. | r |
 
         % -----------------------------------------
-        % Repetition 1 & 2
+        % A - Repetition 1 & 2
         % XXX note: tacit first time
         \mark \default
         e | e |
@@ -57,7 +57,7 @@ Flute Part
         c2.~ c4. c4.~ | c2. r |
 
         % -----------------------------------------
-        % Repetition 3
+        % B - Repetition 3
         \mark \default
         r2. e~ | e r8 a,( b c d e |
         \repeat volta 2 {
@@ -73,7 +73,7 @@ Flute Part
         e!2.~) e4. c~ | c2.~ c4. r |
 
         % -----------------------------------------
-        % Repetition 4
+        % C - Repetition 4
         \mark \default
         c8( a c) e( dis e) c( a  c) e( dis e) |
         c(  a c) e( dis e) c  a( b  c  d   e) |
@@ -86,7 +86,7 @@ Flute Part
         % Page 4 (52)
         \repeat volta 2 {
           d( bes d) f( e   f) d( bes d) f( e   f) |
-          d( bes d) f( e   f) d( bes d) f( e   f) |
+          d( bes d) f( e   f) e( f   e) f( e   f) |
           c( a   c) e( dis e) c( a   c) e( dis e) |
           c( a   c) e( dis e) c  a(  b  c  d   e) |
         }
@@ -96,7 +96,7 @@ Flute Part
         c( a   c) e( dis e) c( a   c) e( dis e) |
 
         % -----------------------------------------
-        % Repetition 5
+        % D - Repetition 5
         % Page 5 (53)
         \mark \default
         e1.~ | e2. r8 a,( b c d e |
@@ -113,7 +113,7 @@ Flute Part
         c1.~ | c2. r |
 
         % -----------------------------------------
-        % Repetition 6
+        % E - Repetition 6
         \mark \default
         a1.~ | a2.~ a4. r |
         \repeat volta 2 {
@@ -147,13 +147,13 @@ Flute Part
         \tempo 4=89
 
         r1. | r
-        % Repetition 1 & 2
+        % A - Repetition 1 & 2
         \mark \default
         \repeat unfold 2 { r }
         \repeat volta 2 { \repeat unfold 4 { r } }
         \repeat volta 2 { \repeat unfold 4 { r } }
         \repeat unfold 4 { r }
-        % Repetition 3
+        % B - Repetition 3
         \mark \default
         \repeat unfold 2 { r }
         \repeat volta 2 { \repeat unfold 4 { r } }
@@ -162,37 +162,37 @@ Flute Part
         \repeat unfold 4 { r }
 
         % -----------------------------------------
-        % Repetition 4
+        % C - Repetition 4
         \mark \default
-        e,8( c e) a( e a) e( c e) a( c a) |
+        e,8( c e) a( e a) e( c e) a( e a) |
         e(   c e) a( e a) e a( b c b a) |
         \repeat volta 2 {
           f( c f) aes( f aes) f( c    f)  aes( f   aes) |
           f( c f) aes( f aes) f  aes( bes c    bes aes) |
-          e( c e) a( e a) e( c  e) a( c a) |
+          e( c e) a( e a) e( c  e) a( e a) |
           e( c e) a( e a) e  a( b  c  b a) |
         }
         % Page 4 (52)
         \repeat volta 2 {
-          f( d f) bes( f bes) f( d f) bes( f bes) |
-          f( d f) bes( f bes) f( d f) bes( f bes) |
-          e,( c e) a( e a) e( c e) a( c a) |
+          f( d f) bes( f bes) f( d   f) bes( f bes) |
+          f( d f) bes( f bes) f( bes f) bes( f bes) |
+          e,( c e) a( e a) e( c e) a( e a) |
           e(  c e) a( e a) e a( b c b a) |
         }
         f( d f) bes( f bes) f( d f) bes( f bes) |
         f( d f) bes( f bes) f aes( bes c bes aes) |
-        e( c e) a( e a) e( c e) a( c a) |
-        e(  c e) a( e a) e a( b c b a) |
+        e( c e) a( e a) e( c  e) a( e a) |
+        e( c e) a( e a) e( c  e) a( e a) |
 
         % -----------------------------------------
-        % Repetition 5
+        % D - Repetition 5
         % Page 5 (53)
         \mark \default
         e( c e) a( gis a) e( c  e) a( gis a) |
         e( c e) a( gis a) e  a( b  c  b   a) |
         \repeat volta 2 {
-          f( c f) aes( f aes) f( c f) aes( f aes) |
-          f( c f) aes( f aes) f( c f) aes( f aes) |
+          f( c f) aes( g aes) f( c f) aes( g aes) |
+          f( c f) aes( g aes) f( c f) aes( g aes) |
           e( c e) a( gis a) e( c  e) a( gis a) |
           e( c e) a( gis a) e  a( b  c  b   a) |
         }
@@ -206,7 +206,7 @@ Flute Part
         % Page 6 (54)
         c1.~ | c2. r |
 
-        % Repetition 6
+        % E - Repetition 6
         \mark \default
         \repeat unfold 2 { r1. }
         \repeat volta 2 { \repeat unfold 4 { r } }
