@@ -11,6 +11,7 @@ Flute Part
 
 \header {
   title = "No. 5 Facades"
+  % Comment out the subtitle to fit it onto two pages instead of three.
   subtitle = "from Glassworks"
   composer = "Philip Glass"
   piece = "Flute 1 & 2 (Transcribed from the Soprano Sax part)"
@@ -143,7 +144,7 @@ Flute Part
       \new Staff \with { instrumentName = #"Flute 2" } {
         \clef treble
         \time 12/8
-        \set Staff.midiInstrument = #"viola"
+        \set Staff.midiInstrument = #"flute"
         \tempo 4.=84
 
         r1. | r
