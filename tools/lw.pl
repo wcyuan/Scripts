@@ -1,24 +1,49 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 #
-###############################################################################
-###
-### $Id: lw.pl,v 1.3 2011/12/29 15:49:16 yuanc Exp $
-### $Source: /u/yuanc/testbed/perl/RCS/lw.pl,v $
-###
-use strict;
-use English;
-use Getopt::Std;
-our($opt_n);
-getopts("n:") or die;
-my ($n) = abs($opt_n) if defined($opt_n);
 
-my @files = ();
-my $less_in = 0;
-my $to_less;
+=head1 SYNOPSIS
+
+lw.pl [-v(erbose)] [-csh|-bash] <cmd>*
+
+=cut
+
+# --------------------------------------------------------------------------
+# Includes
+#
+
+use strict;
+use warnings 'all';
+
+use Carp;
+use Getopt::Long;
+use Pod::Usage;
+
+# --------------------------------------------------------------------------
+# Command line options
+#
+
+my $SHELL = $ENV{XTERM_SHELL} // $ENV{SHELL};
+
+GetOptions("verbose|v!"  => \my $VERBOSE,
+           "shell=s"     => \$SHELL,
+           "sh|bash!"    => sub { $SHELL = 'bash' },
+           "csh|tcsh!"   => sub { $SHELL = 'tcsh' },
+           );
+
+# --------------------------------------------------------------------------
+# Functions
+#
+
+sub verbose($) {
+    my ($str) = @_;
+    print "$str\n"
+        if $VERBOSE;
+}
 
 sub find_perl_module($) {
     my ($file) = @_;
     my $cmd = "desperldoc -v $file 3>/dev/null 2>&1 1>&3 | grep '^Found as'";
+    verbose("Running: $cmd");
     chomp(my $perldoc_output = `$cmd`);
     if ($? == 0 && $perldoc_output !~ m/^\s*$/) {
         my $perl_module = (split ' ', $perldoc_output, 3)[2];
@@ -32,13 +57,49 @@ sub find_perl_module($) {
 
 sub find_python_module($) {
     my ($file) = @_;
+
+    # despydoc works by importing the module, then doing this to get
+    # the filename:
+    #
+    # def get_module_source_filename(module):
+    #     """
+    #     Returns the filename of the source file for a module.
+    #     """
+    #     filename = module.__file__
+    #     base, extension = os.path.splitext(filename)
+    #     if extension == ".py":
+    #         # Great.  A Python source file.
+    #         return filename
+    #     elif extension in (".pyc", ".pyo"):
+    #         # A compiled Python file.  Look for the source file next to it.
+    #         source_filename = base + ".py"
+    #         if os.path.isfile(filename):
+    #             # Got it.
+    #             return source_filename
+    #         else:
+    #             raise RuntimeError(
+    #                 "can't find source file for module file %s" % (filename, ))
+    #     else:
+    #         # An unrecongnized file type.
+    #         raise RuntimeError(
+    #             "don't know how to find source for module file %s" % (filename, ))
+
     my $cmd = "despydoc --where $file 2>/dev/null";
+    verbose("Running: $cmd");
     chomp(my $python_module = `$cmd`);
     if ($? == 0) {
         return $python_module;
     }
     return $file;
 }
+
+# --------------------------------------------------------------------------
+# Main
+#
+
+my @files = ();
+my $less_in = 0;
+my $to_less;
 
 foreach my $cmd (@ARGV) {
     # If the command has a / in it, then it's probably the full path
@@ -47,22 +108,35 @@ foreach my $cmd (@ARGV) {
         push(@files, $cmd);
         next;
     }
+
+    # Different shells could have different paths and different aliases
+    my $shell_cmd = "echo type -a $cmd | bash -s -l 2>/dev/null";
+    if ($SHELL =~ /csh/) {
+        $shell_cmd = "echo where $cmd | tcsh -s";
+    }
+
     my $found = 0;
-    open(WHERE,"echo where $cmd | tcsh -s |") or warn "$cmd: $! $?";
-    while(<WHERE>) {
-	next if (defined($n) && $INPUT_LINE_NUMBER != $n);
+    verbose("Running: $shell_cmd");
+    open(WHERE,"$shell_cmd |")
+        or confess("Error running \"$shell_cmd\": $! $? $@");
+    while(my $line = <WHERE>) {
         $found = 1;
-	chomp;
-	if (-x $_) {
-	    push(@files, $_);
-	} else {
+	chomp($line);
+
+	if (-x $line) {
+	    push(@files, $line);
+	}
+        elsif ($line =~ m/^$cmd is (\/.*)$/) {
+	    push(@files, $1);
+        }
+        else {
             # If the command is an alias, where will tell you what the
             # alias is.  We want to save that message too.
 	    if (!$less_in) {
 		push(@files, "-");
 		$less_in = 1;
 	    }
-	    $to_less .= $_ . '\n';
+	    $to_less .= $line . "\n";
 	}
     }
     close(WHERE);
