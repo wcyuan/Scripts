@@ -93,6 +93,8 @@ Created by: Conan Yuan (yuanc), 20120830
 from __future__ import absolute_import, division, with_statement
 
 from   contextlib               import contextmanager
+from   datetime                 import datetime
+from   operator                 import itemgetter
 from   optparse                 import OptionParser
 
 # For GitPython documentation, try
@@ -134,6 +136,7 @@ def main():
 
     if opts.release:
         push_to_release(repo, rev, opts.remote, opts.upstream, opts.force,
+                        opts.date, opts.release_date,
                         check_rev_in_master=check_rev_in_master)
 
 
@@ -165,6 +168,12 @@ def getopts():
                       help='The remote branch to push to')
     parser.add_option('--repo',
                       help='The repo to cherry-pick from')
+    parser.add_option('--release_date',
+                      help='The date of the release branch to push to',
+                      type='int')
+    parser.add_option('--date',
+                      help="Today's date",
+                      type='int')
 
     opts, args = parser.parse_args()
 
@@ -181,6 +190,9 @@ def getopts():
         if opts.upstream is not None:
             if '/' in opts.upstream:
                 (opts.remote, opts.upstream) = opts.upstream.split('/', 2)
+
+    if opts.date is None:
+        opts.date = int(datetime.now().strftime("%Y%m%d"))
 
     #
     # no options means just do the master branch
@@ -202,19 +214,44 @@ def getopts():
 # push to)
 #
 
-def git_cmd(repo, cmd, *args):
+def __git_cmd(repo, always, cmd, *args):
     '''
-    Run a git command.  But, if no_write is given, then just print the
+    Run a git command.  If it's a command that should run, even in
+    no_write mode, then always should be True.
+
+    If always is not True, and no_write is True, we just print the
     command to run without running it.
+
+    Otherwise we print the command and then run it.  We print the
+    command in a form that the user could copy and paste and run on
+    the command line.
     '''
     cmdline = 'git %s %s' % (
         cmd, ' '.join(str(a) for a in args))
-    if FLAG_NO_WRITE:
+    if not always and FLAG_NO_WRITE:
         print "Would run: " + cmdline
     else:
-        cmd = cmd.replace('-', '_')
         print "Running  : " + cmdline
-        getattr(repo.git, cmd)(*args)
+
+        # On the command line you have to run "cherry-pick", but in
+        # the git package, the command is cherry_pick.  So replace
+        # hyphens with underscores.
+        cmd = cmd.replace('-', '_')
+        return getattr(repo.git, cmd)(*args)
+
+def git_cmd(repo, cmd, *args):
+    '''
+    Run a git command.  If no_write is True, then just print the
+    command to run without running it.
+    '''
+    return __git_cmd(repo, False, cmd, *args)
+
+def git_cmd_always(repo, cmd, *args):
+    '''
+    Run a git command, even if no_write is True.  Print the command
+    before running it.
+    '''
+    return __git_cmd(repo, True, cmd, *args)
 
 def temp_branch_name(repo):
     """
@@ -249,7 +286,7 @@ def stash_if_needed(repo):
     """
     stashed = False
     try:
-        if repo.git.diff() != '':
+        if git_cmd_always(repo, 'diff') != '':
             stashed = True
             git_cmd(repo, 'stash')
         yield
@@ -270,7 +307,7 @@ def checkout(repo, branch):
     finally:
         git_cmd(repo, 'checkout', orig)
 
-def fetch_needed(repo, remote_repo, remote_branch):
+def remote_branch_exists(repo, remote_repo, remote_branch):
     """
     Do we already know about this remote branch?  If not, we should to
     try to fetch it.
@@ -316,7 +353,7 @@ def cherry_push(repo, rev, remote_repo, remote_branch, do_pull=False):
     with stash_if_needed(repo):
         # Make sure the remote branch exists so we can track it
         remote = '{0}/{1}'.format(remote_repo, remote_branch)
-        if fetch_needed(repo, remote_repo, remote_branch):
+        if remote_branch_exists(repo, remote_repo, remote_branch):
             git_cmd(repo, 'fetch', remote_repo,
                     '{0}:remotes/{1}'.format(remote_branch, remote))
 
@@ -354,7 +391,7 @@ def get_tracking(repo):
                              "upstream given")
     return tracking
 
-def default_to_tracking(repo, remote_repo, remote_branch):
+def default_to_tracking(repo, remote_repo, remote_branch=None):
     """
     Return the remote repo and branch to use.  If either isn't
     specified, get the values from the branch that is being tracked by
@@ -391,27 +428,6 @@ def push_to_master(repo, rev, remote_repo, remote_branch, force):
 # Functions related to pushing to the release branch
 #
 
-def get_release_tree(repo_type, release_branch=None):
-    """
-    Get the shared clone of the release branch
-
-    If release_branch is None, return the default release tree (e.g.,
-    /testbed/github/release/<repo_type>).  If release_branch is given,
-    return the release tree specific to that branch, which we get by
-    following the link from /testbed/github/release/<repo_type>, then
-    replacing the last directory with the release_branch given.
-    """
-    rel_tree = RELEASE_PATH + repo_type
-    if release_branch is None:
-        return rel_tree
-    else:
-        if not os.path.islink(rel_tree):
-            raise ValueError("Unsupported or unknown repository {0}"
-                             ", no link at {1}.".format(repo_type, rel_tree))
-        release_path = os.readlink(rel_tree).rstrip('/')
-        release_root = os.path.dirname(release_path)
-        return release_root + '/' + release_branch
-
 def get_repository_type(repo, remote_repo):
     """
     Returns the name of the type of tree this is.  We get this from
@@ -429,55 +445,138 @@ def get_repository_type(repo, remote_repo):
 
     remote_url = repo.config_reader().get_value('remote "{0}"'.
                                                 format(remote_repo), 'url')
-    repo_type = os.path.basename(remote_url)
-    rel_tree = get_release_tree(repo_type)
-    if os.path.exists(rel_tree):
-        return repo_type
-    else:
-        raise ValueError("Unsupported or unknown repository {0} (based on {1})"
-                         ", no release clone in {2}.".format(repo_type,
-                                                             remote_url,
-                                                             rel_tree))
+    return os.path.basename(remote_url)
 
-def get_release_branch(repo_type):
+def get_release_tree(repo_type, release_branch=None):
+    """
+    Get the shared clone of the release branch
+
+    If release_branch is None, return the default release tree (e.g.,
+    /testbed/github/release/<repo_type>).  If release_branch is given,
+    return the release tree specific to that branch, which we get by
+    following the link from /testbed/github/release/<repo_type>, then
+    replacing the last directory with the release_branch given.
+
+    If there is no shared clone (the path doesn't exist), return None.
+    """
+    rel_tree = RELEASE_PATH + repo_type
+    if release_branch is not None:
+        if not os.path.islink(rel_tree):
+            return None
+        release_path = os.readlink(rel_tree).rstrip('/')
+        release_root = os.path.dirname(release_path)
+        rel_tree = release_root + '/' + release_branch
+    return rel_tree
+
+def get_release_branch_date(string, pattern):
+    """
+    Given the name of a release branch, and a regexp for parsing
+    release branches, where the first matching group is the date,
+    return the date of the release branch, as an integer.
+
+    If the release branch name doesn't match the regexp, return None.
+    """
+    matches = re.match(pattern, string)
+    if matches is None:
+        return None
+    return int(matches.group(1))
+
+def get_release_branch(repo, repo_type, remote_repo, release_branch_pattern,
+                       today, release_date=None):
     """
     Get the current release branch.
 
     Use the filename that the release clone link is pointing to.
-
     We could also get the release clone's active branch, which
     should have the same result.
 
-    We could also list all branches and pick the one that looks like
-    rel_YYYYMMDD with the latest date, but we don't do that because assume that
+    If the shared clone of the release branch isn't found, then we try
+    to get the release branch name by listing all branches and picking
+    the one that looks like rel_YYYYMMDD, with the latest date.
+
     """
     rel_tree = get_release_tree(repo_type)
-    if not os.path.islink(rel_tree):
-        raise ValueError("Unsupported or unknown repository {0}"
-                         ", no link at {1}.".format(repo_type, rel_tree))
-    release_path = os.readlink(rel_tree)
-    release_branch = os.path.basename(release_path)
+    if rel_tree is not None and os.path.exists(rel_tree):
+        if not os.path.islink(rel_tree):
+            raise ValueError("Unsupported repository {0}, {1} exists "
+                             "but is not a symlink.".
+                             format(repo_type, rel_tree))
+        release_path = os.readlink(rel_tree)
+        release_branch = os.path.basename(release_path)
 
-    # or:
-    # release_branch = git.Repo(rel_tree).active_branch
+        # or:
+        # release_branch = git.Repo(rel_tree).active_branch
+
+    else:
+        # get the release branch from the names of the branches on the
+        # remote repo
+        release_branch = None
+
+        # Fetch all branches for this remote to make sure we have them
+        # all.  This will modify the state of the repository, even in
+        # no_write mode.  But in a way that hopefully no one will mind.
+        git_cmd_always(repo, 'fetch', remote_repo)
+
+        # filter out any branches that are for a different remote
+        remote_branches = ((ref.remote_head,
+                            get_release_branch_date(ref.remote_head,
+                                                    release_branch_pattern))
+                           for ref in repo.remote().refs
+                           if ref.remote_name == remote_repo)
+
+        # filter out any branches that don't fit the pattern or are
+        # for future dates.
+
+        remote_branches = [(branch, date)
+                           for (branch, date) in remote_branches
+                           if date is not None and date <= today]
+
+        if len(remote_branches) == 0:
+            raise ValueError("Unsupported or unknown repository {0} (type {1}"
+                             ", no release branches fit pattern {2}.".format(
+                             repo, repo_type, release_branch_pattern))
+
+        if release_date is not None:
+            for (branch, date) in remote_branches:
+                if date == release_date:
+                    release_branch = branch
+                    break
+            else:
+                raise ValueError("No release branch for date {0}".
+                                 format(release_date))
+        else:
+            # sort descending by branch date
+            remote_branches = sorted(remote_branches,
+                                     key=itemgetter(1),
+                                     reverse=True)
+
+            if remote_branches[0][1] == today:
+                if len(remote_branches) > 1:
+                    raise ValueError("Today is a release date.  Use the "
+                                     "--release_date option to specify "
+                                     "whether this commit should go to the "
+                                     "previous release branch %s or the new "
+                                     "one %s" % (remote_branches[1][0],
+                                                 remote_branches[0][0]))
+
+            release_branch = remote_branches[0][0]
 
     return release_branch
 
-def update_release_tree(repo, repo_type, release_branch):
+def do_git_pull(git_root):
     """
     Do a pull on the shared release clone to keep it up-to-date.
     """
-    rel_tree = get_release_tree(repo_type, release_branch)
-    if not os.path.exists(rel_tree):
-        print("No shared release clone to update!  "
-              "Can't find {0}".format(rel_tree))
-        return
     if FLAG_NO_WRITE:
-        print "Would Run: cd " + rel_tree
+        print "Would Run: cd " + git_root
     else:
-        print "Running  : cd " + rel_tree
-        os.chdir(rel_tree)
-    git_cmd(repo, 'pull', '--rebase')
+        # We don't actually need to do a chdir, we just need to pass
+        # that path to the git.Repo contructor.  However, we still
+        # print a message saying that we chdir, so users can follow
+        # along with what we are doing.  That way they could have run
+        # the commands we printed to get the same effect.
+        print "Running  : cd " + git_root
+    git_cmd(Repo(git_root), 'pull', '--rebase')
 
 def ensure_rev_in_master(repo, rev, remote_repo):
     """
@@ -498,7 +597,7 @@ def ensure_rev_in_master(repo, rev, remote_repo):
     want to push a revision to the master branch, then to the release
     branch, you have to get the new hash.
     """
-    matches = repo.git.branch('-r', '--contains', rev)
+    matches = git_cmd_always(repo, 'branch', '-r', '--contains', rev)
     in_master = "^\s*{0}/master$".format(remote_repo)
     for match in matches.split("\n"):
         if re.match(in_master, match) is not None:
@@ -508,24 +607,27 @@ def ensure_rev_in_master(repo, rev, remote_repo):
                      "  If so, use --force.".format(rev))
 
 def push_to_release(repo, rev, remote_repo, remote_branch,
-                    force, check_rev_in_master=True):
+                    force, today, release_date=None, check_rev_in_master=True):
     """
     Push a specific commit to the current release branch
     """
     repo_type = get_repository_type(repo, remote_repo)
-    release_branch = get_release_branch(repo_type)
+
 
     # If the remote_repo wasn't given, default it to the repo of the
-    # branch being tracked by the active branch.  This won't use or
-    # change release_branch.
-    (remote_repo, release_branch) = default_to_tracking(
-        repo, remote_repo, release_branch)
+    # branch being tracked by the active branch.
+    remote_repo = default_to_tracking(repo, remote_repo)[0]
+
+    release_branch_pattern = '^rel_(\d+)$'
 
     if remote_branch is None:
-        remote_branch = release_branch
+        remote_branch = get_release_branch(repo, repo_type, remote_repo,
+                                           release_branch_pattern, today,
+                                           release_date)
 
     if not force:
-        if re.match('^rel_\d+$', remote_branch) is None:
+        if get_release_branch_date(remote_branch,
+                                   release_branch_pattern) is None:
             raise ValueError("Remote branch {0} doesn't look like "
                              "rel_YYYYMMDD.  Use --force to continue".
                              format(remote_branch))
@@ -533,9 +635,14 @@ def push_to_release(repo, rev, remote_repo, remote_branch,
         if check_rev_in_master:
             ensure_rev_in_master(repo, rev, remote_repo)
 
-
     cherry_push(repo, rev, remote_repo, remote_branch)
-    update_release_tree(repo, repo_type, release_branch)
+    rel_tree = get_release_tree(repo_type, remote_branch)
+    if rel_tree is None or not os.path.exists(rel_tree):
+        print("No shared release clone to update!  "
+              "Can't find {0}".format(rel_tree))
+        return
+
+    do_git_pull(rel_tree)
 
     # It would be nice if we could give more information about how to
     # make the tree and publish changes, but that's not related to git.
@@ -545,7 +652,6 @@ def push_to_release(repo, rev, remote_repo, remote_branch,
     # rev.stats.files gives a dict whose keys are the files that were
     # modified in this commit.
     files_in_commit = rev.stats.files.keys()
-    rel_tree = get_release_tree(repo_type, release_branch)
 
     print
     print('# Run "make" in the release tree.')
