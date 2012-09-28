@@ -63,6 +63,17 @@ alias        hex='printf "%x\n"'
 alias       beep='perl -e "print \"\a\";"'
 alias        fep=rlwrap
 
+embolden() {
+    # Takes one argument, which is a pattern.
+    #
+    # Passes through stdin, but highlights the pattern in bold red.
+    #
+    # terminal colors are specified as "1;31"
+    # 1 means bold
+    # 31 means red
+    sed "s/\($1\)/[1;31m\1[m/g"
+}
+
 # ----------------------------------------------------
 # Completion
 #
