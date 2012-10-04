@@ -90,6 +90,11 @@ complete -d cd chdir pushd popd mkdir rmdir
 # commands
 complete -c lw where type which
 
+# See
+# http://clalance.blogspot.com/2011/10/git-bash-prompts-and-tab-completion.html
+# and http://repo.or.cz/w/git.git/blob/HEAD:/contrib/completion/git-completion.bash
+# for git completion files
+
 #----------------------------------------------------------------------
 
 # don't clobber files
