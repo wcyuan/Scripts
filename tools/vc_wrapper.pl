@@ -1660,6 +1660,9 @@ sub grep_hist($$$$$$) {
             if (scalar(@skip_to_rev) > 0) {
                 $LOGGER->debug("skipping $rev");
                 if (rev_match($repo_type, \@skip_to_rev, $rev)) {
+                    if ($first_occur) {
+                        $prev = $rev;
+                    }
                     @skip_to_rev = ();
                 }
                 next;
