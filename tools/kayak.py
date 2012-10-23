@@ -12,7 +12,7 @@ within each price, show the options for each leg.
 
 from csv      import reader        as csvreader
 from optparse import OptionParser
-from logging  import Logger
+from logging  import warning
 from operator import attrgetter
 
 # Expected fields:
@@ -110,8 +110,8 @@ class Trip(object):
         if self.price is None:
             self.price = leg_price
         elif self.price != leg_price:
-            Logger.warning("Different prices (%s != %s) for record %s" %
-                           (self.record, self.price, leg_price))
+            warning("Different prices (%s != %s) for record %s" %
+                    (self.record, self.price, leg_price))
 
 def read_file(csvfilename):
     """
