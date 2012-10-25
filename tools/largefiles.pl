@@ -72,11 +72,7 @@ sub main() {
     my $n_files = scalar(@all_lines);
     my $last = min($top_n-1, $#all_lines);
     foreach my $line (@all_lines[0..$last]) {
-        if ($in_kb) {
-            $line->[0] .= $unit;
-        } else {
-            $line->[0] .= $unit;
-        }
+        $line->[0] .= $unit;
         print join(' ', @$line) . "\n";
     }
     my $ave = sprintf('%0.2f', $n_files == 0 ? 0 : $total / $n_files);
