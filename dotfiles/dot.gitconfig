@@ -1,0 +1,14 @@
+[user]
+	name = Conan Yuan
+	email = conanyuan@gmail.com
+[github]
+	user = wcyuan
+	token = dd38599d5fa93f58311d17fdcfee92a5
+[alias]
+# http://stackoverflow.com/questions/1057564/pretty-git-branch-graphs/9074343#9074343
+        log-pretty1 = log --graph --all --format=format:'%C(bold blue)%h%C(reset) - %C(bold red)(%cr)%C(reset) %C(black)%s%C(reset) %C(bold blue) %cn%C(reset)%C(bold magenta)%d%C(reset)' --abbrev-commit --date=relative
+        log-pretty2 = log --graph --all --format=format:'%C(bold blue)%h%C(reset) - %C(bold red)%cD%C(reset) %C(bold blue)(%cr)%C(reset)%C(bold red)%d%C(reset)%n''          %C(black)%s%C(reset) %C(bold magenta) %cn%C(reset)' --abbrev-commit
+        log-pretty = !"git log-pretty1"
+        lg = log origin/master..HEAD
+[core]
+	pager = less -FRSX

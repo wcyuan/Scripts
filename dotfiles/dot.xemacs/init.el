@@ -460,31 +460,29 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; http://www.emacswiki.org/emacs/ColumnMarker
 ;;
 
-;; (require 'column-marker)
+(if (file-exists-p "~/.elisp/column-marker.el")
+    (GNUEmacs
+     (progn
+       (load-file "~/.elisp/column-marker.el")
 
-;; (defun set-eighty-column ()
-;;   "Highlight the 80th column"
-;;   (interactive)
-;;   (if column-marker-1
-;;     (progn
-;;       (column-marker-internal 'column-marker-1 nil)
-;;       (message "80-column marker OFF")
-;;       )
-;;     (progn
-;;       (column-marker-1 80)
-;;       (message "80-column marker ON")
-;;       )))
-
-;; ; \C-c\C-e seems to be a neat double paren feature, at least in cperl
-;; ;(global-set-key "\C-c\C-e" 'set-eighty-column)
-;; ;(global-set-key "\M-n" 'just-one-space)
-;; ;(global-set-key "\M-p" 'fill-paragraph)
-
-;; (global-set-key "\C-ce" 'set-eighty-column)
-;; (add-hook 'cperl-mode-hook (lambda () (interactive) (column-marker-1 80)))
-;; (add-hook 'python-mode-hook (lambda () (interactive) (column-marker-1 80)))
-;; (add-hook 'java-mode-hook (lambda () (interactive) (column-marker-1 80)))
-;; (add-hook 'c-mode-hook (lambda () (interactive) (column-marker-1 80)))
+       (defun set-eighty-column ()
+         "Highlight the 80th column"
+         (interactive)
+         (if column-marker-1
+             (progn
+               (column-marker-internal 'column-marker-1 nil)
+               (message "80-column marker OFF")
+               )
+           (progn
+             (column-marker-1 80)
+             (message "80-column marker ON")
+             )))
+       (global-set-key "\C-ce" 'set-eighty-column)
+       (add-hook 'cperl-mode-hook (lambda () (interactive) (column-marker-1 80)))
+       (add-hook 'python-mode-hook (lambda () (interactive) (column-marker-1 80)))
+       (add-hook 'java-mode-hook (lambda () (interactive) (column-marker-1 80)))
+       (add-hook 'c-mode-hook (lambda () (interactive) (column-marker-1 80)))
+       )))
 
 ;;; ---------------------------------------------------------------- ;;
 ;
