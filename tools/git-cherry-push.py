@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 """
 git-cherry-push.py [--master | --release | --both] [--force] [revision|file]
 
@@ -215,7 +215,7 @@ def getopts():
 #
 
 def __git_cmd(repo, always, cmd, *args):
-    '''
+    """
     Run a git command.  If it's a command that should run, even in
     no_write mode, then always should be True.
 
@@ -225,7 +225,7 @@ def __git_cmd(repo, always, cmd, *args):
     Otherwise we print the command and then run it.  We print the
     command in a form that the user could copy and paste and run on
     the command line.
-    '''
+    """
     cmdline = 'git %s %s' % (
         cmd, ' '.join(str(a) for a in args))
     if not always and FLAG_NO_WRITE:
