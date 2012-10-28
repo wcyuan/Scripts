@@ -104,8 +104,6 @@ from   git                      import Repo, BadObject
 import os
 import re
 
-__version__ = "$Revision: 1.15 $"
-
 ##################################################################
 
 # Path to the shared clones of the release trees for various
