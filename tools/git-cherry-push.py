@@ -131,13 +131,15 @@ def main():
 
     check_rev_in_master = True
     if opts.master:
-        push_to_master(repo, rev, opts.remote, opts.upstream, opts.force)
+        push_to_master(repo, rev, opts.remote, opts.upstream, opts.force,
+                       opts.leave)
         check_rev_in_master = False
 
     if opts.release:
         push_to_release(repo, rev, opts.remote, opts.upstream, opts.force,
                         opts.date, opts.release_date,
-                        check_rev_in_master=check_rev_in_master)
+                        check_rev_in_master=check_rev_in_master,
+                        opts.leave)
 
 
 def getopts():
@@ -174,6 +176,9 @@ def getopts():
     parser.add_option('--date',
                       help="Today's date",
                       type='int')
+    parser.add_option('--leave',
+                      action='store_true',
+                      help="Don't clean up on conflict")
 
     opts, args = parser.parse_args()
 
@@ -266,46 +271,50 @@ def temp_branch_name(repo):
             return temp
         number += 1
 
+def yield_and_catch(value=None, leave=False):
+    try:
+        yield value
+    except Exception as e:
+        if leave:
+            raise(e)
+        else:
+            print "Aborting due to error %s" % e
+
 @contextmanager
-def temp_branch(repo, remote):
+def temp_branch(repo, remote, leave=False):
     """
     Create a temporary branch (with a unique name).  When finished,
     delete the branch.
     """
     name = temp_branch_name(repo)
-    try:
-        git_cmd(repo, 'branch', '-t', name, remote)
-        yield name
-    finally:
-        git_cmd(repo, 'branch', '-D', name)
+    git_cmd(repo, 'branch', '-t', name, remote)
+    yield_and_catch(value=name, leave=leave)
+    git_cmd(repo, 'branch', '-D', name)
 
 @contextmanager
-def stash_if_needed(repo):
+def stash_if_needed(repo, leave=False):
     """
     Temporarily stash any changes.  When finished, stash pop.
     """
     stashed = False
-    try:
-        if git_cmd_always(repo, 'diff') != '':
-            stashed = True
-            git_cmd(repo, 'stash')
-        yield
-    finally:
-        if stashed:
-            git_cmd(repo, 'stash', 'pop')
+    if git_cmd_always(repo, 'diff') != '':
+        stashed = True
+        git_cmd(repo, 'stash')
+    yield_and_catch(leave=leave)
+    if stashed:
+        git_cmd(repo, 'stash', 'pop')
 
 @contextmanager
-def checkout(repo, branch):
+def checkout(repo, branch, leave=False):
     """
     Temporarily checkout a git branch.  When finished, checkout the
     original branch again.
     """
     orig = repo.active_branch
-    try:
-        git_cmd(repo, 'checkout', branch)
-        yield
-    finally:
-        git_cmd(repo, 'checkout', orig)
+    git_cmd(repo, 'checkout', branch)
+    yield_and_catch(leave=leave)
+    git_cmd(repo, 'reset', '--merge')
+    git_cmd(repo, 'checkout', orig)
 
 def remote_branch_exists(repo, remote_repo, remote_branch):
     """
@@ -341,7 +350,8 @@ def get_revision(repo, rev):
 
         raise ValueError("Unknown file or commit: {0}".format(rev))
 
-def cherry_push(repo, rev, remote_repo, remote_branch, do_pull=False):
+def cherry_push(repo, rev, remote_repo, remote_branch, do_pull=False,
+                leave=False):
     """
     Push a specific commit to a particular branch.  This function is
     the heart of the logic in this script.
@@ -350,7 +360,7 @@ def cherry_push(repo, rev, remote_repo, remote_branch, do_pull=False):
     print ("Pushing commit {0} to {1}:{2}\n\n{3}\n".
            format(rev, remote_repo, remote_branch, rev.message))
 
-    with stash_if_needed(repo):
+    with stash_if_needed(repo, leave):
         # Make sure the remote branch exists so we can track it
         remote = '{0}/{1}'.format(remote_repo, remote_branch)
         if remote_branch_exists(repo, remote_repo, remote_branch):
@@ -358,10 +368,10 @@ def cherry_push(repo, rev, remote_repo, remote_branch, do_pull=False):
                     '{0}:remotes/{1}'.format(remote_branch, remote))
 
         # Create a unique temp branch
-        with temp_branch(repo, remote) as branch_name:
+        with temp_branch(repo, remote, leave) as branch_name:
 
             # Checkout the temp branch
-            with checkout(repo, branch_name):
+            with checkout(repo, branch_name, leave):
                 git_cmd(repo, 'cherry-pick', rev)
                 git_cmd(repo, 'pull', '--rebase')
                 git_cmd(repo, 'prep')
@@ -412,7 +422,7 @@ def default_to_tracking(repo, remote_repo, remote_branch=None):
             remote_branch = tracking.remote_head
     return (remote_repo, remote_branch)
 
-def push_to_master(repo, rev, remote_repo, remote_branch, force):
+def push_to_master(repo, rev, remote_repo, remote_branch, force, leave=False):
     """
     Select a particular command and push it to the remote 'master'.
     """
@@ -422,7 +432,8 @@ def push_to_master(repo, rev, remote_repo, remote_branch, force):
         raise ValueError("Are you sure you want to push to branch {0}"
                          " instead of branch 'master'?  If so, use --force."
                          .format(remote_branch))
-    cherry_push(repo, rev, remote_repo, remote_branch, do_pull=True)
+    cherry_push(repo, rev, remote_repo, remote_branch, do_pull=True,
+                leave=leave)
 
 ##################################################################
 # Functions related to pushing to the release branch
@@ -607,7 +618,8 @@ def ensure_rev_in_master(repo, rev, remote_repo):
                      "  If so, use --force.".format(rev))
 
 def push_to_release(repo, rev, remote_repo, remote_branch,
-                    force, today, release_date=None, check_rev_in_master=True):
+                    force, today, release_date=None, check_rev_in_master=True,
+                    leave=False):
     """
     Push a specific commit to the current release branch
     """
@@ -635,7 +647,7 @@ def push_to_release(repo, rev, remote_repo, remote_branch,
         if check_rev_in_master:
             ensure_rev_in_master(repo, rev, remote_repo)
 
-    cherry_push(repo, rev, remote_repo, remote_branch)
+    cherry_push(repo, rev, remote_repo, remote_branch, leave=leave)
     rel_tree = get_release_tree(repo_type, remote_branch)
     if rel_tree is None or not os.path.exists(rel_tree):
         print("No shared release clone to update!  "
