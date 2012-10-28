@@ -1,5 +1,4 @@
 #!/usr/local/bin/perl -w
-# $Header: /u/yuanc/testbed/PL/RCS/mastermind.pl,v 1.14 2003/03/15 01:37:56 yuanc Exp $
 # debuglvl	description
 # 1		game level stuff
 # 2		better guess level stuff

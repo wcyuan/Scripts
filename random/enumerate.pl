@@ -262,8 +262,6 @@ __END__
 =head1 AUTHOR
 
  Conan Yuan
- $Revision: 1.4 $
- $Source: /u/yuanc/testbed/PL/random/RCS/enumerate.pl,v $
 
 =cut
 

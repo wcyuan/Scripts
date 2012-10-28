@@ -1,8 +1,5 @@
 #!/usr/local/bin/perl -w
 #
-# $Id: sched_stats.pl,v 1.85 2011/12/29 16:16:34 yuanc Exp $
-# $Source: /u/yuanc/testbed/perl/random/RCS/sched_stats.pl,v $
-#
 # sched_stats.pl
 # @desc:  Print some information about the tennis schedule.
 #
@@ -612,8 +609,6 @@ __END__
 =head1 AUTHOR
 
  Conan Yuan
- $Revision: 1.85 $
- $Source: /u/yuanc/testbed/perl/random/RCS/sched_stats.pl,v $
 
 =cut
 
