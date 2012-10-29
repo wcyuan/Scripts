@@ -137,7 +137,7 @@ def main():
         push_to_release(repo, rev, opts.remote, opts.upstream, opts.force,
                         opts.date, opts.release_date,
                         check_rev_in_master=check_rev_in_master,
-                        opts.leave)
+                        leave=opts.leave)
 
 
 def getopts():
@@ -269,14 +269,14 @@ def temp_branch_name(repo):
             return temp
         number += 1
 
-def yield_and_catch(value=None, leave=False):
-    try:
-        yield value
-    except Exception as e:
-        if leave:
-            raise(e)
-        else:
-            print "Aborting due to error %s" % e
+def handle_exception(exception, leave=False):
+    if leave:
+        raise(exception)
+    else:
+        print("[cherry-push] Failed due to error %s" % exception)
+        print("[cherry-push] Cleaning up temp branch.")
+        print("[cherry-push] To be left in the middle of the "
+              "conflict, use the --leave option.")
 
 @contextmanager
 def temp_branch(repo, remote, leave=False):
@@ -286,7 +286,10 @@ def temp_branch(repo, remote, leave=False):
     """
     name = temp_branch_name(repo)
     git_cmd(repo, 'branch', '-t', name, remote)
-    yield_and_catch(value=name, leave=leave)
+    try:
+        yield name
+    except Exception as e:
+        handle_exception(e, leave=leave)
     git_cmd(repo, 'branch', '-D', name)
 
 @contextmanager
@@ -298,7 +301,10 @@ def stash_if_needed(repo, leave=False):
     if git_cmd_always(repo, 'diff') != '':
         stashed = True
         git_cmd(repo, 'stash')
-    yield_and_catch(leave=leave)
+    try:
+        yield
+    except Exception as e:
+        handle_exception(e, leave=leave)
     if stashed:
         git_cmd(repo, 'stash', 'pop')
 
@@ -310,7 +316,10 @@ def checkout(repo, branch, leave=False):
     """
     orig = repo.active_branch
     git_cmd(repo, 'checkout', branch)
-    yield_and_catch(leave=leave)
+    try:
+        yield
+    except Exception as e:
+        handle_exception(e, leave=leave)
     git_cmd(repo, 'reset', '--merge')
     git_cmd(repo, 'checkout', orig)
 
