@@ -93,7 +93,14 @@ complete -c lw where type which
 # See
 # http://clalance.blogspot.com/2011/10/git-bash-prompts-and-tab-completion.html
 # and http://repo.or.cz/w/git.git/blob/HEAD:/contrib/completion/git-completion.bash
+# or https://github.com/git/git/tree/master/contrib/completion
 # for git completion files
+if [ -f "$HOME/.git-completion.sh" ]; then
+    . $HOME/.git-completion.sh
+fi
+if [ -f "$HOME/.git-prompt.sh" ]; then
+    . $HOME/.git-prompt.sh
+fi
 
 #----------------------------------------------------------------------
 
