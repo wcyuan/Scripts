@@ -109,6 +109,16 @@
 ;; M-x make-frame-on-display
 ;;           -- open a window on a different display
 ;;
+;; M-x describe-function
+;;           -- describe a function and say what key sequence it is bound to
+;;
+;; M-x describe-key
+;;           -- say what function a key sequence is bound to
+;;
+;; Dynamic Abbrev Expansion:
+;; M-/       -- Search the buffer for possible completions
+;; C-M-/     -- Show all possible completions
+;;
 ;; http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html
 ;; http://www.emacswiki.org/emacs/EmacsWiki
 ;;
@@ -148,18 +158,18 @@
 ;; Various configuration
 ;;
 (setq frame-title-format mode-line-buffer-identification)
-(setq enable-local-variables t)		;; Let files specify major-mode
+(setq enable-local-variables t)         ;; Let files specify major-mode
 (setq-default indent-tabs-mode nil)     ;; Indent with spaces, not tabs
-(setq inhibit-startup-message t)	;; No emacs start-up message
+(setq inhibit-startup-message t)        ;; No emacs start-up message
 (setq dired-listing-switches (concat dired-listing-switches "F"))
-(put 'narrow-to-region 'disabled nil)	;; Enable C-x-n-n
+(put 'narrow-to-region 'disabled nil)   ;; Enable C-x-n-n
 (setq diff-switches "-wu")              ;; Switches to pass to diff
 (setq require-final-newline t)          ;; Always make sure files end
                                         ;; with newlines
 
 ;; customize mode line
 (setq display-time-string-forms '((format "%s:%s%s" 12-hours minutes am-pm)))
-(display-time)				;; Show current time
+(display-time)                          ;; Show current time
 
 ;; ---------------------------------------------------------------- ;;
 ;; Turn off the toolbar
@@ -336,8 +346,8 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
   (interactive "p")
   (message "%s" last-command)
   (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
-	((looking-at "\\s\)") (forward-char 1) (backward-list 1))
-	(t (self-insert-command (or arg 1)))))
+        ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+        (t (self-insert-command (or arg 1)))))
 
 (global-set-key "%" 'goto-match-paren)
 
@@ -445,11 +455,11 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;(setq tags-file-name '"/u/yuanc/usr/tags/TAGS")
 ;(setq tags-build-completion-table t)
 ;(setq tags-auto-read-changed-tag-files t)
-;(setq tags-always-exact t)		;; make tags work "correctly"
+;(setq tags-always-exact t)             ;; make tags work "correctly"
 ;(Unix (setq tags-table-list '("/u/yuanc/usr/tags/TAGS")))
 ;(if (>= (emacs-number) 20.3)
-;    (setq tags-revert-without-query t)	;; always revert tags tables w/o query
-;  (setq revert-without-query '(".*")))	;; always revert tags tables w/o query
+;    (setq tags-revert-without-query t) ;; always revert tags tables w/o query
+;  (setq revert-without-query '(".*"))) ;; always revert tags tables w/o query
 ;
 ;
 
@@ -496,21 +506,21 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;;; ---------------------------------------------------------------- ;;
 ;; I don't think I need these
 ;
-;(setq search-highlight t)		;; highlight search strings
-;;(Windows (require 'cygwin32-mount))	;; read cygwin mount points
+;(setq search-highlight t)              ;; highlight search strings
+;;(Windows (require 'cygwin32-mount))   ;; read cygwin mount points
 ;(GNUEmacs (transient-mark-mode 1))      ;; highlight region when mark is active
-;(setq next-line-add-newlines nil)	;; no newlines at end of buffer
-;(setq scroll-step 3)			;; set scrolling
-;(setq make-backup-files nil)		;; no *~ files
+;(setq next-line-add-newlines nil)      ;; no newlines at end of buffer
+;(setq scroll-step 3)                   ;; set scrolling
+;(setq make-backup-files nil)           ;; no *~ files
 ;(setq angry-mob-with-torches-and-pitchforks t)
-;(GNUEmacs (menu-bar-mode -1))		;; turn off menu bar
-;(resize-minibuffer-mode 1)		;; automatically resize minibuffer
-;(hscroll-global-mode)			;; horizontal scroll
-;(set-input-mode nil nil t)		;; use accents
-;(setq default-major-mode 'text-mode)	;; text mode as default
-;(setq find-file-existing-other-name t)	;; handle symbolic links
+;(GNUEmacs (menu-bar-mode -1))          ;; turn off menu bar
+;(resize-minibuffer-mode 1)             ;; automatically resize minibuffer
+;(hscroll-global-mode)                  ;; horizontal scroll
+;(set-input-mode nil nil t)             ;; use accents
+;(setq default-major-mode 'text-mode)   ;; text mode as default
+;(setq find-file-existing-other-name t) ;; handle symbolic links
 ;(setq-default mode-line-mule-info "-")
-;(setq display-time-mail-file t)	;; don't check for new mail
+;(setq display-time-mail-file t)        ;; don't check for new mail
 ;
 ;; ---------------------------------------------------------------- ;;
 ;; Cscope
@@ -570,7 +580,7 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; (defun fontify ()
 ;;   "Turn on font lock (M-x list-faces-display) and customize colors."
 ;;   (interactive)
-;;   (require 'font-lock)	; for xemacs
+;;   (require 'font-lock)       ; for xemacs
 ;;   (if (functionp 'global-font-lock-mode) (global-font-lock-mode t))
 ;;   ;(setq font-lock-support-mode 'lazy-lock-mode)
 ;;   (setq lazy-lock-minimum-size 10000)
@@ -586,20 +596,20 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;;       (set-face-underline-p 'underline nil))
 ;;   (if (< (string-to-number emacs-version) 20)
 ;;       (setq font-lock-face-attributes
-;; 	    '((font-lock-comment-face "forest green")
-;; 	      (font-lock-function-name-face "red")
-;; 	      (font-lock-keyword-face "blue")
-;; 	      (font-lock-reference-face "cadetblue")
-;; 	      (font-lock-string-face "brown")
-;; 	      (font-lock-type-face "purple")
-;; 	      (font-lock-variable-name-face "orangered")))
+;;          '((font-lock-comment-face "forest green")
+;;            (font-lock-function-name-face "red")
+;;            (font-lock-keyword-face "blue")
+;;            (font-lock-reference-face "cadetblue")
+;;            (font-lock-string-face "brown")
+;;            (font-lock-type-face "purple")
+;;            (font-lock-variable-name-face "orangered")))
 ;;     (if (facep 'font-lock-builtin-face)
-;; 	(set-face-foreground 'font-lock-builtin-face "Orchid"))
+;;      (set-face-foreground 'font-lock-builtin-face "Orchid"))
 ;;     (set-face-foreground 'font-lock-comment-face "forest green")
 ;;     (if (facep 'font-lock-reference-face)
-;; 	(set-face-foreground 'font-lock-reference-face "cadetblue"))
+;;      (set-face-foreground 'font-lock-reference-face "cadetblue"))
 ;;     (if (not (facep 'font-lock-constant-face))
-;; 	(copy-face 'font-lock-reference-face 'font-lock-constant-face))
+;;      (copy-face 'font-lock-reference-face 'font-lock-constant-face))
 ;;     (set-face-foreground 'font-lock-constant-face "cadetblue")
 ;;     (set-face-foreground 'font-lock-function-name-face "red")
 ;;     (set-face-foreground 'font-lock-keyword-face "blue")
@@ -607,38 +617,38 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;;     (set-face-foreground 'font-lock-type-face "purple")
 ;;     (set-face-foreground 'font-lock-variable-name-face "orangered")
 ;;     (if (facep 'font-lock-warning-face)
-;; 	(set-face-foreground 'font-lock-warning-face "red"))
+;;      (set-face-foreground 'font-lock-warning-face "red"))
 ;;     (GNUEmacs (set-face-foreground 'modeline "white")
-;; 	      (set-face-background 'modeline "steel blue"))
+;;            (set-face-background 'modeline "steel blue"))
 ;;     (XEmacs (set-face-foreground 'modeline "red")
-;; 	    (set-face-background 'modeline "Gray95"))
+;;          (set-face-background 'modeline "Gray95"))
 ;;     (XEmacs (set-face-background 'default "gray85"))
 ;;     ; change font-lock-keywords
 ;;     (GNUEmacs
 ;;      (font-lock-add-keywords 'tcl-mode
 ;;       '(("\\<\\(set\\|unset\\|incr\\|expr\\|array\\|split\\|string\\|regexp\\|array\\|lindex\\|list\\|lappend\\)\\>"
-;; 	 0 font-lock-type-face)
-;; 	("\\<\\(catch\\)\\>" 0 font-lock-keyword-face)
-;; 	("${?\\(\\sw+\\)" 1 font-lock-variable-name-face) ; variables
-;; 	("$\\(\\sw+\\)(\\(\\sw+\\))" 2 font-lock-variable-name-face) ; array variables
-;; 	("\\<[0-9]+\\>" 0 'font-lock-constant-face)
-;; 	("\\<0x[0-9]+\\>" 0 'font-lock-constant-face)
-;; 	; itcl stuff
-;; 	("\\<private\\>" 0 font-lock-type-face)
-;; 	("\\<\\(namespace\\)\\>[ 	]*\\(\\sw+\\)?"
-;; 	 (1 font-lock-type-face)
-;; 	 (2 font-lock-function-name-face nil t))
-;; 	("\\<\\(body\\|class\\|configbody\\|variable\\)\\>[ 	]*\\(\\sw+\\)?"
-;; 	 (1 font-lock-keyword-face)
-;; 	 (2 font-lock-function-name-face nil t))
-;; 	("#auto" 0 'font-lock-type-face t)
-;; 	))
+;;       0 font-lock-type-face)
+;;      ("\\<\\(catch\\)\\>" 0 font-lock-keyword-face)
+;;      ("${?\\(\\sw+\\)" 1 font-lock-variable-name-face) ; variables
+;;      ("$\\(\\sw+\\)(\\(\\sw+\\))" 2 font-lock-variable-name-face) ; array variables
+;;      ("\\<[0-9]+\\>" 0 'font-lock-constant-face)
+;;      ("\\<0x[0-9]+\\>" 0 'font-lock-constant-face)
+;;      ; itcl stuff
+;;      ("\\<private\\>" 0 font-lock-type-face)
+;;      ("\\<\\(namespace\\)\\>[        ]*\\(\\sw+\\)?"
+;;       (1 font-lock-type-face)
+;;       (2 font-lock-function-name-face nil t))
+;;      ("\\<\\(body\\|class\\|configbody\\|variable\\)\\>[     ]*\\(\\sw+\\)?"
+;;       (1 font-lock-keyword-face)
+;;       (2 font-lock-function-name-face nil t))
+;;      ("#auto" 0 'font-lock-type-face t)
+;;      ))
 ;;     (font-lock-add-keywords 'perl-mode
 ;;       '(("^\\(=\\sw+\\)\\s-\\(.+\\)\n\\(^\n\\|^[^=].*\n\\)*"
-;; 	 (0 font-lock-comment-face prepend)
-;; 	 (1 font-lock-builtin-face prepend)
-;; 	 (2 font-lock-type-face prepend))
-;; 	("^=cut$" 0 font-lock-builtin-face)))
+;;       (0 font-lock-comment-face prepend)
+;;       (1 font-lock-builtin-face prepend)
+;;       (2 font-lock-type-face prepend))
+;;      ("^=cut$" 0 font-lock-builtin-face)))
 ;;     (font-lock-add-keywords 'comint-mode
 ;;       '(("^\\[[0-9]+\\][^#$%>\n]*[$>] *" 0 font-lock-keyword-face))))))
 
