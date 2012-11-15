@@ -58,6 +58,27 @@ ioncore.set{
     --screen_notify=true,
 
     -- XXX ADDED
+    --
+    -- This turns off focus-follows-mouse.  This is useful because
+    -- it's common in ion3 to use the keyboard to control focus, which
+    -- means you are typing in one window while the mouse is in
+    -- another window.  If you accidentally touch the mouse a little,
+    -- then focus will jump to the mouse, out of the window that you
+    -- are in.  So, for me, though I like focus-follows-mouse in
+    -- standard window managers, I don't like it in ion3.
+    --
+    -- However, when you turn off focus-follows-mouse, you get a weird
+    -- result.  In most window managers, the options are
+    -- focus-follows-mouse or click-to-focus.  But in ion3, if you
+    -- turn off focus-follows-mouse, then even click-to-focus doesn't
+    -- work.  You have to use the keyboard to move focus between
+    -- frames.  If you click in another frame, the focus doesn't move.
+    -- If you click in another frame, that frame is the object that
+    -- receives the click event.  For example, if you middle-click in
+    -- a window that doesn't have focus, you will be pasting in that
+    -- window.  It's just that focus won't move.  If you type, the
+    -- things you type will continue to go in the original window that
+    -- has focus, not the window that you just pasted into.
     mousefocus='disabled',
 }
 
