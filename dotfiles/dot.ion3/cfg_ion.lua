@@ -56,6 +56,9 @@ ioncore.set{
 
     -- Display notification tooltips for activity on hidden workspace.
     --screen_notify=true,
+
+    -- XXX ADDED
+    mousefocus='disabled',
 }
 
 
