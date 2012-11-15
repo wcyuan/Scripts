@@ -20,18 +20,16 @@ Created by: Conan Yuan (yuanc), 20120607
 
 from __future__ import absolute_import, division, with_statement
 
-from   os.path                  import basename, exists
+from   os.path                  import basename, exists, join as pathjoin
 import re
 from   zipfile                  import ZipFile
 
 from   optparse                 import OptionParser
-from   logging                  import getLogger
+from   logging                  import getLogger, DEBUG, info
 
 __version__ = "$Revision: 1.3 $"
 
 ##################################################################
-
-LOGGER = getLogger(__name__)
 
 def main():
     """
@@ -42,7 +40,7 @@ def main():
     jars = [jar for jar_list in
             (find_jar(j) for j in opts.jarfiles)
             for jar in jar_list]
-    LOGGER.info("Searching jars: {0}".format(', '.join(jars)))
+    info("Searching jars: {0}".format(', '.join(jars)))
     if opts.list:
         for (jar, patt, fn) in list_jar(jars, args):
             print ' '.join((jar, fn))
@@ -66,6 +64,9 @@ def getopts():
     parser.add_option('-i', '--case_insensitive',
                       action='store_true',
                       help='when listing, search case insensitively')
+    parser.add_option('--verbose',
+                      action='store_true',
+                      help='verbose mode')
     opts,args = parser.parse_args()
 
     if opts.list and opts.cat:
@@ -76,6 +77,9 @@ def getopts():
             opts.cat = True
         else:
             opts.list = True
+
+    if opts.verbose:
+        getLogger().setLevel(DEBUG)
 
     # Do further analysis here, if necessary
     return (opts,args)
@@ -90,10 +94,10 @@ def find_jar(jar):
     if not hasattr(find_jar, 'search_dirs'):
         dirs = []
         find_jar.search_dirs = ['.']
-        find_jar.search_dirs.extend('{0}/java/jar'.format(d) for d in dirs)
+        find_jar.search_dirs.extend(pathjoin(d, 'java', 'jar') for d in dirs)
 
     for d in find_jar.search_dirs:
-        full = '%s/%s' % (d, jar)
+        full = pathjoin(d, jar)
         if exists(full):
             yield full
 
@@ -105,10 +109,10 @@ def read_jar(jars, files):
             data = ZipFile(jar).read(fn)
             found[patt] = True
             if fn.endswith('.class'):
-                LOGGER.info("Skipping class file {0} from {1} ({2})".
+                info("Skipping class file {0} from {1} ({2})".
                      format(fn, jar, patt))
                 continue
-            LOGGER.info("Reading {0} from {1} ({2})".format(fn, jar, patt))
+            info("Reading {0} from {1} ({2})".format(fn, jar, patt))
             print data
 
 def list_jar(jars, patterns):
