@@ -104,8 +104,12 @@ def find_jar(jar):
 def read_jar(jars, files):
     found = dict((f, False) for f in files)
     for jar in jars:
-        for (x, patt, fn) in list_jar([jar],
-                                      [f for f in files if not found[f]]):
+        remaining = [f for f in files if not found[f]]
+        if len(remaining) == 0:
+            # If there are no files left, return, otherwise list_jar
+            # will return every file.
+            return
+        for (x, patt, fn) in list_jar([jar], remaining):
             data = ZipFile(jar).read(fn)
             found[patt] = True
             if fn.endswith('.class'):
