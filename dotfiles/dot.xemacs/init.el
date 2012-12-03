@@ -394,17 +394,34 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; http://www.emacswiki.org/emacs/PythonMode#toc8
 ;;
 
+; Put flymake temp files into a common local directory so they don't
+; clutter the directory the file is in.  This allows flymake to work
+; on directories where you don't have permission to write.  It also
+; reduces clutter from left over flymake files.
+(defun flymake-create-temp-local-temp-dir (file-name prefix)
+  (unless (stringp file-name)
+    (error "Invalid file-name"))
+  (or prefix
+      (setq prefix "flymake"))
+  (let* ((temp-name   (concat "~/.emacs.d/flymake-py/"
+                              (file-name-nondirectory file-name)
+                              "_" prefix
+                              (and (file-name-extension file-name)
+                                   (concat "." (file-name-extension file-name))))))
+    (flymake-log 3 "create-temp-inplace: file=%s temp=%s" file-name temp-name)
+    temp-name))
+
 (when (load "flymake" t)
   (defun flymake-pylint-init ()
     (let* ((temp-file (flymake-init-create-temp-buffer-copy
-                       'flymake-create-temp-inplace))
-       (local-file (file-relative-name
-                    temp-file
-                    (file-name-directory buffer-file-name))))
-      (list "epylint" (list local-file))))
+                       'flymake-create-temp-local-temp-dir))
+           (local-file (file-relative-name
+                        temp-file
+                        (file-name-directory buffer-file-name))))
+      (list "epylint" (list temp-file))))
 
   (add-to-list 'flymake-allowed-file-name-masks
-           '("\\.py\\'" flymake-pylint-init)))
+               '("\\.py\\'" flymake-pylint-init)))
 
 (setq flymake-allowed-file-name-masks
       '(("\\.py\\'" flymake-pylint-init)
