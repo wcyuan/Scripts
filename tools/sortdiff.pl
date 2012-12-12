@@ -90,7 +90,7 @@ use File::Basename;
 use Getopt::Long qw(:config pass_through no_auto_abbrev);
 use Log::Log4perl qw(:levels);
 
-# ----------------------
+# ---------------------------------------------------------------
 
 # default values
 my $nfiles = 2;
@@ -104,34 +104,36 @@ GetOptions( "col=s"    => \my %col,
             "debug!"   => \my $debug,
             "leave!"   => \my $leave_files,
             "verbose|v" => sub { $logger->level($DEBUG) },
+            "cmd!"     => \my $is_cmd,
           )
     or pod2usage();
 
 # parse script arguments
 pod2usage("Wrong number of arguments") unless @ARGV >= $nfiles;
 
-my $cmd_basename = basename($0);
+# ---------------------------------------------------------------
+# Create temporary filenames
+#
 
-# since we're popping, get files in reverse order
+my $cmd_basename = basename($0);
+# Pop two arguments off the end of @ARGV.  Earlier arguments will be
+# passed into the diff command.  Since we're popping, we get the files
+# in reverse order.
 for (my $ii = $nfiles; $ii > 0; $ii--) {
-    $file{$ii}{name} = pop @ARGV;
+    $file{$ii}{name} = pop(@ARGV);
     $file{$ii}{temp} = "/tmp/$cmd_basename.$ii.$$";
-    $file{$ii}{basename} = basename($file{$ii}{name});
 }
 
 for (my $ii = 1; $ii <= $nfiles; $ii++) {
     if ($ii > 1) {
-	if ($file{$ii}{basename} eq "") {
-	    # After the first file, the later files can just be
-	    # directories and we'll assume the same basename as the
-	    # first file.
-	    if ($file{1}{basename} ne "") {
-		$file{$ii}{basename} = $file{1}{basename};
-		$file{$ii}{name} .= $file{1}{basename};
-	    }
-	}
+        if (-d $file{$ii}{name}) {
+            # After the first file, the later files can just be
+            # directories and we'll assume the same basename as the
+            # first file.
+            $file{$ii}{name} .= basename($file{1}{name});
+        }
     }
-    $logger->debug("$ii $file{$ii}{basename} $file{$ii}{temp} $file{$ii}{name}");
+    $logger->debug("file $ii: '$file{$ii}{name}' -> $file{$ii}{temp}");
 }
 
 foreach my $fileno (keys %col) {
@@ -141,10 +143,13 @@ foreach my $fileno (keys %col) {
     $file{$fileno}{col} = $col{$fileno};
 }
 
-# ----------------------
+# ---------------------------------------------------------------
+# Read input files, output to temp files
+#
 
 foreach my $fileno (keys %file) {
     my $infd;
+    $logger->debug("Reading file $fileno: '$file{$fileno}{name}'");
     open($infd, $file{$fileno}{name})
         or $logger->logconfess("Can't open $file{$fileno}{name}: $? $! $@");
     my @lines;
@@ -171,19 +176,28 @@ foreach my $fileno (keys %file) {
         or $logger->logconfess("Can't close $file{$fileno}{temp}: $? $! $@");
 }
 
+# ---------------------------------------------------------------
+# Run the diff command
+#
+
 my $cmd = join(" ", "diff", @ARGV, $file{1}{temp},  $file{2}{temp});
 if ($debug) {
-    $logger->debug("Not running $cmd");
+    $logger->debug("Not running '$cmd'");
 } else {
-    $logger->info("Running $cmd");
+    $logger->info("Running '$cmd'");
     system($cmd);
 }
+
+# ---------------------------------------------------------------
+# Remove temp files
+#
 
 foreach my $fileno (keys %file) {
     if ($leave_files) {
 	$logger->warn("Leaving file $file{$fileno}{temp}");
     } else {
-	unlink($file{$fileno}{temp}) or warning("Can't remove $file{$fileno}{temp}: $? $! $@");
+	unlink($file{$fileno}{temp})
+            or warning("Can't remove $file{$fileno}{temp}: $? $! $@");
     }
 }
 
