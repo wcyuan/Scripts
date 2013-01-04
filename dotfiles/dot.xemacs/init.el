@@ -64,7 +64,7 @@
 ;; C-x 5 1   -- close all windows but this one
 ;; C-x 5 0   -- close this window
 ;;
-;; M-space   -- begin marking a region.  Also just shift-<arrow>
+;; C-space   -- begin marking a region.  Also just shift-<arrow>
 ;; C-w       -- kill-region
 ;; M-w       -- copy-region
 ;; C-x C-x   -- move cursor to the mark
