@@ -427,22 +427,23 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
   (add-to-list 'flymake-allowed-file-name-masks
                '("\\.py\\'" flymake-pylint-init)))
 
-(setq flymake-allowed-file-name-masks
-      '(("\\.py\\'" flymake-pylint-init)
-        ("\\.html?\\'" flymake-xml-init)
-        ("\\.cs\\'" flymake-simple-make-init)
-        ("\\.pl\\'" flymake-perl-init)
-        ("[0-9]+\\.tex\\'" flymake-master-tex-init flymake-master-cleanup)
-        ("\\.tex\\'" flymake-simple-tex-init)
-        ("\\.idl\\'" flymake-simple-make-init)))
-; remove the c, java, and xml flymake hooks since those don't seem to work.
+(GNUEmacs
+ (setq flymake-allowed-file-name-masks
+       '(("\\.py\\'" flymake-pylint-init)
+         ("\\.html?\\'" flymake-xml-init)
+         ("\\.cs\\'" flymake-simple-make-init)
+         ("\\.pl\\'" flymake-perl-init)
+         ("[0-9]+\\.tex\\'" flymake-master-tex-init flymake-master-cleanup)
+         ("\\.tex\\'" flymake-simple-tex-init)
+         ("\\.idl\\'" flymake-simple-make-init)))
+  ; remove the c, java, and xml flymake hooks since those don't seem to work.
   ;("\\.c\\'" flymake-simple-make-init)
   ;("\\.cpp\\'" flymake-simple-make-init)
   ;("\\.xml\\'" flymake-xml-init)
   ;("\\.h\\'" flymake-master-make-header-init flymake-master-cleanup)
   ;("\\.java\\'" flymake-simple-make-java-init flymake-simple-java-cleanup)
+ (add-hook 'find-file-hook 'flymake-find-file-hook))
 
-(add-hook 'find-file-hook 'flymake-find-file-hook)
 
 ;; ---------------------------------------------------------------- ;;
 ;; Matlab mode
@@ -514,6 +515,12 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
        (add-hook 'java-mode-hook (lambda () (interactive) (column-marker-1 80)))
        (add-hook 'c-mode-hook (lambda () (interactive) (column-marker-1 80)))
        )))
+
+;; ---------------------------------------------------------------- ;;
+;;; Nice unique buffer names.  More descriptive than sim.pl<2>
+
+(require 'uniquify)
+(setq uniquify-buffer-name-style 'post-forward-angle-brackets)
 
 ;;; ---------------------------------------------------------------- ;;
 ;
