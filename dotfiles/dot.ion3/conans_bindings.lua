@@ -119,7 +119,7 @@ defbindings("WFrame", {
 --    kpress(ALTMETA.."F2", "ioncore.exec_on(_, 'xterm -bg `/u/yuanc/bin/my_randcolor`')"),
 --})
 
-XTERM="xterm -bg `/u/yuanc/bin/my_randcolor` -e bash"
+XTERM="xterm -bg `/u/yuanc/bin/my_randcolor` -fg black -e bash"
 
 -- ** ------------------------------------------------------------------- ** --
 -- ** Menus
