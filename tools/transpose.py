@@ -2,28 +2,37 @@
 """
 transpose.py --patt <pattern> [<file>]
 
-Take tabular input that looks like, whre every field has a different length
+Take tabular input that looks like this, where every field has a
+different length:
+
  aa bbbb cccccc dd eeee
  1 2 3 4 5
  6 7 8 9 10
  11 12 13 14 15
 
-And output it transposed:
+And output it transposed, and with columns lined up:
+
+ aa     1 6  11
+ bbbb   2 7  12
+ cccccc 3 8  13
+ dd     4 9  14
+ eeee   5 10 15
+
+Only transposes if there are no more than 6 rows to transpose,
+otherwise just line the columns up without transposing:
+
  aa bbbb cccccc dd eeee
  1     2      3  4    5
  6     7      8  9   10
  11   12     13 14   15
 
+Tries to be intelligent about parsing the input: Tries to guess
+whether the input is fixed width or delimited.  If delimited, tries to
+guess what the separator is.
 
-Only transposes if there are no more than 6 rows to transpose.
-
-Tries to be intelligent about how to parse the tabular input.  Tries
-to guess whether the input is fixed width or delimited.  If delimited,
-tries to guess what the separator is.
-
-Takes an optional pattern.  If we are given a pattern, then we grep
-the file for that pattern and only show matching lines.  However, we
-also output the header so you can see what the fields mean.
+Takes an optional pattern.  If given a pattern, then grep the file for
+that pattern and only show matching lines.  Also output the header so
+you can see what the fields mean.
 
 """
 
@@ -32,7 +41,7 @@ from __future__ import absolute_import, division, with_statement
 
 from contextlib   import contextmanager
 from itertools    import izip_longest
-from logging      import getLogger, DEBUG, info
+from logging      import getLogger, DEBUG, info, debug
 from optparse     import OptionParser
 from subprocess   import Popen, PIPE
 from StringIO     import StringIO
@@ -63,7 +72,13 @@ def getopts():
                       help="the delimiter to use")
     parser.add_option('--left',
                       action="store_true",
-                      help="left justify")
+                      default=True,
+                      help="left justify (True by default)")
+    parser.add_option('--right',
+                      action="store_false",
+                      dest='left',
+                      default=False,
+                      help="right justify (False by default)")
     parser.add_option('--reverse', '-v',
                       action="store_true",
                       help="reverse the pattern matching")
@@ -93,7 +108,9 @@ def getopts():
 
 HEADERS = ('#@desc',)
 
-DELIMITERS = (' \| ', '\|', ',', '@', "\t", "~", "\s+")
+# These delimiters should be in order from least likely to appear by
+# accident to most likely to appear by accident.
+DELIMITERS = (' \| ', "~", '\|', '@', ',', "\t", "\s+")
 
 DECOMPRESSORS = (('.bz2', 'bzcat'),
                  ('.gz', 'zcat'))
@@ -111,7 +128,12 @@ OFS = " "
 def zopen(fn):
     """
     Return the contents of a file, even if it might be compressed.
-    Returns a list of strings, one string per line of the file.
+    Returns a file object, just like open would return.  This is a
+    context manager so it's meant to be called using the "with"
+    command, like this:
+
+    with zopen(file_name) as file_object:
+       ....
     """
     for (sfx, cmd) in DECOMPRESSORS:
         if fn.endswith(sfx):
@@ -138,31 +160,58 @@ def guess_delim(header, kind):
     Guess the form of the data based on the header.  Most cases are
     delimiter separated, so it's mostly a matter of figuring out the
     delimiter.
+
+    This assumes that the header uses the same format as the rest of
+    the table.
     """
     if kind is None:
+        # Ideally we could detect whether we are delimited or whether
+        # we are using a fixed format, but so far I haven't tried
+        # implementing that logic yet.  So just assume we are
+        # delimited unless the user tells us differently.
         kind = 'delimited'
+
     if kind == 'delimited':
+        # We go through the possible delimiters in order from least
+        # likely to most likely.  As soon as one of the delimiters
+        # appears on the line more than 5 times, it's probably the
+        # delimiter.
         for d in DELIMITERS:
             if len(re.findall(d, header)) > 5:
                 delim = d
                 break
         else:
+            # If no delimiter appears more than 5 times, we're
+            # probably just white-space delimited.
             delim = '\s+'
+
     elif kind == 'fixed':
         # return a list containing the locations of the the first
         # letter of each word in the header.
         delim = [m.start() for m in re.finditer('[^\s]+', header)]
+
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
+
     info("Guessing kind %s with delimiter '%s' from header %s" %
          (kind, delim, header))
+
     return (kind, delim)
 
 def is_header(line, comment_char, header_patt):
-    if any(line.startswith(pfx) for pfx in HEADERS):
-        return True
+    """
+    Is this row the header?
+    """
+    # Sometimes we are given a pattern and we should only match that
+    # pattern
     if header_patt is not None:
         return re.search(header_patt, line) is not None
+
+    # Some files use special strings to mark the header.
+    if any(line.startswith(pfx) for pfx in HEADERS):
+        return True
+
+    # Otherwise we just take the first non-comment
     return not is_comment(line, comment_char)
 
 def is_comment(line, char):
@@ -182,11 +231,16 @@ def is_match(line, patt, reverse=False):
         return match is not None
 
 def separate(line, kind, delim):
+    """
+    Split a line according to its format.
+    """
     if kind == 'delimited':
         vals = re.split(delim, line)
         # If the row starts with #@desc, we should get rid of that.
         if vals[0] in HEADERS:
             vals.pop(0)
+        debug("line (%s delim='%s') %s separated into %s" %
+              (kind, delim, line, vals))
         return vals
     elif kind == 'fixed':
         # Fixed-width format.  To try to parse something like:
@@ -201,10 +255,13 @@ def separate(line, kind, delim):
         # until we find a space.  We split the word in those places.
         indexes = [delim[0]]
         indexes.extend(line.rfind(' ', 0, idx)+1 for idx in delim[1:])
-        return [x.strip()
-                for x in (line[start:] if end is None else line[start:end]
-                          for (start, end) in izip_longest(indexes, indexes[1:],
-                                                           fillvalue=None))]
+        vals= [x.strip()
+               for x in (line[start:] if end is None else line[start:end]
+                         for (start, end) in izip_longest(indexes, indexes[1:],
+                                                          fillvalue=None))]
+        debug("line (%s delim='%s') %s separated into %s" %
+              (kind, delim, line, vals))
+        return vals
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
 
@@ -215,6 +272,10 @@ def read_input(fd, patt=None, delim=None, comment='#',
     header = None
     for line in fd:
         line = line.strip(IRS)
+
+        # First step is to look for the header.  If we haven't found
+        # it yet, we'll skip all lines until we find it.  We use the
+        # header to figure out the format for the rest of the file.
         if header is None:
             if not is_header(line, comment, header_patt):
                 continue
@@ -223,15 +284,25 @@ def read_input(fd, patt=None, delim=None, comment='#',
             header = separate(line, kind, delim)
             table.append(header)
             continue
+
+        # Skip comments
         if is_comment(line, comment):
             continue
+
+        # If there is a pattern to match, skip until we find that pattern
         if (patt is not None and
             not is_match(line, patt, reverse=reverse)):
             continue
+
+        # Found a valid line!  Parse it and add it to the table.
         table.append(separate(line, kind, delim))
+
+        # If we were given a number of lines to look for, stop after
+        # that number.
         if head is not None:
             if len(table) >= head+1:
                 break
+
     return table
 
 def transpose(intable):
@@ -243,13 +314,15 @@ def transpose(intable):
 
 def texttable(outtable, intable=None, delim=OFS, left=False):
     """
+    pretty-print a table.  Every column's width is the width of the
+    widest field in that column.
+
     intable should be an iterable where every element is a list of
     fields
     """
     if intable is None:
-        intable = list(transpose(outtable))
-    widths = (max(len(fld) for fld in line)
-              for line in intable)
+        intable = transpose(outtable)
+    widths = (max(len(fld) for fld in line) for line in intable)
     lc = '-' if left else ''
     formats = ["%{0}{1}s".format(lc, width) for width in widths]
     return ORS.join("%s" % delim.join(format % fld
@@ -259,14 +332,20 @@ def texttable(outtable, intable=None, delim=OFS, left=False):
 def read_transpose(fd, patt=None, delim=None, left=False,
                    comment='#', kind='delimited', reverse=False,
                    head=None, header_patt=None):
-    intable = list(read_input(fd, patt=patt, delim=delim,
-                              comment=comment, kind=kind,
-                              reverse=reverse, head=head,
-                              header_patt=header_patt))
+    """
+    Puts it all together (for a single, uncompressed file).  Reads the
+    file, transposes (if necessary), and pretty-prints the output.
+    """
+    intable = read_input(fd, patt=patt, delim=delim,
+                         comment=comment, kind=kind,
+                         reverse=reverse, head=head,
+                         header_patt=header_patt)
     if len(intable) < 6:
         ttable = transpose(intable)
+        debug("transposed table: %s" % ttable)
     else:
         ttable = intable
+        intable = None
     print texttable(ttable, intable=intable, left=left)
 
 # --------------------------------------------------------------------
