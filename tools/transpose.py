@@ -26,6 +26,7 @@ from contextlib   import contextmanager
 from itertools    import izip_longest
 from optparse     import OptionParser
 from subprocess   import Popen, PIPE
+from StringIO     import StringIO
 
 import re
 import sys
@@ -60,10 +61,16 @@ def getopts():
     parser.add_option('--kind',
                       default='delimited',
                       help="the kind of table")
+    parser.add_option('--header_patt',
+                      help="a pattern that distinguishes the header")
+    parser.add_option('--head',
+                      type=int,
+                      help="Only show the first <head> lines")
     opts, args = parser.parse_args()
 
     opts = dict((v, getattr(opts, v))
-                for v in ('patt', 'delim', 'left', 'reverse', 'kind'))
+                for v in ('patt', 'delim', 'left', 'reverse',
+                          'kind', 'header_patt', 'head'))
 
     return (opts, args)
 
@@ -93,11 +100,18 @@ def zopen(fn):
     """
     for (sfx, cmd) in DECOMPRESSORS:
         if fn.endswith(sfx):
-            # XXX not sure this works...
+            print 'running %s %s' % (cmd, fn)
             proc = Popen([cmd, fn], stdout=PIPE)
-            proc.wait()
-            yield proc.stdout
-            return
+            stdout = proc.communicate()[0]
+            print 'done running %s %s' % (cmd, fn)
+
+            # stdout is just a string, but StringIO allows us to treat
+            # it like a file.  Just for convenience so that we can
+            # always return file objects.
+            string = StringIO(stdout)
+            yield string
+            string.close()
+            break
     else:
         with open(fn) as f:
             yield f
@@ -120,17 +134,19 @@ def guess_delim(header, kind):
         else:
             delim = '\s+'
     elif kind == 'fixed':
+        # return a list containing the locations of the the first
+        # letter of each word in the header.
         delim = [m.start() for m in re.finditer('[^\s]+', header)]
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
     return (kind, delim)
 
-def is_header(line, comment_char):
-    if not is_comment(line, comment_char):
-        return True
+def is_header(line, comment_char, header_patt):
     if any(line.startswith(pfx) for pfx in HEADERS):
         return True
-    return False
+    if header_patt is not None:
+        return re.search(header_patt, line) is not None
+    return not is_comment(line, comment_char)
 
 def is_comment(line, char):
     """
@@ -150,21 +166,42 @@ def is_match(line, patt, reverse=False):
 
 def separate(line, kind, delim):
     if kind == 'delimited':
-        # XXX have to do something about #@desc
-        return re.split(delim, line)
+        vals = re.split(delim, line)
+        # If the row starts with #@desc, we should get rid of that.
+        if vals[0] in HEADERS:
+            vals.pop(0)
+        return vals
     elif kind == 'fixed':
-        raise NotImplementedError
+        # Fixed-width format.  To try to parse something like:
+        #
+        #   F1      F2   F3    F4     F5   F6
+        #   this    is   a    fixed  width format
+        #
+        # You'd like to just split the line into pieces according to
+        # the words in the title.  But there could be columns that
+        # start before the header did.  So what we do is we start at
+        # the location of the header word, then we search backwards
+        # until we find a space.  We split the word in those places.
+        indexes = [delim[0]]
+        indexes.extend(line.rfind(' ', 0, idx)+1 for idx in delim[1:])
+        return [x.strip()
+                for x in (line[start:] if end is None else line[start:end]
+                          for (start, end) in izip_longest(indexes, indexes[1:],
+                                                           fillvalue=None))]
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
 
 def read_input(fd, patt=None, delim=None, comment='#',
-               kind='delimited', reverse=False):
+               kind='delimited', reverse=False, head=None,
+               header_patt=None):
     table = []
     header = None
     info = None
     for line in fd:
         line = line.strip(IRS)
-        if header is None and is_header(line, comment):
+        if header is None:
+            if not is_header(line, comment, header_patt):
+                continue
             if delim is None:
                 (kind, delim) = guess_delim(line, kind)
             header = separate(line, kind, delim)
@@ -176,6 +213,9 @@ def read_input(fd, patt=None, delim=None, comment='#',
             not is_match(line, patt, reverse=reverse)):
             continue
         table.append(separate(line, kind, delim))
+        if head is not None:
+            if len(table) == head:
+                break
     return table
 
 def transpose(intable):
@@ -201,10 +241,12 @@ def texttable(outtable, intable=None, delim=OFS, left=False):
                     for line in outtable)
 
 def read_transpose(fd, patt=None, delim=None, left=False,
-                   comment='#', kind='delimited', reverse=False):
+                   comment='#', kind='delimited', reverse=False,
+                   head=None, header_patt=None):
     intable = list(read_input(fd, patt=patt, delim=delim,
                               comment=comment, kind=kind,
-                              reverse=reverse))
+                              reverse=reverse, head=head,
+                              header_patt=header_patt))
     if len(intable) < 6:
         ttable = transpose(intable)
     else:
