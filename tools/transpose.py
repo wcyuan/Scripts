@@ -108,10 +108,8 @@ def zopen(fn):
     """
     for (sfx, cmd) in DECOMPRESSORS:
         if fn.endswith(sfx):
-            print 'running %s %s' % (cmd, fn)
             proc = Popen([cmd, fn], stdout=PIPE)
             stdout = proc.communicate()[0]
-            print 'done running %s %s' % (cmd, fn)
 
             # stdout is just a string, but StringIO allows us to treat
             # it like a file.  Just for convenience so that we can
@@ -204,7 +202,6 @@ def read_input(fd, patt=None, delim=None, comment='#',
                header_patt=None):
     table = []
     header = None
-    info = None
     for line in fd:
         line = line.strip(IRS)
         if header is None:
@@ -222,7 +219,7 @@ def read_input(fd, patt=None, delim=None, comment='#',
             continue
         table.append(separate(line, kind, delim))
         if head is not None:
-            if len(table) == head:
+            if len(table) >= head+1:
                 break
     return table
 
