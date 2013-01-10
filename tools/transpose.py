@@ -2,21 +2,29 @@
 """
 transpose.py --patt <pattern> [<file>]
 
-Take tabular input that looks like:
- a b c
- 1 2 3
- 4 5 6
+Take tabular input that looks like, whre every field has a different length
+ aa bbbb cccccc dd eeee
+ 1 2 3 4 5
+ 6 7 8 9 10
+ 11 12 13 14 15
 
 And output it transposed:
- a 1 4
- b 2 5
- c 3 6
+ aa bbbb cccccc dd eeee
+ 1     2      3  4    5
+ 6     7      8  9   10
+ 11   12     13 14   15
+
+
+Only transposes if there are no more than 6 rows to transpose.
 
 Tries to be intelligent about how to parse the tabular input.  Tries
 to guess whether the input is fixed width or delimited.  If delimited,
 tries to guess what the separator is.
 
-Takes an optional pattern
+Takes an optional pattern.  If we are given a pattern, then we grep
+the file for that pattern and only show matching lines.  However, we
+also output the header so you can see what the fields mean.
+
 """
 
 # --------------------------------------------------------------------
