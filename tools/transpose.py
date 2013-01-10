@@ -32,6 +32,7 @@ from __future__ import absolute_import, division, with_statement
 
 from contextlib   import contextmanager
 from itertools    import izip_longest
+from logging      import getLogger, DEBUG, info
 from optparse     import OptionParser
 from subprocess   import Popen, PIPE
 from StringIO     import StringIO
@@ -74,7 +75,13 @@ def getopts():
     parser.add_option('--head',
                       type=int,
                       help="Only show the first <head> lines")
+    parser.add_option('--verbose',
+                      action='store_true',
+                      help='verbose mode')
     opts, args = parser.parse_args()
+
+    if opts.verbose:
+        getLogger().setLevel(DEBUG)
 
     opts = dict((v, getattr(opts, v))
                 for v in ('patt', 'delim', 'left', 'reverse',
@@ -108,8 +115,10 @@ def zopen(fn):
     """
     for (sfx, cmd) in DECOMPRESSORS:
         if fn.endswith(sfx):
+            info('running %s %s' % (cmd, fn))
             proc = Popen([cmd, fn], stdout=PIPE)
             stdout = proc.communicate()[0]
+            info('done running %s %s' % (cmd, fn))
 
             # stdout is just a string, but StringIO allows us to treat
             # it like a file.  Just for convenience so that we can
@@ -145,6 +154,8 @@ def guess_delim(header, kind):
         delim = [m.start() for m in re.finditer('[^\s]+', header)]
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
+    info("Guessing kind %s with delimiter '%s' from header %s" %
+         (kind, delim, header))
     return (kind, delim)
 
 def is_header(line, comment_char, header_patt):
