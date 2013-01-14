@@ -517,10 +517,24 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
        )))
 
 ;; ---------------------------------------------------------------- ;;
-;;; Nice unique buffer names.  More descriptive than sim.pl<2>
+;; Nice unique buffer names.  More descriptive than sim.pl<2>
+;;
 
 (require 'uniquify)
 (setq uniquify-buffer-name-style 'post-forward-angle-brackets)
+
+;; ---------------------------------------------------------------- ;;
+;; Toggle reverse video
+;;
+;; From http://lists.gnu.org/archive/html/help-gnu-emacs/2011-03/msg00818.html
+;;
+
+(GNUEmacs
+ (defun toggle-rev-video()
+   "Toggle reverse video"
+   (interactive)
+   (x-handle-reverse-video (selected-frame) '((reverse . t))))
+ (global-set-key "\C-cv" 'toggle-rev-video))
 
 ;;; ---------------------------------------------------------------- ;;
 ;
