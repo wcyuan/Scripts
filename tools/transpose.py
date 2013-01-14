@@ -51,6 +51,33 @@ import sys
 
 # --------------------------------------------------------------------
 
+HEADERS = ('#@desc',)
+
+# These delimiters should be in order from least likely to appear by
+# accident to most likely to appear by accident.
+DELIMITERS = (' \| ', "~", '\|', '@', ',', "\t", "\s+")
+
+DECOMPRESSORS = (('.bz2', 'bzcat'),
+                 ('.gz', 'zcat'))
+
+COMMENT_CHAR='#'
+
+# input record separator
+IRS = "\n"
+# output record separator
+ORS = "\n"
+# output field separator
+OFS = " "
+
+# These are the types of filters that we support.  This is the order
+# in which we will look for the operator.  It's important that all
+# operators must come after operators they are a substring of.  That
+# is, '=' must come after '!=', '<=', and '>='; '<' must come after
+# '<='; '>' must come after '>='.
+FILTER_OPS = ('!=', '<=', '>=', '<', '>', '=')
+
+# --------------------------------------------------------------------
+
 def main():
     opts, args = getopts()
 
@@ -96,7 +123,7 @@ def getopts():
     parser.add_option('--filter',
                       dest='filters',
                       action='append',
-                      help='verbose mode')
+                      help='Filter results')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -111,45 +138,55 @@ def getopts():
 
     return (opts, args)
 
+def opfunc(op, val):
+    """
+    Translate a filter operator and a given value into a function that
+    takes a new value and returns true if that new value passes the
+    filter.
+    """
+    if op == '=':
+        return lambda v: v == val
+    if op == '!=':
+        return lambda v: v != val
+    if op == '>=':
+        return lambda v: v >= val
+    if op == '<=':
+        return lambda v: v <= val
+    if op == '>':
+        return lambda v: v > val
+    if op == '<':
+        return lambda v: v < val
+    raise AssertionError("Unknown op '%s'" % op)
+
 def parse_filter(filter_string):
-    if filter_string.index('!=') >= 0:
-        (var, val) = filter_string.split('!=', 2)
-        return (var, lambda v: v != val)
-    elif filter_string.index('<=') >= 0:
-        (var, val) = filter_string.split('<=', 2)
-        return (var, lambda v: v <= val)
-    elif filter_string.index('>=') >= 0:
-        (var, val) = filter_string.split('>=', 2)
-        return (var, lambda v: v >= val)
-    elif filter_string.index('<') >= 0:
-        (var, val) = filter_string.split('<', 2)
-        return (var, lambda v: v < val)
-    elif filter_string.index('>') >= 0:
-        (var, val) = filter_string.split('>', 2)
-        return (var, lambda v: v > val)
-    elif filter_string.index('=') >= 0:
-        (var, val) = filter_string.split('=', 2)
-        return (var, lambda v: v == val)
-    else:
-        raise ValueError("Can't parse filter %s" % filter_string)
+    """
+    Parse the valid values for the filter argument.  Valid filters
+    look like:
+       <name> = 3
+    Where <name> is the name of the field given by the file's header.
 
-# --------------------------------------------------------------------
+    The return value is a tuple of (var, func) where var is the name
+    of the field that we are filtering on and func is a function that
+    returns True if the value passes the filter.
+    """
+    for op in FILTER_OPS:
+        if filter_string.index(op) >= 0:
+            (var, val) = filter_string.split(op, 2)
 
-HEADERS = ('#@desc',)
+            # Strip whitespace.  That way, we can parse expressions like
+            #   count = 0
+            # which looks a little nicer than
+            #   count=0
+            # but it also means that we can't handle filters where
+            # leading or trailing whitespace is actually part of the
+            # filter.
+            var = var.strip()
+            val = val.strip()
 
-# These delimiters should be in order from least likely to appear by
-# accident to most likely to appear by accident.
-DELIMITERS = (' \| ', "~", '\|', '@', ',', "\t", "\s+")
+            return (var, opfunc(op, val))
 
-DECOMPRESSORS = (('.bz2', 'bzcat'),
-                 ('.gz', 'zcat'))
-
-# input record separator
-IRS = "\n"
-# output record separator
-ORS = "\n"
-# output field separator
-OFS = " "
+    raise ValueError("Can't parse filter '%s', can't find an operator" %
+                     filter_string)
 
 # --------------------------------------------------------------------
 
@@ -295,6 +332,16 @@ def separate(line, kind, delim):
         raise ValueError ("Invalid input kind: %s" % kind)
 
 def should_filter(values, names, filters):
+    """
+    Returns False if and only if the set of values passes all the
+    filters.  Otherwise we return True because we should filter out
+    the row.
+
+    The filters should be an iterable whose values are tuples of:
+        (varname, filterfunc)
+    Where varname is the field to check and filterfunc is a function
+    which returns True if the value passes the filter.
+    """
     if len(filters) == 0:
         # only construct valdict if necessary
         return False
@@ -306,9 +353,22 @@ def should_filter(values, names, filters):
 
     return False
 
-def read_input(fd, patt=None, delim=None, comment='#',
+def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
                header_patt=None, filters=[]):
+    """
+    Reads a file with tabular data.  Returns a list of rows, where a
+    row is a list of fields.  The first row is the header.
+
+    So this function:
+     - Looks for a header
+     - Skips comments (lines that start with '#')
+     - Guesses at how the line is formatted (if the user didn't tell us)
+     - Parses each row into separate fields
+     - Applies filters
+     - Stops after <head> rows
+
+    """
     table = []
     header = None
     for line in fd:
@@ -377,7 +437,7 @@ def texttable(outtable, intable=None, delim=OFS, left=False):
                     for line in outtable)
 
 def read_transpose(fd, patt=None, delim=None, left=False,
-                   comment='#', kind='delimited', reverse=False,
+                   comment=COMMENT_CHAR, kind='delimited', reverse=False,
                    head=None, header_patt=None, filters=[]):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
