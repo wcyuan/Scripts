@@ -343,7 +343,7 @@ def should_filter(values, names, filters):
     Where varname is the field to check and filterfunc is a function
     which returns True if the value passes the filter.
     """
-    if len(filters) == 0:
+    if filters is None or len(filters) == 0:
         # only construct valdict if necessary
         return False
 
@@ -356,7 +356,7 @@ def should_filter(values, names, filters):
 
 def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
-               header_patt=None, filters=[]):
+               header_patt=None, filters=None):
     """
     Reads a file with tabular data.  Returns a list of rows, where a
     row is a list of fields.  The first row is the header.
@@ -439,7 +439,7 @@ def texttable(outtable, intable=None, delim=OFS, left=False):
 
 def read_transpose(fd, patt=None, delim=None, left=False,
                    comment=COMMENT_CHAR, kind='delimited', reverse=False,
-                   head=None, header_patt=None, filters=[]):
+                   head=None, header_patt=None, filters=None):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
     file, transposes (if necessary), and pretty-prints the output.
