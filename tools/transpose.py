@@ -123,7 +123,8 @@ def getopts():
     parser.add_option('--filter',
                       dest='filters',
                       action='append',
-                      help='Filter results')
+                      help='Filter results.  If multiple filters given, '
+                      'will only print lines that match them all.')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -149,13 +150,13 @@ def opfunc(op, val):
     if op == '!=':
         return lambda v: v != val
     if op == '>=':
-        return lambda v: v >= val
+        return lambda v: float(v) >= float(val)
     if op == '<=':
-        return lambda v: v <= val
+        return lambda v: float(v) <= float(val)
     if op == '>':
-        return lambda v: v > val
+        return lambda v: float(v) > float(val)
     if op == '<':
-        return lambda v: v < val
+        return lambda v: float(v) < float(val)
     raise AssertionError("Unknown op '%s'" % op)
 
 def parse_filter(filter_string):
@@ -170,7 +171,7 @@ def parse_filter(filter_string):
     returns True if the value passes the filter.
     """
     for op in FILTER_OPS:
-        if filter_string.index(op) >= 0:
+        if filter_string.find(op) >= 0:
             (var, val) = filter_string.split(op, 2)
 
             # Strip whitespace.  That way, we can parse expressions like
