@@ -93,16 +93,45 @@ def getopts():
     parser.add_option('--verbose',
                       action='store_true',
                       help='verbose mode')
+    parser.add_option('--filter',
+                      dest='filters',
+                      action='append',
+                      help='verbose mode')
     opts, args = parser.parse_args()
 
     if opts.verbose:
         getLogger().setLevel(DEBUG)
 
+    if opts.filters is not None:
+        opts.filters = [parse_filter(f) for f in opts.filters]
+
     opts = dict((v, getattr(opts, v))
                 for v in ('patt', 'delim', 'left', 'reverse',
-                          'kind', 'header_patt', 'head'))
+                          'kind', 'header_patt', 'head', 'filters'))
 
     return (opts, args)
+
+def parse_filter(filter_string):
+    if filter_string.index('!=') >= 0:
+        (var, val) = filter_string.split('!=', 2)
+        return (var, lambda v: v != val)
+    elif filter_string.index('<=') >= 0:
+        (var, val) = filter_string.split('<=', 2)
+        return (var, lambda v: v <= val)
+    elif filter_string.index('>=') >= 0:
+        (var, val) = filter_string.split('>=', 2)
+        return (var, lambda v: v >= val)
+    elif filter_string.index('<') >= 0:
+        (var, val) = filter_string.split('<', 2)
+        return (var, lambda v: v < val)
+    elif filter_string.index('>') >= 0:
+        (var, val) = filter_string.split('>', 2)
+        return (var, lambda v: v > val)
+    elif filter_string.index('=') >= 0:
+        (var, val) = filter_string.split('=', 2)
+        return (var, lambda v: v == val)
+    else:
+        raise ValueError("Can't parse filter %s" % filter_string)
 
 # --------------------------------------------------------------------
 
@@ -265,9 +294,21 @@ def separate(line, kind, delim):
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
 
+def should_filter(values, names, filters):
+    if len(filters) == 0:
+        # only construct valdict if necessary
+        return False
+
+    valdict = dict(zip(names, values))
+    for (var, criteria) in filters:
+        if not criteria(valdict[var]):
+            return True
+
+    return False
+
 def read_input(fd, patt=None, delim=None, comment='#',
                kind='delimited', reverse=False, head=None,
-               header_patt=None):
+               header_patt=None, filters=[]):
     table = []
     header = None
     for line in fd:
@@ -294,8 +335,14 @@ def read_input(fd, patt=None, delim=None, comment='#',
             not is_match(line, patt, reverse=reverse)):
             continue
 
-        # Found a valid line!  Parse it and add it to the table.
-        table.append(separate(line, kind, delim))
+        # Found a valid line!  Parse it into separate fields.
+        row = separate(line, kind, delim)
+
+        # Apply filters
+        if should_filter(row, header, filters):
+            continue
+
+        table.append(row)
 
         # If we were given a number of lines to look for, stop after
         # that number.
@@ -331,7 +378,7 @@ def texttable(outtable, intable=None, delim=OFS, left=False):
 
 def read_transpose(fd, patt=None, delim=None, left=False,
                    comment='#', kind='delimited', reverse=False,
-                   head=None, header_patt=None):
+                   head=None, header_patt=None, filters=[]):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
     file, transposes (if necessary), and pretty-prints the output.
@@ -339,7 +386,8 @@ def read_transpose(fd, patt=None, delim=None, left=False,
     intable = read_input(fd, patt=patt, delim=delim,
                          comment=comment, kind=kind,
                          reverse=reverse, head=head,
-                         header_patt=header_patt)
+                         header_patt=header_patt,
+                         filters=filters)
     if len(intable) < 6:
         ttable = transpose(intable)
         debug("transposed table: %s" % ttable)
