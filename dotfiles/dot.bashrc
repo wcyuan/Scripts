@@ -19,6 +19,17 @@ alias ipython='python ~/usr/pkgs/ipython-0.12/ipython.py'
 
 alias     pgm='cd ~/code/local/octave/pgmclass/pa9/'
 
+gitall() {
+    for d in ~/code/classes ~/code/github/* ~/code/local ~/code/saas-class-hw3
+    do
+      if [ -d $d ]
+      then
+          echo " -- $d"
+          (cd $d ; git status -s)
+      fi
+    done
+}
+
 saas() {
     # e.g. ec2-23-22-197-139.compute-1.amazonaws.com
     host=$1
