@@ -38,6 +38,15 @@ my $LOGGER = Log::Log4perl->get_logger();
 
 my $INOUT_SCHEDULE = $ENV{HOME} . "/usr/crontab/inoutschedule";
 
+my @COMPUTED = qw(OPT OPT_REM ALL_REASONS);
+
+# You start with 17 days OPT.  After working for 2 years (or if you
+# make VP), you get 22.  After working 10 years (or if you make SVP or
+# MD), you get 27 days).
+my @OPT_ALLOWED = ([10, 27], [2, 22], [0, 17]);
+
+my $START = 2000;
+
 # -------------------------------------------------------------------
 # Main
 
@@ -231,13 +240,25 @@ sub inout_status($;$) {
         my ($start_date, $end_date, $stat) = @$info;
         if ($date >= $start_date && $date <= $end_date) {
             if ($seen) {
-                $LOGGER->warn("$date is part of two date ranges.  Using $stat instead of $status");
+                $LOGGER->warn("$date is part of two date ranges.  " .
+                              "Using $stat instead of $status");
             }
             $seen = 1;
             $status = $stat;
         }
     }
     return $status;
+}
+
+sub opt_allowed($) {
+    my ($year) = @_;
+    my $nyears = $year - $START;
+    foreach my $pair (@OPT_ALLOWED) {
+        my ($n, $opt) = @$pair;
+        if ($nyears >= $n) {
+            return $opt;
+        }
+    }
 }
 
 # Group statuses by reason.  Helper for inout_table.
@@ -258,20 +279,47 @@ sub inout_by_reason($$$) {
         my $to_year = get_year($to);
         my $from_year = get_year($from);
         if ($to_year != $from_year) {
-            my $from_days = weekdays_between($from, get_year_end($from_year)) + 1;
+            my $from_days =
+                weekdays_between($from, get_year_end($from_year)) + 1;
             $reasons{$this_reason}{$from_year} += $from_days;
-            $reasons{ALL_REASONS}{$from_year} += $from_days;
             my $to_days = weekdays_between(get_year_start($to_year), $to) + 1;
             $reasons{$this_reason}{$to_year} += $to_days;
-            $reasons{ALL_REASONS}{$to_year} += $to_days;
         } else {
             $reasons{$this_reason}{$from_year} += $days;
-            $reasons{ALL_REASONS}{$from_year} += $days;
         }
-        $reasons{$this_reason}{ALL_YEARS} += $days;
-        $reasons{ALL_REASONS}{ALL_YEARS} += $days;
     }
 
+    #
+    # Computed Reasons
+    #
+
+    # ALL_REASONS
+    foreach my $reason (grep {$_ ne 'ALL_REASONS'} keys(%reasons)) {
+        foreach my $year (keys(%{$reasons{$reason}})) {
+            $reasons{ALL_REASONS}{$year} += $reasons{$reason}{$year};
+        }
+    }
+
+    # OPT (paid time off)
+    foreach my $year (keys(%{$reasons{ALL_REASONS}})) {
+        $reasons{OPT}{$year} = (($reasons{OVD}{$year}//0) +
+                                ($reasons{OPD}{$year}//0) +
+                                ($reasons{ORD}{$year}//0));
+        $reasons{OPT_REM}{$year} = opt_allowed($year) - $reasons{OPT}{$year};
+    }
+
+    #
+    # Computed Years
+    #
+
+    # ALL_YEARS
+    foreach my $reason (keys(%reasons)) {
+        foreach my $year (grep {$_ ne 'ALL_YEARS'} keys(%{$reasons{$reason}})) {
+            $reasons{$reason}{ALL_YEARS} += $reasons{$reason}{$year};
+        }
+    }
+
+    # AVERAGE
     my $nyears = scalar(keys(%{$reasons{ALL_REASONS}})) - 1;
     if ($nyears != 0) {
         foreach my $reason (keys(%reasons)) {
@@ -281,6 +329,11 @@ sub inout_by_reason($$$) {
     }
 
     return \%reasons;
+}
+
+sub real_reason($) {
+    my ($reason) = @_;
+    return scalar(grep {$reason eq $_} @COMPUTED) == 0;
 }
 
 sub inout_table($;$$) {
@@ -302,14 +355,20 @@ sub inout_table($;$$) {
         @years = grep {$_ ne 'ALL_YEARS' && $_ ne 'AVERAGE'} @years;
     }
 
+    my @reasons = sort {
+        $reasons->{$a}{ALL_YEARS} <=> $reasons->{$b}{ALL_YEARS}
+    } grep {real_reason($_)} keys(%$reasons);
+    push(@reasons, undef, @COMPUTED);
+
     my $table = new Text::Table('reason', @years);
-    foreach my $reason (sort {
-                            $reasons->{$a}{ALL_YEARS} <=> $reasons->{$b}{ALL_YEARS}
-                        } keys(%$reasons))
-    {
-        $table->add($reason, map {
-            $reasons->{$reason}{$_} // '-';
-        } @years);
+    foreach my $reason (@reasons) {
+        if (!defined($reason)) {
+            $table->add(" ");
+        } else {
+            $table->add($reason, map {
+                $reasons->{$reason}{$_} // '-';
+            } @years);
+        }
     }
 
     return $table;
