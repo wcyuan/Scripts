@@ -24,11 +24,12 @@ ovd.pl - print out information about my schedule
 # Includes
 
 use strict;
-use Pod::Usage;
 use Date::Calc qw(Day_of_Week Delta_Days Add_Delta_Days);
-use Text::Table;
 use Getopt::Long qw(GetOptions);
 use Log::Log4perl qw(:levels);
+use Pod::Usage;
+use Scalar::Util qw(looks_like_number);
+use Text::Table;
 
 # -------------------------------------------------------------------
 # Defaults
@@ -39,6 +40,7 @@ my $LOGGER = Log::Log4perl->get_logger();
 my $INOUT_SCHEDULE = $ENV{HOME} . "/usr/crontab/inoutschedule";
 
 my @COMPUTED = qw(OPT OPT_REM ALL_REASONS);
+my @OPT_REASONS = qw(OVD OPD ORD);
 
 # You start with 17 days OPT.  After working for 2 years (or if you
 # make VP), you get 22.  After working 10 years (or if you make SVP or
@@ -265,7 +267,7 @@ sub opt_allowed($) {
 sub inout_by_reason($$$) {
     my ($schedule, $first, $last) = @_;
 
-    my %reasons = ( ALL_REASONS => { ALL_YEARS => 0 } );
+    my %reasons;
     foreach my $info (read_inout_schedule($schedule)) {
         my ($from, $to, $mode, $this_reason, $from_date, $to_date) = @$info;
         next if $mode eq "IN";
@@ -302,9 +304,14 @@ sub inout_by_reason($$$) {
 
     # OPT (paid time off)
     foreach my $year (keys(%{$reasons{ALL_REASONS}})) {
-        $reasons{OPT}{$year} = (($reasons{OVD}{$year}//0) +
-                                ($reasons{OPD}{$year}//0) +
-                                ($reasons{ORD}{$year}//0));
+        $reasons{OPT}{$year} = 0;
+        foreach my $reason (@OPT_REASONS) {
+            if (exists($reasons{$reason}) &&
+                defined($reasons{$reason}{$year}))
+            {
+                $reasons{OPT}{$year} += $reasons{$reason}{$year};
+            }
+        }
         $reasons{OPT_REM}{$year} = opt_allowed($year) - $reasons{OPT}{$year};
     }
 
@@ -321,7 +328,7 @@ sub inout_by_reason($$$) {
 
     # AVERAGE
     my $nyears = scalar(keys(%{$reasons{ALL_REASONS}})) - 1;
-    if ($nyears != 0) {
+    if ($nyears > 0) {
         foreach my $reason (keys(%reasons)) {
             $reasons{$reason}{AVERAGE} =
                 sprintf("%.2f", $reasons{$reason}{ALL_YEARS} / $nyears);
@@ -338,7 +345,11 @@ sub real_reason($) {
 
 sub inout_table($;$$) {
     my ($schedule, $year, $end_year) = @_;
-    if (!defined($year)) {
+    if (defined($year)) {
+        if (!looks_like_number($year)) {
+            $LOGGER->logconfess("Invalid year: $year");
+        }
+    } else {
         $year = get_current_year();
     }
     if (!defined($end_year)) {
