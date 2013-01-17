@@ -156,6 +156,8 @@ sub mastermind ( $$$$$ ) {
 	    print "Not quite.\n";
 	    print "$exact digits were correct and in the correct place.\n";
 	    print "$close digits were correct and in the incorrect place.\n";
+            my $pv = get_possible_values($width, $max_dig, @history);
+	    print scalar(@$pv) . " possibilities remaining.\n";
 	}
     }
     print "Sorry, no more tries.  The answer was $val\n";
@@ -376,11 +378,14 @@ sub better_guess ( $$@ ) {
 my $ngames       = 0;
 my $wins         = 0;
 my $total_tries  = 0;
+my $max_tries    = 0;
+my $max_try_num  = undef;
+my $first_num    = $NUM;
 while (1) {
     $ngames++;
     if (defined($AUTO)) {
-	print "Press enter to begin game $ngames.  ";
-	my $foo = <STDIN>;
+	#print "Press enter to begin game $ngames.  ";
+	#my $foo = <STDIN>;
     }
     my $tries = mastermind($WIDTH,$MAX_DIG,$TRIES,$AUTO,$NUM);
     if ($tries > 0) {
@@ -389,10 +394,23 @@ while (1) {
     } else {
 	$total_tries += $TRIES;
     }
+    if ($tries > $max_tries) {
+        $max_tries = $tries;
+        $max_try_num = $NUM;
+    }
     print("--------------------------------------------------------------\n");
     print("$wins wins out of $ngames games\n");
     printf("%.4g%% win rate\n", ($wins/$ngames*100));
+    printf("%d tries at most ($max_try_num)\n", $max_tries);
     printf("%d guesses (%.2g tries per game)\n",
 	   $total_tries, ($total_tries/$ngames));
     print("--------------------------------------------------------------\n");
+
+    if (defined($NUM)) {
+        $NUM = increment($WIDTH, $MAX_DIG, $NUM);
+        if ($NUM == $first_num) {
+            exit;
+        }
+    }
+    exit;
 }
