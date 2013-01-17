@@ -39,7 +39,7 @@ my $LOGGER = Log::Log4perl->get_logger();
 
 my $INOUT_SCHEDULE = $ENV{HOME} . "/usr/crontab/inoutschedule";
 
-my @COMPUTED = qw(OPT OPT_REM ALL_REASONS);
+my @COMPUTED = qw(OPT OPT_AVAIL OPT_REM ALL_REASONS);
 my @OPT_REASONS = qw(OVD OPD ORD);
 
 # You start with 17 days OPT.  After working for 2 years (or if you
@@ -312,6 +312,7 @@ sub inout_by_reason($$$) {
                 $reasons{OPT}{$year} += $reasons{$reason}{$year};
             }
         }
+        $reasons{OPT_AVAIL}{$year} = opt_allowed($year);
         $reasons{OPT_REM}{$year} = opt_allowed($year) - $reasons{OPT}{$year};
     }
 
