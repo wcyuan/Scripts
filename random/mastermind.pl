@@ -26,7 +26,7 @@ my $WIDTH   = (defined($opt_w) && $opt_w > 0) ? $opt_w : 4;
 my $MAX_DIG = (defined($opt_m) && $opt_m > 0 && $opt_m < 10) ? $opt_m : 6;
 my $TRIES   = (defined($opt_t) && $opt_t > 0) ? $opt_t : 8;
 my $DEBUG = defined($opt_d) ? $opt_d : 0;
-my $NUM = defined($opt_n) ? $opt_n : "";
+my $NUM = defined($opt_n) ? $opt_n : undef;
 my $AUTO = $opt_a;
 
 sub debug ( $$ ) {
@@ -396,7 +396,7 @@ while (1) {
     }
     if ($tries > $max_tries) {
         $max_tries = $tries;
-        $max_try_num = $NUM;
+        $max_try_num = $NUM // "";
     }
     print("--------------------------------------------------------------\n");
     print("$wins wins out of $ngames games\n");
