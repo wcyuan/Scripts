@@ -415,27 +415,38 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
 
 def transpose(intable):
     """
-    intable should be an iterable where every element is a list of
-    fields
+    Given a table represented as an iterable of iterables, we return a
+    transposed version of that table.
+    
+    Returns an iterator, which can only be traversed once.
     """
     return izip_longest(*intable, fillvalue="")
 
-def texttable(outtable, intable=None, delim=OFS, left=False):
+def texttable(table, transposed=None, delim=OFS, left=False):
     """
     pretty-print a table.  Every column's width is the width of the
     widest field in that column.
 
-    intable should be an iterable where every element is a list of
-    fields
+    The given table should be a list of lists.  That is, it should be
+    a list of rows, where every row is a list of fields.
+
+    To get the width of each column, we'll transpose the table.  For
+    efficiency, if the caller already has a transposed version of the
+    table, they can pass that into us so we don't have to re-transpose
+    it.
+
+    Both the table, and the transposed version of the table, will be
+    traversed exactly once, so it's fine if they are just generator
+    functions.
     """
-    if intable is None:
-        intable = transpose(outtable)
-    widths = (max(len(fld) for fld in line) for line in intable)
+    if transposed is None:
+        transposed = transpose(table)
+    widths = (max(len(fld) for fld in line) for line in transposed)
     lc = '-' if left else ''
     formats = ["%{0}{1}s".format(lc, width) for width in widths]
     return ORS.join("%s" % delim.join(format % fld
                                       for (format, fld) in zip(formats, line))
-                    for line in outtable)
+                    for line in table)
 
 def read_transpose(fd, patt=None, delim=None, left=False,
                    comment=COMMENT_CHAR, kind='delimited', reverse=False,
@@ -455,7 +466,7 @@ def read_transpose(fd, patt=None, delim=None, left=False,
     else:
         ttable = intable
         intable = None
-    print texttable(ttable, intable=intable, left=left)
+    print texttable(ttable, transposed=intable, left=left)
 
 # --------------------------------------------------------------------
 
