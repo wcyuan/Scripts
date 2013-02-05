@@ -39,9 +39,15 @@ use a different WM anyway.
    b. Run install-scripts.sh to create links in $HOME/.ion3/lib to the
       location of the scripts.  Looks like this has to be run while
       you are in the ion-scripts directory, not sure.  Also, you may
-      only want to do this if you .ion3 directory is currently empty.
+      only want to do this if your $HOME/.ion3 directory is currently
+      empty.
 
-   c. In .ion3/, link cfg_ion.lua and conans_bindings.lua.
-      All cfg_ion.lua does is set META to Control + Alt, load
-      emacs_bindings, and load conans_bindings.
+   c. In $HOME/.ion3/, create links to cfg_ion.lua and
+      conans_bindings.lua.
+
+      All cfg_ion.lua does is:
+        set META to Control + Alt
+        set mousefocus='disabled'  (turn off focus-follows-mouse)
+        load emacs_bindings
+        load conans_bindings.
 
