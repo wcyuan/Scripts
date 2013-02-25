@@ -39,13 +39,13 @@ my $LOGGER = Log::Log4perl->get_logger();
 
 my $INOUT_SCHEDULE = $ENV{HOME} . "/usr/crontab/inoutschedule";
 
-my @COMPUTED = qw(OPT OPT_AVAIL OPT_REM ALL_REASONS);
-my @OPT_REASONS = qw(OVD OPD ORD);
+my @COMPUTED = qw(PTO PTO_AVAIL PTO_REM ALL_REASONS);
+my @PTO_REASONS = qw(OVD OPD ORD);
 
-# You start with 17 days OPT.  After working for 2 years (or if you
+# You start with 17 days PTO.  After working for 2 years (or if you
 # make VP), you get 22.  After working 10 years (or if you make SVP or
 # MD), you get 27 days).
-my @OPT_ALLOWED = ([10, 27], [2, 22], [0, 17]);
+my @PTO_ALLOWED = ([10, 27], [2, 22], [0, 17]);
 
 my $START = 2000;
 
@@ -252,13 +252,13 @@ sub inout_status($;$) {
     return $status;
 }
 
-sub opt_allowed($) {
+sub pto_allowed($) {
     my ($year) = @_;
     my $nyears = $year - $START;
-    foreach my $pair (@OPT_ALLOWED) {
-        my ($n, $opt) = @$pair;
+    foreach my $pair (@PTO_ALLOWED) {
+        my ($n, $pto) = @$pair;
         if ($nyears >= $n) {
-            return $opt;
+            return $pto;
         }
     }
 }
@@ -302,18 +302,18 @@ sub inout_by_reason($$$) {
         }
     }
 
-    # OPT (paid time off)
+    # PTO (paid time off)
     foreach my $year (keys(%{$reasons{ALL_REASONS}})) {
-        $reasons{OPT}{$year} = 0;
-        foreach my $reason (@OPT_REASONS) {
+        $reasons{PTO}{$year} = 0;
+        foreach my $reason (@PTO_REASONS) {
             if (exists($reasons{$reason}) &&
                 defined($reasons{$reason}{$year}))
             {
-                $reasons{OPT}{$year} += $reasons{$reason}{$year};
+                $reasons{PTO}{$year} += $reasons{$reason}{$year};
             }
         }
-        $reasons{OPT_AVAIL}{$year} = opt_allowed($year);
-        $reasons{OPT_REM}{$year} = opt_allowed($year) - $reasons{OPT}{$year};
+        $reasons{PTO_AVAIL}{$year} = pto_allowed($year);
+        $reasons{PTO_REM}{$year} = pto_allowed($year) - $reasons{PTO}{$year};
     }
 
     #
