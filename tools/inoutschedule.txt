@@ -243,6 +243,7 @@
 20130328-20130329       noinout OWH # in Ithaca?
 20130401-20130402       noinout ORD # Passover 2nd days
 20130515-20130516       noinout ORD # Shavuot
+20130527-20130527       noinout Company_Holiday
 20130704-20130704       noinout Company_Holiday
 20130902-20130902       noinout Company_Holiday
 20130905-20130906       noinout ORD # Rosh Hashanah
