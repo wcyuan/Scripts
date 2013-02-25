@@ -323,6 +323,13 @@ sub main() {
             update_from_trunk($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision);
             return;
 
+        } elsif ($action eq "update_from_release" ||
+                 $action eq "uprelease" ||
+                 $action eq "uprel") {
+
+            update_from_release($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision);
+            return;
+
         } elsif ($action eq "release_message" ||
                  $action eq "rmsg") {
 
@@ -458,7 +465,12 @@ sub parse_command_line() {
                         "version|v=s" => \$foreign_arg_version,
                       )
                 or pod2usage();
-        } elsif ($action eq "uptrunk") {
+        } elsif ($action eq "uptrunk" ||
+                 $action eq "update_from_trunk" ||
+                 $action eq "update_from_release" ||
+                 $action eq "uprelease" ||
+                 $action eq "uprel")
+        {
             Getopt::Long::Configure("no_pass_through");
             GetOptions( "revision|r=i" => \$uptrunk_arg_revision,
                       )
@@ -1355,6 +1367,53 @@ sub update_from_trunk($$$$$) {
     # different, but the tags are different, so trying to do the merge
     # again won't work.  You have to do "svn revert <file>".
     #
+}
+
+sub update_from_release($$$$$) {
+    my ($repo_type, $action, $files, $run_cmds, $uprel_arg_revision) = @_;
+
+    if ($repo_type ne "svn") {
+	$LOGGER->logconfess("$action is only valid with svn");
+    }
+    foreach my $file (@$files) {
+        my ($full_file, $branch_file) = get_branch_info_from_trunk_file($file);
+	if (!defined($branch_file)) {
+	    next;
+	}
+
+	my $cmd;
+	if (1) {
+            my $rev;
+            if (defined($uprel_arg_revision)) {
+                $rev = $uprel_arg_revision;
+            } else {
+                # To merge just the last revision of the trunk file
+                my $branch_svn_info = svn_info($branch_file);
+                if (!defined($branch_svn_info)) {
+                    next;
+                }
+                if (!defined($branch_svn_info->{"Last Changed Rev"})) {
+                    $LOGGER->error("Can't get Last Changed Rev from svn info for $branch_file");
+                    next;
+                }
+                $rev = $branch_svn_info->{"Last Changed Rev"};
+            }
+	    $cmd = "$SVN merge -c$rev $branch_file $file";
+	    # or, equivalently:
+	    # my $prev = $rev-1;
+	    # print "$SVN merge -r$prev:$rev $trunk_file $file\n";
+	} else {
+	    # To merge all changes from the release to the trunk file
+	    $cmd = "$SVN merge $full_file $branch_file $file";
+	}
+	if ($run_cmds) {
+	    print "Running: $cmd\n";
+	    my $output = run($cmd);
+	    print $output;
+	} else {
+	    print $cmd . "\n";
+	}
+    }
 }
 
 sub release_message($$$) {
