@@ -216,39 +216,64 @@ if false
 then
 
     # Ansi terminal color codes
-    #    Foreground Colours
-    #    30	Black
-    #    31	Red
-    #    32	Green
-    #    33	Yellow
-    #    34	Blue
-    #    35	Magenta
-    #    36	Cyan
-    #    37	White
+    # http://linuxgazette.net/issue65/padala.html
     #
-    #    Background Colours
-    #    40	Black
-    #    41	Red
-    #    42	Green
-    #    43	Yellow
-    #    44	Blue
-    #    45	Magenta
-    #    46	Cyan
-    #    47	White
+    # <ESC>[{attr};{fg};{bg}m
+    #
+    # {attr} is one of
+    # 0  Normal (default).
+    # 1  Bold.
+    # 2  Dim
+    # 3  Underline
+    # 4  Underlined.
+    # 5  Blink (appears as Bold).
+    # 7  Inverse.
+    # 8  Invisible, i.e., hidden (VT300).
+    #
+    # {fg} (foreground color) is one of
+    # 30 Black.
+    # 31 Red.
+    # 32 Green.
+    # 33 Yellow.
+    # 34 Blue.
+    # 35 Magenta.
+    # 36 Cyan.
+    # 37 White.
+    # 39 default (original).
+    #
+    # {bg} (background color) is one of:
+    # 40 Black.
+    # 41 Red.
+    # 42 Green.
+    # 43 Yellow.
+    # 44 Blue.
+    # 45 Magenta.
+    # 46 Cyan.
+    # 47 White.
+    # 49 default (original).
 
     function format_prompt
     {
-        local PREV_EXIT_STATUS=$?
+        local prev_exit_status=$?
 
-        local LINE_COLOR='\[\e[1;33m\e[44m\]' # Bold Yellow on Blue
-        local PATH_COLOR='\[\e[32m\]'         # Green
-        local FAIL_COLOR='\[\e[1;31m\e[44m\]' # Bold Red on Blue
-        local TIME_COLOR='\[\e[36m\]'         # Cyan
-        local RESET_COLOR='\[\e[0m\]'
+        local line_color='\[\e[1;33m\e[44m\]' # Bold Yellow on Blue
+        local path_color='\[\e[32m\]'         # Green
+        local fail_color='\[\e[1;31m\e[44m\]' # Bold Red on Blue
+        local time_color='\[\e[36m\]'         # Cyan
+        local reset_color='\[\e[0m\]'
 
-        if [[ $PREV_EXIT_STATUS -ne 0 ]]
+        # If we are on an unexpected machine, change the prompt to a
+        # Red background
+        #
+        #if [[ ! `hostname` =~ ^(casqa|invest|vnc) ]]
+        #then
+        #    line_color='\[\e[1;33m\e[41m\]' # Bold Yellow on Blue
+        #    fail_color='\[\e[1;34m\e[41m\]' # Bold Red on Blue
+        #fi
+
+        if [[ $prev_exit_status -ne 0 ]]
         then
-            LINE_COLOR=$FAIL_COLOR
+            line_color=$fail_color
         fi
 
         #local pwdmaxlen=30
@@ -278,18 +303,18 @@ then
         let elapsed=$(($stop-$start))
         if [ $elapsed -gt 3600 ]
         then
-            ETIME=$(printf "%02dh %02dm %02ds" $((elapsed/3600)) $((elapsed/60%60)) $((elapsed%60)))
+            etime=$(printf "%02dh %02dm %02ds" $((elapsed/3600)) $((elapsed/60%60)) $((elapsed%60)))
         elif [ $elapsed -gt 60 ]
         then
-            ETIME=$(printf "%02dm %02ds" $((elapsed/60%60)) $((elapsed%60)))
+            etime=$(printf "%02dm %02ds" $((elapsed/60%60)) $((elapsed%60)))
         else
-            ETIME=$(printf "%02ds" $elapsed)
+            etime=$(printf "%02ds" $elapsed)
         fi
 
         # This version also shows the username:
-        #TITLE='\[\033]0;\u@\h:\w\007\]'
-        TITLE='\[\033]0;\h:\w\007\]'
-        PS1="${TITLE}${LINE_COLOR}\\! ${TIME_COLOR}[$ETIME][\\t]${PATH_COLOR}[\\h:${PWD}]${RESET_COLOR}\n$ "
+        #title='\[\033]0;\u@\h:\w\007\]'
+        title='\[\033]0;\h:\w\007\]'
+        PS1="${title}${line_color}\\! ${time_color}[$etime][\\t]${path_color}[\\h:${PWD}]${reset_color}\n$ "
     }
 
     PROMPT_COMMAND='format_prompt'
