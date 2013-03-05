@@ -31,6 +31,7 @@ alias     lsd='ls -dlF'
 alias     ltr='ls -lrt'
 alias      sa='unalias -a; . ~/.bashrc'
 alias ipython='python ~/usr/pkgs/ipython-0.12/ipython.py'
+alias     irb='/cygdrive/c/Ruby193/bin/irb.bat --prompt default'
 
 alias     pgm='cd ~/code/local/octave/pgmclass/pa9/'
 
