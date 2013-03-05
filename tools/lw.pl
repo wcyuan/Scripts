@@ -111,7 +111,7 @@ foreach my $cmd (@ARGV) {
 
     # Different shells could have different paths and different aliases
     my $shell_cmd = "echo type -a $cmd | bash -s -l 2>/dev/null";
-    if ($SHELL =~ /csh/) {
+    if (defined($SHELL) && $SHELL =~ /csh/) {
         $shell_cmd = "echo where $cmd | tcsh -s";
     }
 
