@@ -2,8 +2,22 @@
 # ----------------------------------------------------
 # PATH
 
-PATH=$PATH:/cygdrive/c/Program\ Files/Java/jdk1.6.0_21/bin
-PATH=$PATH:$HOME/bin
+add_to_path_front() {
+    newpath=$*
+    newpath=`~/bin/rmdups -F : -e . $newpath:$PATH`
+    if [[ $? -eq 0 ]]
+    then
+        PATH=$newpath
+        export PATH
+    fi
+}
+
+add_to_path_end() {
+    add_to_path $PATH:$*
+}
+
+add_to_path_front $HOME/bin
+add_to_path_end   /cygdrive/c/Program\ Files/Java/jdk1.6.0_21/bin
 
 # ----------------------------------------------------
 # aliases
