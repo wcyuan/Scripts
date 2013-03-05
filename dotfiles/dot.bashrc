@@ -65,6 +65,23 @@ which() {
 }
 alias      where='which -a'
 
+go() {
+    file=$*
+    if [[ ! -e $file ]]
+    then
+        file=`which $file`
+    elif [[ -L $file ]]
+    then
+        file=`readlink $file`
+    fi
+
+    if [[ -e $file ]]
+    then
+        dir=`dirname $file`
+        cd $dir
+    fi
+}
+
 # grep
 alias       grep='grep --color'
 alias      egrep='egrep --color'
