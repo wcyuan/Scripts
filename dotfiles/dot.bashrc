@@ -13,11 +13,12 @@ add_to_path_front() {
 }
 
 add_to_path_end() {
-    add_to_path $PATH:$*
+    add_to_path_front $PATH:$*
 }
 
 add_to_path_front $HOME/bin
 add_to_path_end   /cygdrive/c/Program\ Files/Java/jdk1.6.0_21/bin
+add_to_path_front /cygdrive/c/Ruby193/bin
 
 # ----------------------------------------------------
 # aliases
