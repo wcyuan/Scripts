@@ -245,6 +245,7 @@
 20130515-20130516       noinout ORD # Shavuot
 20130527-20130527       noinout Company_Holiday
 20130704-20130704       noinout Company_Holiday
+20130812-20130816       noinout OVD # Dad's birthday
 20130902-20130902       noinout Company_Holiday
 20130905-20130906       noinout ORD # Rosh Hashanah
 20130919-20130920       noinout ORD # Sukkot
