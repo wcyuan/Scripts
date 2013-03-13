@@ -42,7 +42,7 @@ sub verbose($) {
 
 sub find_perl_module($) {
     my ($file) = @_;
-    my $cmd = "desperldoc -v $file 3>/dev/null 2>&1 1>&3 | grep '^Found as'";
+    my $cmd = "perldoc -v $file 3>/dev/null 2>&1 1>&3 | grep '^Found as'";
     verbose("Running: $cmd");
     chomp(my $perldoc_output = `$cmd`);
     if ($? == 0 && $perldoc_output !~ m/^\s*$/) {
@@ -57,37 +57,12 @@ sub find_perl_module($) {
 
 sub find_python_module($) {
     my ($file) = @_;
-
-    # despydoc works by importing the module, then doing this to get
-    # the filename:
-    #
-    # def get_module_source_filename(module):
-    #     """
-    #     Returns the filename of the source file for a module.
-    #     """
-    #     filename = module.__file__
-    #     base, extension = os.path.splitext(filename)
-    #     if extension == ".py":
-    #         # Great.  A Python source file.
-    #         return filename
-    #     elif extension in (".pyc", ".pyo"):
-    #         # A compiled Python file.  Look for the source file next to it.
-    #         source_filename = base + ".py"
-    #         if os.path.isfile(filename):
-    #             # Got it.
-    #             return source_filename
-    #         else:
-    #             raise RuntimeError(
-    #                 "can't find source file for module file %s" % (filename, ))
-    #     else:
-    #         # An unrecongnized file type.
-    #         raise RuntimeError(
-    #             "don't know how to find source for module file %s" % (filename, ))
-
-    my $cmd = "despydoc --where $file 2>/dev/null";
+    my $cmd = "python -c 'import $file; " .
+              "f = $file.__file__; " .
+              "print f[:-1] if f.endswith(\".pyc\") else f' 2>/dev/null";
     verbose("Running: $cmd");
     chomp(my $python_module = `$cmd`);
-    if ($? == 0) {
+    if ($? == 0 && -f $python_module) {
         return $python_module;
     }
     return $file;
