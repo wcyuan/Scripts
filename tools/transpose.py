@@ -302,7 +302,7 @@ def separate(line, kind, delim):
     Split a line according to its format.
     """
     if kind == 'delimited':
-        vals = re.split(delim, line)
+        vals = re.split(delim, line.strip())
         # If the row starts with #@desc, we should get rid of that.
         if vals[0] in HEADERS:
             vals.pop(0)
@@ -417,7 +417,7 @@ def transpose(intable):
     """
     Given a table represented as an iterable of iterables, we return a
     transposed version of that table.
-    
+
     Returns an iterator, which can only be traversed once.
     """
     return izip_longest(*intable, fillvalue="")
