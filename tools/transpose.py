@@ -117,6 +117,9 @@ def getopts():
     parser.add_option('--head',
                       type=int,
                       help="Only show the first <head> lines")
+    parser.add_option('--col_no', '--by_column_number',
+                      action="store_true",
+                      help="Just number the columns instead of using the header")
     parser.add_option('--verbose',
                       action='store_true',
                       help='verbose mode')
@@ -135,7 +138,7 @@ def getopts():
 
     opts = dict((v, getattr(opts, v))
                 for v in ('patt', 'delim', 'left', 'reverse',
-                          'kind', 'header_patt', 'head', 'filters'))
+                          'kind', 'header_patt', 'head', 'filters', 'col_no'))
 
     return (opts, args)
 
@@ -356,7 +359,7 @@ def should_filter(values, names, filters):
 
 def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
-               header_patt=None, filters=None):
+               header_patt=None, filters=None, col_no=False):
     """
     Reads a file with tabular data.  Returns a list of rows, where a
     row is a list of fields.  The first row is the header.
@@ -384,8 +387,11 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
             if delim is None:
                 (kind, delim) = guess_delim(line, kind)
             header = separate(line, kind, delim)
-            table.append(header)
-            continue
+            if col_no:
+                table.append([str(r) for r in range(1, len(header)+1)])
+            else:
+                table.append(header)
+                continue
 
         # Skip comments
         if is_comment(line, comment):
@@ -450,7 +456,7 @@ def texttable(table, transposed=None, delim=OFS, left=False):
 
 def read_transpose(fd, patt=None, delim=None, left=False,
                    comment=COMMENT_CHAR, kind='delimited', reverse=False,
-                   head=None, header_patt=None, filters=None):
+                   head=None, header_patt=None, filters=None, col_no=False):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
     file, transposes (if necessary), and pretty-prints the output.
@@ -459,7 +465,7 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                          comment=comment, kind=kind,
                          reverse=reverse, head=head,
                          header_patt=header_patt,
-                         filters=filters)
+                         filters=filters, col_no=col_no)
     if len(intable) < 6:
         ttable = transpose(intable)
         debug("transposed table: %s" % ttable)
