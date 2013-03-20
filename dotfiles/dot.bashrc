@@ -30,7 +30,9 @@ alias      la='ls -alF'
 alias     lsd='ls -dlF'
 alias     ltr='ls -lrt'
 alias      sa='unalias -a; . ~/.bashrc'
-alias ipython='python ~/usr/pkgs/ipython-0.12/ipython.py'
+# for using windows python from cygwin, ipython has to be started like this:
+# http://stackoverflow.com/questions/3250749/using-windows-python-from-cygwin
+alias ipython='PYTHONUNBUFFERED=1 python c:/cygwin/home/Yuan/usr/pkgs/ipython-0.12/ipython.py'
 alias     irb='/cygdrive/c/Ruby193/bin/irb.bat --prompt default'
 
 alias     pgm='cd ~/code/local/octave/pgmclass/pa9/'
