@@ -38,6 +38,11 @@ alias     irb='/cygdrive/c/Ruby193/bin/irb.bat --prompt default'
 alias     pgm='cd ~/code/local/octave/pgmclass/pa9/'
 
 gitall() {
+    cmd="$@"
+    if [[ $cmd == "" ]]
+    then
+        cmd='status -sb'
+    fi
     for d in ~/code/github/* ~/code/*
     do
       if [ -d $d ]
@@ -47,7 +52,7 @@ gitall() {
               :
           else
               echo " -- $d"
-              (cd $d ; git status -sb)
+              (cd $d ; git $cmd)
           fi
       fi
     done
