@@ -38,12 +38,17 @@ alias     irb='/cygdrive/c/Ruby193/bin/irb.bat --prompt default'
 alias     pgm='cd ~/code/local/octave/pgmclass/pa9/'
 
 gitall() {
-    for d in ~/code/classes ~/code/github/* ~/code/local ~/code/saas-class-hw3
+    for d in ~/code/github/* ~/code/*
     do
       if [ -d $d ]
       then
-          echo " -- $d"
-          (cd $d ; git status -s)
+          if [[ $d =~ /(github|projectlocker)$ ]]
+          then
+              :
+          else
+              echo " -- $d"
+              (cd $d ; git status -sb)
+          fi
       fi
     done
 }
