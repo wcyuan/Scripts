@@ -120,6 +120,16 @@ embolden() {
     sed "s/\($1\)/[1;31m\1[m/g"
 }
 
+winpath() {
+    cygpath --windows `which $*`
+}
+
+python27() {
+    cmd=`winpath $1`
+    shift
+    /cygdrive/c/Python27/python $cmd $*
+}
+
 # ----------------------------------------------------
 # Completion
 #
@@ -134,7 +144,7 @@ embolden() {
 complete -d cd chdir pushd popd mkdir rmdir
 
 # commands
-complete -c lw where type which
+complete -c lw where type which python27 winpath cygpath
 
 # See
 # http://clalance.blogspot.com/2011/10/git-bash-prompts-and-tab-completion.html
