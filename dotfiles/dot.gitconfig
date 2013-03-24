@@ -12,3 +12,7 @@
         lg = log @{u}..
 [core]
 	pager = less -FRSX
+[branch]
+	autosetuprebase = always
+[push]
+	default = tracking
