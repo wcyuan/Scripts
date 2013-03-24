@@ -48,10 +48,16 @@ gitall() {
     done
 }
 
-saas() {
-    # e.g. ec2-23-22-197-139.compute-1.amazonaws.com
-    host=$1
-    ssh -L *:3000:localhost:3000 -i ~/code/classes/saas/AWSEC2.pem ubuntu@$host
+aws() {
+    if [ $# -gt 0 ]
+    then
+        # e.g. ec2-23-22-197-139.compute-1.amazonaws.com
+        host=$1
+    else
+        host=54.225.135.13
+    fi
+    # map vncserver, port 5901 on the EC2 machine, to 9000 on my machine.
+    ssh -L *:9000:localhost:5901 -i ~/code/aws/AWSEC2.pem ubuntu@$host
 }
 
 which() {
