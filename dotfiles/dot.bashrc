@@ -41,7 +41,7 @@ gitall() {
     cmd="$@"
     if [[ $cmd == "" ]]
     then
-        cmd='status -sb'
+        cmd='cherry -v'
     fi
     for d in ~/code/github/* ~/code/*
     do
