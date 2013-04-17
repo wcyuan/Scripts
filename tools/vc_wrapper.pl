@@ -286,6 +286,7 @@ sub main() {
         $foreign_arg_fn,
         $foreign_arg_version,
         $uptrunk_arg_revision,
+        $uptrunk_arg_clear_mergeinfo,
         $lastrev_arg_revno,
         $lastrev_arg_revs_back,
         $grep_hist_arg_missing,
@@ -320,7 +321,8 @@ sub main() {
         } elsif ($action eq "update_from_trunk" ||
                  $action eq "uptrunk") {
 
-            update_from_trunk($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision);
+            update_from_trunk($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision,
+                $uptrunk_arg_clear_mergeinfo);
             return;
 
         } elsif ($action eq "update_from_release" ||
@@ -441,6 +443,7 @@ sub parse_command_line() {
     my $foreign_arg_fn;
     my $foreign_arg_version;
     my $uptrunk_arg_revision;
+    my $uptrunk_arg_clear_mergeinfo;
     my $lastrev_arg_revno;
     my $lastrev_arg_revs_back;
     my $grep_hist_arg_missing;
@@ -473,6 +476,7 @@ sub parse_command_line() {
         {
             Getopt::Long::Configure("no_pass_through");
             GetOptions( "revision|r=i" => \$uptrunk_arg_revision,
+                        "clear|c!"     => \$uptrunk_arg_clear_mergeinfo,
                       )
                 or pod2usage();
         } elsif ($action eq "lastrev" || $action eq 'rlastrev') {
@@ -527,6 +531,7 @@ sub parse_command_line() {
             $foreign_arg_fn,
             $foreign_arg_version,
             $uptrunk_arg_revision,
+            $uptrunk_arg_clear_mergeinfo,
             $lastrev_arg_revno,
             $lastrev_arg_revs_back,
             $grep_hist_arg_missing,
@@ -1315,8 +1320,8 @@ sub switch_to_trunk($$$$) {
     }
 }
 
-sub update_from_trunk($$$$$) {
-    my ($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision) = @_;
+sub update_from_trunk($$$$$$) {
+    my ($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision, $uptrunk_arg_clear_mergeinfo) = @_;
 
     if ($repo_type ne "svn") {
 	$LOGGER->logconfess("$action is only valid with svn");
@@ -1359,6 +1364,17 @@ sub update_from_trunk($$$$$) {
 	} else {
 	    print $cmd . "\n";
 	}
+
+        if ($uptrunk_arg_clear_mergeinfo) {
+            $cmd = "$SVN propdel svn:mergeinfo $file";
+            if ($run_cmds) {
+                print "Running: $cmd\n";
+                my $output = run($cmd);
+                print $output;
+            } else {
+                print $cmd . "\n";
+            }
+        }
     }
 
     #
