@@ -12,6 +12,8 @@
         lg = log @{u}..
 [core]
 	pager = less -FRSX
+        # this is useful on NFS:
+        preloadIndex = true
 [branch]
 	autosetuprebase = always
 [push]
