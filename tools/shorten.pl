@@ -61,23 +61,47 @@ use Text::Tabs qw(expand);
 # ----------------------
 
 # Default values
-my $WIDTH = 139;
 my $OFFSET = 0;
 Log::Log4perl->easy_init($ERROR);
 my $logger = Log::Log4perl->get_logger();
 
 # Parse any command-line options
 GetOptions( "offset|o=i" => \$OFFSET,
-            "width|w=i"  => \$WIDTH,
+            "width|w=i"  => \my $WIDTH,
             "verbose|v!" => sub { $logger->level($DEBUG) },
           )
     or pod2usage();
 
-if (scalar(@ARGV) > 0 &&
+if (!defined($WIDTH) &&
+    scalar(@ARGV) > 0 &&
     ! -f $ARGV[0] &&
     looks_like_number($ARGV[0]))
 {
+    $logger->debug("Taking WIDTH from first argument");
     $WIDTH = shift(@ARGV);
+}
+
+if (!defined($WIDTH))
+{
+    $logger->debug("Trying to get width from Term::ReadKey");
+    require Term::ReadKey;
+    my ($wchar, $hchar, $wpixels, $hpixels) = Term::ReadKey::GetTerminalSize();
+    $WIDTH = $wchar;
+}
+
+if (!defined($WIDTH))
+{
+    $logger->debug("Trying to get width from stty size");
+    # This is supposed to work on linux, but it doesn't seem to.
+    # Could also try to parse stty -a.
+    chomp(my $tty_size = `stty -a`);
+    $WIDTH = (split(' ', $tty_size))[1];
+}
+
+if (!defined($WIDTH))
+{
+    $logger->debug("Defaulting to hard coded width");
+    $WIDTH = 139;
 }
 
 my @FILES = @ARGV;
