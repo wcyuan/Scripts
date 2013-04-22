@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 #
 # shorten.pl
 # @desc:  shorten lines
@@ -84,18 +84,22 @@ if (!defined($WIDTH) &&
 if (!defined($WIDTH))
 {
     $logger->debug("Trying to get width from Term::ReadKey");
-    require Term::ReadKey;
-    my ($wchar, $hchar, $wpixels, $hpixels) = Term::ReadKey::GetTerminalSize();
-    $WIDTH = $wchar;
+    eval {
+        require Term::ReadKey;
+        my ($wchar, $hchar, $wpixels, $hpixels) = Term::ReadKey::GetTerminalSize();
+        $WIDTH = $wchar;
+    };
 }
 
 if (!defined($WIDTH))
 {
     $logger->debug("Trying to get width from stty size");
-    # This is supposed to work on linux, but it doesn't seem to.
-    # Could also try to parse stty -a.
-    chomp(my $tty_size = `stty -a`);
-    $WIDTH = (split(' ', $tty_size))[1];
+    eval {
+        # This is supposed to work on linux, but it doesn't seem to.
+        # Could also try to parse stty -a.
+        chomp(my $tty_size = `stty size`);
+        $WIDTH = (split(' ', $tty_size))[1];
+    }
 }
 
 if (!defined($WIDTH))
