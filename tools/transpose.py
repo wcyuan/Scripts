@@ -84,9 +84,7 @@ def main():
     if len(args) == 0:
         read_transpose(sys.stdin, **opts)
     else:
-        for fn in args:
-            with zopen(fn) as fd:
-                read_transpose(fd, **opts)
+        read_files(args, **opts)
 
 def getopts():
     """
@@ -119,7 +117,8 @@ def getopts():
                       help="Only show the first <head> lines")
     parser.add_option('--col_no', '--by_column_number',
                       action="store_true",
-                      help="Just number the columns instead of using the header")
+                      help="Just number the columns instead of "
+                      "using the header")
     parser.add_option('--verbose',
                       action='store_true',
                       help='verbose mode')
@@ -454,6 +453,15 @@ def texttable(table, transposed=None, delim=OFS, left=False):
                                       for (format, fld) in zip(formats, line))
                     for line in table)
 
+def pretty_print(intable, left=False):
+    if len(intable) < 6:
+        ttable = transpose(intable)
+        debug("transposed table: %s" % ttable)
+    else:
+        ttable = intable
+        intable = None
+    print texttable(ttable, transposed=intable, left=left)
+
 def read_transpose(fd, patt=None, delim=None, left=False,
                    comment=COMMENT_CHAR, kind='delimited', reverse=False,
                    head=None, header_patt=None, filters=None, col_no=False):
@@ -466,13 +474,51 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                          reverse=reverse, head=head,
                          header_patt=header_patt,
                          filters=filters, col_no=col_no)
-    if len(intable) < 6:
-        ttable = transpose(intable)
-        debug("transposed table: %s" % ttable)
-    else:
-        ttable = intable
-        intable = None
-    print texttable(ttable, transposed=intable, left=left)
+    pretty_print(intable, left)
+
+def read_files(fns, patt=None, delim=None, left=False,
+               comment=COMMENT_CHAR, kind='delimited', reverse=False,
+               head=None, header_patt=None, filters=None, col_no=False):
+    """
+    Reads multiple files, transposes (if necessary), and pretty-prints
+    the output.
+    """
+    table = None
+    prev_header = None
+    for fn in fns:
+        with zopen(fn) as fd:
+            filetable = read_input(fd, patt=patt, delim=delim,
+                                   comment=comment, kind=kind,
+                                   reverse=reverse, head=head,
+                                   header_patt=header_patt,
+                                   filters=filters, col_no=col_no)
+
+            if len(filetable) == 0:
+                continue
+
+            # Save the header from before we add filenames
+            header = filetable[0]
+
+            # If there are multiple files, add a column of filenames
+            # to the table.
+            if len(fns) > 0:
+                filetable = ([['FILE'] + filetable[0]] +
+                             [[fn] + l for l in filetable[1:]])
+
+            if table is None:
+                table = filetable
+            elif prev_header == header:
+                # the header matches the previous file, so just stick
+                # the data onto the existing table.
+                table.extend(filetable[1:])
+            else:
+                pretty_print(table, left)
+                table = filetable
+            prev_header = header
+
+    if table is not None:
+        pretty_print(table, left)
+
 
 # --------------------------------------------------------------------
 
