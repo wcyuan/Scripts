@@ -55,7 +55,13 @@ HEADERS = ('#@desc',)
 
 # These delimiters should be in order from least likely to appear by
 # accident to most likely to appear by accident.
-DELIMITERS = (' \| ', "~", '\|', '@', ',', "\t", "\s+")
+#
+# The RE: "(?<!\\\) " is an attempt to split on space, but allowing
+# backslash to escape the space.  ?<! means a "negative lookbehind
+# assertion", it specifies what must come before the regexp being
+# matched.
+#
+DELIMITERS = (' \| ', "~", '\|', '@', ',', "\t", '(?<!\\\) ', "\s+")
 
 DECOMPRESSORS = (('.bz2', 'bzcat'),
                  ('.gz', 'zcat'))
@@ -308,6 +314,9 @@ def separate(line, kind, delim):
         # If the row starts with #@desc, we should get rid of that.
         if vals[0] in HEADERS:
             vals.pop(0)
+        # If we have escaped spaces, remove the backslashes in the output
+        if delim == '(?<!\\\) ':
+            vals = [v.replace('\ ', ' ') for v in vals]
         debug("line (%s delim='%s') %s separated into %s" %
               (kind, delim, line, vals))
         return vals
@@ -501,7 +510,7 @@ def read_files(fns, patt=None, delim=None, left=False,
 
             # If there are multiple files, add a column of filenames
             # to the table.
-            if len(fns) > 0:
+            if len(fns) > 1:
                 filetable = ([['FILE'] + filetable[0]] +
                              [[fn] + l for l in filetable[1:]])
 
