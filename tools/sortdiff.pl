@@ -36,6 +36,10 @@ sortdiff.pl - diff two files unordered (sort them first).
 
 the first file.  "-" indicates stdin.
 
+Note that the files are opened with perl open, so it's easy to pass a command instead of a file, like this:
+
+sortdiff "gzcat file1.gz |" "bzcat file2.bz2 |"
+
 =item I<file2>
 
 the second file.  "-" indicates stdin.  If both files are stdin, the script will
