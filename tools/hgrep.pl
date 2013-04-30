@@ -15,15 +15,20 @@ my $LOGGER = Log::Log4perl->get_logger();
 
 sub main() {
     my ($cols, $files, $strs) = get_options();
+    if (scalar(@$strs) == 0) {
+        return;
+    }
     my $lines = read_files($files, $strs);
-    pretty(transpose($lines, $cols, $strs));
+    pretty(transpose($lines, $cols));
 }
 
 # -----------------------------------------------
 
 sub default_file() {
     chomp(my $date = `date +%Y%m%d`);
-    return "/data/optvol/eomm/universe/PROD/$date/underlying_universe.txt";
+    my $fn = "/data/optvol/eomm/universe/PROD/$date/underlying_universe.txt";
+    $LOGGER->debug("Reading $fn");
+    return $fn;
 }
 
 sub get_options() {
@@ -32,13 +37,18 @@ sub get_options() {
 
     # Consume all options.  They just become the columns that we
     # should print.
+    #
+    # TODO: handle options with two hyphens
+    # TODO: handle -- as "stop processing options"
     my @cols;
-    while ($ARGV[0] =~ /^-/) {
+    while (scalar(@ARGV) > 0 && $ARGV[0] =~ /^-/) {
         push(@cols, substr(shift(@ARGV), 1));
     }
 
+    # The user can end with as many files as they like.  We know they
+    # are files if they are valid filenames.
     my @files;
-    while (-e $ARGV[-1]) {
+    while (scalar(@ARGV) > 0 && -e $ARGV[-1]) {
         push(@files, pop(@ARGV));
     }
     if (scalar(@files) == 0) {
@@ -55,10 +65,14 @@ sub get_options() {
 sub read_files($$) {
     my ($files, $strs) = @_;
 
+    # TODO: handle user specified patterns
+    # TODO: handle compressed files
     my $patt = join('|', map {"^$_ "} ($MAGIC, @$strs));
     my @lines;
     foreach my $file (@$files) {
-        my $lines = `egrep '$patt' $file`;
+        my $cmd = "egrep '$patt' $file";
+        $LOGGER->debug("Running $cmd");
+        my $lines = `$cmd`;
 
         # Split on spaces, but allow backslash to escape spaces
         my @flines = map { [split('(?<!\\\) ', $_)] } split('\n', $lines);
@@ -80,9 +94,12 @@ sub read_files($$) {
 # -----------------------------------------------
 
 # $intable should be a list of lists
+#
+# Besides transposing, this also handles the filtering of the column.
+# Ideally that would be a separate function.
 
-sub transpose($$$) {
-    my ($intable, $cols, $strs) = @_;
+sub transpose($$) {
+    my ($intable, $cols) = @_;
     my @outtable;
 
     while (1) {
