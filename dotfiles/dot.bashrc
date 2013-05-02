@@ -111,6 +111,12 @@ go() {
     fi
 }
 
+sshbash() {
+    # ssh -t gives you a terminal
+    # bash -i gives you interactive mode
+    ssh -t $* bash -i
+}
+
 # grep
 alias       grep='grep --color'
 alias      egrep='egrep --color'
