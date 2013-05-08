@@ -246,20 +246,38 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ; Example of cperl-continued-statement-offset
 ; value of 0:
 ;
-;   if (1)
+;   if (one() &&
+;       two())
 ;   {
 ;       my $a = 'abc' .
 ;       'def';
 ;   }
+;   print
+;   one(),
+;   two();
+;   dothis()
+;   or die();
 ;
 ; value of 4:
 ;
-;   if (1)
+;   if (one() &&
+;           two())
 ;       {
 ;           my $a = 'abc' .
 ;               'def';
 ;       }
+;   dothis()
+;       or die();
+;   print
+;       one(),
+;           two();
 ;
+; This is annoying.  I want an offset of 4 for things like "a or
+; die()" and for "print one()" but an offset of 0 for open braces on
+; new lines.  I want an offset on the first line continuation after a
+; print, but not the second continuation line.
+;
+; For now, I'll probably choose an offset of 0.
 ;
 
 ;
