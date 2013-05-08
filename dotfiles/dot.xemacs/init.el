@@ -221,16 +221,244 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; ---------------------------------------------------------------- ;;
 ;; Perl
 ;;
+
+; Prefer cperl-mode to perl-mode.
+;
 ; http://www.emacswiki.org/emacs/CPerlMode
 ;; cperl-mode is preferred to perl-mode
 ;; "Brevity is the soul of wit" <foo at acm.org>
+;
+; One way to do this is to alias perl-mode to cperl-mode
 (defalias 'perl-mode 'cperl-mode)
+
+; the defalias doesn't always seem to work, so try these too.
+(fset 'perl-mode 'cperl-mode)
+
+; In case the aliases don't work, we can also change the
+; auto-mode-alist
+(mapc
+ (lambda (pair)
+   (if (eq (cdr pair) 'perl-mode)
+       (setcdr pair 'cperl-mode)))
+ (append auto-mode-alist interpreter-mode-alist))
+
+;
+; Example of cperl-continued-statement-offset
+; value of 0:
+;
+;   if (1)
+;   {
+;       my $a = 'abc' .
+;       'def';
+;   }
+;
+; value of 4:
+;
+;   if (1)
+;       {
+;           my $a = 'abc' .
+;               'def';
+;       }
+;
+;
+
+;
+; Example of cperl-close-paren-offset
+; value of 0:
+;
+;   unless ($a
+;           )
+;   unless (
+;       $a
+;       )
+;
+; value of -4:
+;
+;   unless ($a
+;       )
+;   unless (
+;       $a
+;   )
+;
+;
+
+;
+; Examples of cperl-indent-parens-as-block and cperl-close-paren-offset,
+; All with cperl-close-paren-offset=0
+
+; cperl-indent-parens-as-block t, cperl-close-paren-offset 0
+;
+;    $foo = {
+;        $a
+;        };
+;    $foo = { $a
+;             };
+;    $foo = {$a
+;            };
+;    $foo =
+;    {
+;        $a
+;        };
+;    unless (
+;        $a
+;        ) {
+;    }
+;    unless ( $a
+;             ) {
+;    }
+;    unless ($a
+;            ) {
+;    }
+;    unless (
+;        $a
+;        )
+;    {
+;    }
+;    unless ( $a
+;             )
+;    {
+;    }
+;    unless ($a
+;            )
+;    {
+;    }
+;    function_call(
+;        $arg1,
+;        $arg2,
+;        another_function_call(
+;            $arg3
+
+; cperl-indent-parens-as-block t, cperl-close-paren-offset -4
+; (this one looks the best to me)
+;
+;    $foo = {
+;        $a
+;    };
+;    $foo = { $a
+;         };
+;    $foo = {$a
+;        };
+;    $foo =
+;    {
+;        $a
+;    };
+;    unless (
+;        $a
+;    ) {
+;    }
+;    unless ( $a
+;         ) {
+;    }
+;    unless ($a
+;        ) {
+;    }
+;    unless (
+;        $a
+;    )
+;    {
+;    }
+;    unless ( $a
+;         )
+;    {
+;    }
+;    unless ($a
+;        )
+;    {
+;    }
+;    function_call(
+;        $arg1,
+;        $arg2,
+;        another_function_call(
+;            $arg3
+
+; cperl-indent-parens-as-block nil, cperl-close-paren-offset 0
+;
+;    $foo = {
+;            $a
+;            };
+;    $foo = { $a
+;            };
+;    $foo = {$a
+;            };
+;    $foo =
+;    {
+;        $a
+;        };
+;    unless (
+;        $a
+;        ) {
+;    }
+;    unless ( $a
+;             ) {
+;    }
+;    unless ($a
+;            ) {
+;    }
+;    unless (
+;        $a
+;        )
+;    {
+;    }
+;    unless ( $a
+;             )
+;    {
+;    }
+;    unless ($a
+;            )
+;    {
+;    }
+;    function_call(
+;                  $arg1,
+;                  $arg2,
+;                  another_function_call(
+;                                        $arg3
+
+; cperl-indent-parens-as-block nil, cperl-close-paren-offset -4
+;    $foo = {
+;            $a
+;        };
+;    $foo = { $a
+;        };
+;    $foo = {$a
+;        };
+;    $foo =
+;    {
+;     $a
+; };
+;    unless (
+;            $a
+;        ) {
+;    }
+;    unless ( $a
+;        ) {
+;    }
+;    unless ($a
+;        ) {
+;    }
+;    unless (
+;            $a
+;        )
+;    {
+;    }
+;    unless ( $a
+;        )
+;    {
+;    }
+;    unless ($a
+;        )
+;    {
+;    }
+;    function_call(
+;                  $arg1,
+;                  $arg2,
+;                  another_function_call(
+;                                        $arg3
 
 ; http://www.emacswiki.org/emacs/IndentingPerl
 (setq cperl-indent-level 4
-      cperl-continued-statement-offset 4
-      ;cperl-close-paren-offset -4
-      ;cperl-indent-parens-as-block t
+      cperl-continued-statement-offset 0
+      cperl-close-paren-offset -4
+      cperl-indent-parens-as-block t
       ;cperl-tab-always-indent t
       )
 
