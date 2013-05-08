@@ -149,10 +149,10 @@ use Carp;
 use Data::Dumper;
 
 our %LEVELS = (DEBUG      => 50,
-	       INFO       => 40,
-	       WARN       => 30,
-	       ERROR      => 20,
-	       LOGCONFESS => 10);
+               INFO       => 40,
+               WARN       => 30,
+               ERROR      => 20,
+               LOGCONFESS => 10);
 our %REVLEVELS = map { $LEVELS{$_} => $_ } keys(%LEVELS);
 
 sub new($;$) {
@@ -257,9 +257,9 @@ my $GIT = find_next_cmd('git');
 my $RCS = find_next_cmd('rcs');
 my $DIFF = 'diff';
 my %CMDS = ("svn" => $SVN,
-	    "cvs" => $CVS,
-	    "git" => $GIT,
-	    "rcs" => $RCS);
+            "cvs" => $CVS,
+            "git" => $GIT,
+            "rcs" => $RCS);
 
 # ------------------------------------------------------------------------------
 
@@ -307,57 +307,59 @@ sub main() {
     if (defined($action)) {
         if ($action eq "switch_to_release" ||
             $action eq "switchrel" ||
-            $action eq "switchrelease") {
-
+            $action eq "switchrelease")
+        {
             switch_to_release($repo_type, $action, $files, $run_cmds);
             return;
-
-        } elsif ($action eq "switch_to_trunk" ||
-                 $action eq "switchtrunk") {
-
+        }
+        elsif ($action eq "switch_to_trunk" ||
+               $action eq "switchtrunk")
+        {
             switch_to_trunk($repo_type, $action, $files, $run_cmds);
             return;
-
-        } elsif ($action eq "update_from_trunk" ||
-                 $action eq "uptrunk") {
-
+        }
+        elsif ($action eq "update_from_trunk" ||
+               $action eq "uptrunk")
+        {
             update_from_trunk($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision,
-                $uptrunk_arg_clear_mergeinfo);
+                              $uptrunk_arg_clear_mergeinfo);
             return;
-
-        } elsif ($action eq "update_from_release" ||
-                 $action eq "uprelease" ||
-                 $action eq "uprel") {
-
+        }
+        elsif ($action eq "update_from_release" ||
+               $action eq "uprelease" ||
+               $action eq "uprel")
+        {
             update_from_release($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision);
             return;
-
-        } elsif ($action eq "release_message" ||
-                 $action eq "rmsg") {
-
+        }
+        elsif ($action eq "release_message" ||
+                 $action eq "rmsg")
+        {
             release_message($repo_type, $action, $files);
             return;
-
-        } elsif ($action eq "foreign_diff" ||
-                 $action eq "fdiff") {
-
+        }
+        elsif ($action eq "foreign_diff" ||
+               $action eq "fdiff")
+        {
             foreign_diff($repo_type, $action, $files,
                          $foreign_arg_repos,
                          $foreign_arg_fn,
                          $foreign_arg_version);
             return;
-
-        } elsif ($action eq "foreign_merge" ||
-                 $action eq "fmerge") {
-
+        }
+        elsif ($action eq "foreign_merge" ||
+               $action eq "fmerge")
+        {
             foreign_merge($repo_type, $action, $files);
             return;
-        } elsif ($action eq "lastrev" || $action eq 'rlastrev') {
-
+        }
+        elsif ($action eq "lastrev" || $action eq 'rlastrev')
+        {
             lastrev($repo_type, $action, $cmd_options, $files, $lastrev_arg_revs_back, $lastrev_arg_revno);
             return;
-        } elsif ($action eq "grep-hist") {
-
+        }
+        elsif ($action eq "grep-hist")
+        {
             grep_hist($repo_type, $action, $subcmd_options, $files,
                       $grep_hist_arg_missing,
                       $grep_hist_arg_all_revs,
@@ -366,8 +368,9 @@ sub main() {
                       $grep_hist_arg_last_occur,
                       $grep_hist_arg_show_log);
             return;
-        } elsif ($action eq "bisect-all") {
-
+        }
+        elsif ($action eq "bisect-all")
+        {
             bisect_all($repo_type, $action, $subcmd_options, $files);
             return;
         }
@@ -466,7 +469,7 @@ sub parse_command_line() {
             GetOptions( "repository|r=s" => \$foreign_arg_repos,
                         "file|fn|filename|f=s" => \$foreign_arg_fn,
                         "version|v=s" => \$foreign_arg_version,
-                      )
+                    )
                 or pod2usage();
         } elsif ($action eq "uptrunk" ||
                  $action eq "update_from_trunk" ||
@@ -562,9 +565,9 @@ sub my_dirname($) {
     #
     # It's otherwise harmless, though.
     if ($file_or_dir !~ m/\n/ && -d $file_or_dir) {
-	return $file_or_dir;
+        return $file_or_dir;
     } else {
-	return dirname($file_or_dir);
+        return dirname($file_or_dir);
     }
 }
 
@@ -654,47 +657,47 @@ sub run ( $;$ ) {
     my ($cmd, $options) = @_;
     my ($always, $panic_on_error, $no_warn_on_error, $exec);
     if (defined($options)) {
-	if (ref($options) ne 'HASH') {
-	    $LOGGER->logconfess('Usage: run($cmd, \%options)');
-	}
-	foreach my $key (keys %$options) {
-	    if ($key =~ m/^always$/io && $options->{$key}) {
-		$always = 1;
-	    } elsif ($key =~ m/^panic$/io && $options->{$key}) {
-		$panic_on_error = 1;
-	    } elsif ($key =~ m/^no_warn$/io && $options->{$key}) {
-		$no_warn_on_error = 1;
-	    } elsif ($key =~ m/^exec$/io && $options->{$key}) {
-		$exec = 1;
-	    } else {
-		$LOGGER->logconfess("Invalid option: $key");
-	    }
-	}
+        if (ref($options) ne 'HASH') {
+            $LOGGER->logconfess('Usage: run($cmd, \%options)');
+        }
+        foreach my $key (keys %$options) {
+            if ($key =~ m/^always$/io && $options->{$key}) {
+                $always = 1;
+            } elsif ($key =~ m/^panic$/io && $options->{$key}) {
+                $panic_on_error = 1;
+            } elsif ($key =~ m/^no_warn$/io && $options->{$key}) {
+                $no_warn_on_error = 1;
+            } elsif ($key =~ m/^exec$/io && $options->{$key}) {
+                $exec = 1;
+            } else {
+                $LOGGER->logconfess("Invalid option: $key");
+            }
+        }
     }
     my ($output, $retval);
     if (ref($cmd) eq 'ARRAY') {
-	$LOGGER->debug(join(' ', @$cmd));
+        $LOGGER->debug(join(' ', @$cmd));
     } else {
-	$LOGGER->debug($cmd);
+        $LOGGER->debug($cmd);
     }
     if ($always || !$NO_WRITE) {
-	if ($exec) {
-	    if (ref($cmd) eq 'ARRAY') {
-		exec(@$cmd);
-	    } else {
-		exec($cmd);
-	    }
-	} else {
-	    $output = `$cmd`;
-	    $retval = $?;
-	}
-	if ($retval != 0) {
-	    if ($panic_on_error) {
-		$LOGGER->logconfess("error running $cmd ($! $retval): $output");
-	    } elsif (!$no_warn_on_error) {
-		$LOGGER->error("error running $cmd ($! $retval): $output");
-	    }
-	}
+        if ($exec) {
+            if (ref($cmd) eq 'ARRAY') {
+                exec(@$cmd);
+            } else {
+                exec($cmd);
+            }
+        } else {
+            $output = `$cmd`;
+            $retval = $?;
+        }
+        if ($retval != 0) {
+            if ($panic_on_error) {
+                $LOGGER->logconfess("error running $cmd ($! $retval): $output");
+            } elsif (!$no_warn_on_error) {
+                $LOGGER->error("error running $cmd ($! $retval): $output");
+            }
+        }
     } else {
         print "NO WRITE: Not running $cmd\n";
     }
@@ -730,19 +733,19 @@ sub svn_info ( $ ) {
     my $cmd = "$SVN info $file";
     my ($error, $output) = run($cmd, {always => 1});
     if ($error) {
-	return;
+        return;
     }
     my %retval;
     foreach my $line (split "\n", $output) {
-	# skip blank or empty lines
-	if ($line =~ m/^\s*$/) {
-	    next;
-	}
- 	if ($line !~ m/^([^:]*): (.*)$/) {
-	    $LOGGER->error("Can't read line of svn info, skipping: $line");
-	    next;
-	}
-	$retval{$1} = $2;
+        # skip blank or empty lines
+        if ($line =~ m/^\s*$/) {
+            next;
+        }
+        if ($line !~ m/^([^:]*): (.*)$/) {
+            $LOGGER->error("Can't read line of svn info, skipping: $line");
+            next;
+        }
+        $retval{$1} = $2;
     }
     return \%retval;
 }
@@ -758,10 +761,10 @@ sub match_repository_root ( $$ ) {
     my $root_len = length($root);
     my $file_root = substr $file, 0, $root_len;
     if ($file_root ne $root) {
-	return;
+        return;
     } else {
-	my $file_rest = substr $file, $root_len;
-	return $file_rest;
+        my $file_rest = substr $file, $root_len;
+        return $file_rest;
     }
 }
 
@@ -781,14 +784,14 @@ sub get_trunk_file ( $$ ) {
     # First, compare the beginning of the file to $root
     my $file_rest = match_repository_root($root, $file);
     if (!$file_rest) {
-	$LOGGER->error("Can't parse release file $file, doesn't start with root $root");
-	$LOGGER->error("Are you already in the trunk?");
-	return;
+        $LOGGER->error("Can't parse release file $file, doesn't start with root $root");
+        $LOGGER->error("Are you already in the trunk?");
+        return;
     }
     if ($file_rest !~ m@^/branches/rel_\d+(.*)$@) {
-	$LOGGER->error("Can't parse release file $file (root $root)");
-	$LOGGER->error("Are you already in the trunk?");
-	return;
+        $LOGGER->error("Can't parse release file $file (root $root)");
+        $LOGGER->error("Are you already in the trunk?");
+        return;
     }
     my $path = $1;
 
@@ -809,24 +812,24 @@ sub get_latest_release ( $ ) {
     $LOGGER->debug($cmd);
     my $rc = open(CMD, "$cmd |");
     if (!$rc) {
-	$LOGGER->error("Can't run $cmd: $? $! $@");
-	return
+        $LOGGER->error("Can't run $cmd: $? $! $@");
+        return
     }
     my $release_branch = "";
     while (my $line = <CMD>) {
-	chomp($line);
-	# take the last line that matches
-	# relies on the fact that "svn list" outputs release branches in order
-	if ($line =~ m@^rel_\d+@) {
-	    $release_branch = $line;
-	}
+        chomp($line);
+        # take the last line that matches
+        # relies on the fact that "svn list" outputs release branches in order
+        if ($line =~ m@^rel_\d+@) {
+            $release_branch = $line;
+        }
     }
     close(CMD)
-	or $LOGGER->error("Can't close $cmd: $? $! $@");
+        or $LOGGER->error("Can't close $cmd: $? $! $@");
 
     if ($release_branch !~ m@^rel_\d+@) {
-	$LOGGER->error("Can't get latest branch from $root (got $release_branch instead)");
-	return
+        $LOGGER->error("Can't get latest branch from $root (got $release_branch instead)");
+        return
     }
     return $branch_root .  $release_branch;
 }
@@ -844,19 +847,19 @@ sub get_release_file ( $$ ) {
     # First, compare the beginning of the file to $root
     my $file_rest = match_repository_root($root, $file);
     if (!$file_rest) {
-	$LOGGER->error("Can't parse trunk file $file, doesn't start with root $root");
-	$LOGGER->error("Are you already in the trunk?");
-	return;
+        $LOGGER->error("Can't parse trunk file $file, doesn't start with root $root");
+        $LOGGER->error("Are you already in the trunk?");
+        return;
     }
     if ($file_rest !~ m@^/trunk(.*)$@) {
-	$LOGGER->error("Can't parse trunk file $file (root $root)");
-	$LOGGER->error("Are you already in the release branch?");
-	return;
+        $LOGGER->error("Can't parse trunk file $file (root $root)");
+        $LOGGER->error("Are you already in the release branch?");
+        return;
     }
 
     my $branch_root = get_latest_release($root);
     if (!defined($branch_root)) {
-	return;
+        return;
     }
 
     my $path = $1;
@@ -933,23 +936,23 @@ sub svn_revision_list($;$) {
     my $cmd = "$SVN log -q $file 2>&1";
     my $error = 0;
     open(SVNLOG, "$cmd |")
-	or ($error = 1);
+        or ($error = 1);
     if ($error) {
-	warn("Error running $cmd: $? $@ $!");
-	return;
+        warn("Error running $cmd: $? $@ $!");
+        return;
     }
     my @revs;
     while(my $line = <SVNLOG>) {
-	next if ($line =~ m/^-*$/);
-	# rely on the fact that the revision is the first column
-	my ($rev) = split(' ', $line);
+        next if ($line =~ m/^-*$/);
+        # rely on the fact that the revision is the first column
+        my ($rev) = split(' ', $line);
 
-	$rev =~ s/^r//;
-	push(@revs, $rev);
+        $rev =~ s/^r//;
+        push(@revs, $rev);
 
-	if (defined($revs_needed) && scalar(@revs) > $revs_needed) {
-	    last;
-	}
+        if (defined($revs_needed) && scalar(@revs) > $revs_needed) {
+            last;
+        }
     }
     close(SVNLOG);
     return \@revs;
@@ -1071,11 +1074,11 @@ sub get_version ( $$ ) {
 
     my %lines;
     foreach my $tag ("Header", "Id", "Source", "HeadURL", "URL") {
-	my $cmd = 'grep \$' . $tag . " " . $file;
-	chomp($lines{$tag} = run($cmd, {always => 1, no_warn => 1}));
+        my $cmd = 'grep \$' . $tag . " " . $file;
+        chomp($lines{$tag} = run($cmd, {always => 1, no_warn => 1}));
     }
     if (!defined($lines{Header}) && !defined($lines{Id})) {
-	$LOGGER->logconfess("Can't get version for $file, no Id or Header tag");
+        $LOGGER->logconfess("Can't get version for $file, no Id or Header tag");
     }
 
     # fn and version are used as sentinels, so don't initialize them
@@ -1084,49 +1087,49 @@ sub get_version ( $$ ) {
     my $data = "";
     # The last tag visited takes precedence...
     foreach my $tag ("Source", "URL", "HeadURL", "Id", "Header") {
-	next unless defined($lines{$tag});
-	if ($lines{$tag} !~ /\$(.*)\$/) {
-	    next;
-	}
+        next unless defined($lines{$tag});
+        if ($lines{$tag} !~ /\$(.*)\$/) {
+            next;
+        }
 
-	$data = $1;
-	my ($this_tag, $this_fn, $this_version, $this_date, $this_time, $this_user, $this_other) = split ' ', $data;
+        $data = $1;
+        my ($this_tag, $this_fn, $this_version, $this_date, $this_time, $this_user, $this_other) = split ' ', $data;
 
-	if (!defined($fn) || $tag eq "Header" || $tag eq "Source") {
-	    $fn = $this_fn;
-	}
-	if (defined($this_version)) {
-	    $version = $this_version;
-	}
-	if (defined($this_date)) {
-	    $date = $this_date;
-	}
-	if (defined($this_time)) {
-	    $time = $this_time;
-	}
-	if (defined($this_user)) {
-	    $user = $this_user;
-	}
-	if (defined($this_other)) {
-	    $other = $this_other;
-	}
+        if (!defined($fn) || $tag eq "Header" || $tag eq "Source") {
+            $fn = $this_fn;
+        }
+        if (defined($this_version)) {
+            $version = $this_version;
+        }
+        if (defined($this_date)) {
+            $date = $this_date;
+        }
+        if (defined($this_time)) {
+            $time = $this_time;
+        }
+        if (defined($this_user)) {
+            $user = $this_user;
+        }
+        if (defined($this_other)) {
+            $other = $this_other;
+        }
     }
 
     if ((!defined($fn) || !defined($version)) && $repo_type eq "cvs") {
-	my $base = basename($file);
-	my $dir = dirname($file);
-	if ($base =~ m/^\.#(\S+)\.(\d\.[\d\.]+)$/) {
-	    $fn = $1;
-	    $version = $2;
-	    chomp(my $repos = `cat $dir/CVS/Root`);
-	    $repos .= "/";
-	    chomp($repos .= `cat $dir/CVS/Repository`);
-	    $fn = $repos . "/" . $fn;
-	}
+        my $base = basename($file);
+        my $dir = dirname($file);
+        if ($base =~ m/^\.#(\S+)\.(\d\.[\d\.]+)$/) {
+            $fn = $1;
+            $version = $2;
+            chomp(my $repos = `cat $dir/CVS/Root`);
+            $repos .= "/";
+            chomp($repos .= `cat $dir/CVS/Repository`);
+            $fn = $repos . "/" . $fn;
+        }
     }
 
     if (!defined($fn) || !defined($version)) {
-	$LOGGER->logconfess("Can't get version or repository for $file, malformed cvs tags: " . Dumper(%lines));
+        $LOGGER->logconfess("Can't get version or repository for $file, malformed cvs tags: " . Dumper(%lines));
     }
 
     # strip trailing ,v from the repository file
@@ -1135,20 +1138,20 @@ sub get_version ( $$ ) {
     # split the fn into the repository and the rest
     my $repository;
     if ($fn =~ m@^(.*)repository/(.*)$@) {
-	$repository = $1 . "repository";
-	$fn = $2;
+        $repository = $1 . "repository";
+        $fn = $2;
     } else {
-	$repository = "";
+        $repository = "";
     }
 
     $LOGGER->debug(join('', map { $_ . "\n" } ("data       => $data",
-				      "repository => $repository",
-				      "fn         => $fn",
-				      "version    => $version",
-				      "date       => $date",
-				      "time       => $time",
-				      "user       => $user",
-				      "other      => $other")));
+                                      "repository => $repository",
+                                      "fn         => $fn",
+                                      "version    => $version",
+                                      "date       => $date",
+                                      "time       => $time",
+                                      "user       => $user",
+                                      "other      => $other")));
     return ($repository, $fn, $version);
 }
 
@@ -1278,22 +1281,22 @@ sub switch_to_release($$$$) {
     my ($repo_type, $action, $files, $run_cmds) = @_;
 
     if ($repo_type ne "svn") {
-	$LOGGER->logconfess("$action is only valid with svn");
+        $LOGGER->logconfess("$action is only valid with svn");
     }
     foreach my $file (@$files) {
         my ($full_file, $branch_file) = get_branch_info_from_trunk_file($file);
-	if (!defined($branch_file)) {
-	    next;
-	}
+        if (!defined($branch_file)) {
+            next;
+        }
 
-	my $cmd = "$SVN switch $branch_file $file";
-	if ($run_cmds) {
-	    print "Running: $cmd\n";
-	    my $output = run($cmd);
-	    print $output;
-	} else {
-	    print $cmd . "\n";
-	}
+        my $cmd = "$SVN switch $branch_file $file";
+        if ($run_cmds) {
+            print "Running: $cmd\n";
+            my $output = run($cmd);
+            print $output;
+        } else {
+            print $cmd . "\n";
+        }
     }
 }
 
@@ -1301,22 +1304,22 @@ sub switch_to_trunk($$$$) {
     my ($repo_type, $action, $files, $run_cmds) = @_;
 
     if ($repo_type ne "svn") {
-	$LOGGER->logconfess("$action is only valid with svn");
+        $LOGGER->logconfess("$action is only valid with svn");
     }
     foreach my $file (@$files) {
         my ($full_file, $trunk_file) = get_trunk_info_from_branch_file($file);
-	if (!defined($trunk_file)) {
-	    next;
-	}
+        if (!defined($trunk_file)) {
+            next;
+        }
 
-	my $cmd = "$SVN switch $trunk_file $file";
-	if ($run_cmds) {
-	    print "Running: $cmd\n";
-	    my $output = run($cmd);
-	    print $output;
-	} else {
-	    print $cmd . "\n";
-	}
+        my $cmd = "$SVN switch $trunk_file $file";
+        if ($run_cmds) {
+            print "Running: $cmd\n";
+            my $output = run($cmd);
+            print $output;
+        } else {
+            print $cmd . "\n";
+        }
     }
 }
 
@@ -1324,16 +1327,16 @@ sub update_from_trunk($$$$$$) {
     my ($repo_type, $action, $files, $run_cmds, $uptrunk_arg_revision, $uptrunk_arg_clear_mergeinfo) = @_;
 
     if ($repo_type ne "svn") {
-	$LOGGER->logconfess("$action is only valid with svn");
+        $LOGGER->logconfess("$action is only valid with svn");
     }
     foreach my $file (@$files) {
         my ($full_file, $trunk_file) = get_trunk_info_from_branch_file($file);
-	if (!defined($trunk_file)) {
-	    next;
-	}
+        if (!defined($trunk_file)) {
+            next;
+        }
 
-	my $cmd;
-	if (1) {
+        my $cmd;
+        if (1) {
             my $rev;
             if (defined($uptrunk_arg_revision)) {
                 $rev = $uptrunk_arg_revision;
@@ -1349,21 +1352,21 @@ sub update_from_trunk($$$$$$) {
                 }
                 $rev = $trunk_svn_info->{"Last Changed Rev"};
             }
-	    $cmd = "$SVN merge -c$rev $trunk_file $file";
-	    # or, equivalently:
-	    # my $prev = $rev-1;
-	    # print "$SVN merge -r$prev:$rev $trunk_file $file\n";
-	} else {
-	    # To merge all changes from the trunk to the release file
-	    $cmd = "$SVN merge $full_file $trunk_file $file";
-	}
-	if ($run_cmds) {
-	    print "Running: $cmd\n";
-	    my $output = run($cmd);
-	    print $output;
-	} else {
-	    print $cmd . "\n";
-	}
+            $cmd = "$SVN merge -c$rev $trunk_file $file";
+            # or, equivalently:
+            # my $prev = $rev-1;
+            # print "$SVN merge -r$prev:$rev $trunk_file $file\n";
+        } else {
+            # To merge all changes from the trunk to the release file
+            $cmd = "$SVN merge $full_file $trunk_file $file";
+        }
+        if ($run_cmds) {
+            print "Running: $cmd\n";
+            my $output = run($cmd);
+            print $output;
+        } else {
+            print $cmd . "\n";
+        }
 
         if ($uptrunk_arg_clear_mergeinfo) {
             $cmd = "$SVN propdel svn:mergeinfo $file";
@@ -1389,16 +1392,16 @@ sub update_from_release($$$$$) {
     my ($repo_type, $action, $files, $run_cmds, $uprel_arg_revision) = @_;
 
     if ($repo_type ne "svn") {
-	$LOGGER->logconfess("$action is only valid with svn");
+        $LOGGER->logconfess("$action is only valid with svn");
     }
     foreach my $file (@$files) {
         my ($full_file, $branch_file) = get_branch_info_from_trunk_file($file);
-	if (!defined($branch_file)) {
-	    next;
-	}
+        if (!defined($branch_file)) {
+            next;
+        }
 
-	my $cmd;
-	if (1) {
+        my $cmd;
+        if (1) {
             my $rev;
             if (defined($uprel_arg_revision)) {
                 $rev = $uprel_arg_revision;
@@ -1414,21 +1417,21 @@ sub update_from_release($$$$$) {
                 }
                 $rev = $branch_svn_info->{"Last Changed Rev"};
             }
-	    $cmd = "$SVN merge -c$rev $branch_file $file";
-	    # or, equivalently:
-	    # my $prev = $rev-1;
-	    # print "$SVN merge -r$prev:$rev $trunk_file $file\n";
-	} else {
-	    # To merge all changes from the release to the trunk file
-	    $cmd = "$SVN merge $full_file $branch_file $file";
-	}
-	if ($run_cmds) {
-	    print "Running: $cmd\n";
-	    my $output = run($cmd);
-	    print $output;
-	} else {
-	    print $cmd . "\n";
-	}
+            $cmd = "$SVN merge -c$rev $branch_file $file";
+            # or, equivalently:
+            # my $prev = $rev-1;
+            # print "$SVN merge -r$prev:$rev $trunk_file $file\n";
+        } else {
+            # To merge all changes from the release to the trunk file
+            $cmd = "$SVN merge $full_file $branch_file $file";
+        }
+        if ($run_cmds) {
+            print "Running: $cmd\n";
+            my $output = run($cmd);
+            print $output;
+        } else {
+            print $cmd . "\n";
+        }
     }
 }
 
@@ -1436,7 +1439,7 @@ sub release_message($$$) {
     my ($repo_type, $action, $files) = @_;
 
     if ($repo_type ne "svn") {
-	$LOGGER->logconfess("$action is only valid with svn");
+        $LOGGER->logconfess("$action is only valid with svn");
     }
 
     # print out a message for committing into the release branch.  get
@@ -1445,9 +1448,9 @@ sub release_message($$$) {
 
     foreach my $file (@$files) {
         my ($full_file, $trunk_file) = get_trunk_info_from_branch_file($file);
-	if (!defined($trunk_file)) {
-	    next;
-	}
+        if (!defined($trunk_file)) {
+            next;
+        }
 
         # To merge just the last revision of the trunk file
         my $trunk_svn_info = svn_info($trunk_file);
@@ -1481,56 +1484,56 @@ sub foreign_diff ($$$$$$) {
         $foreign_arg_version) = @_;
 
     if ($repo_type ne 'svn' and $repo_type ne 'cvs') {
-	$LOGGER->logconfess("'$action' is only implemented for svn and cvs, not $repo_type");
+        $LOGGER->logconfess("'$action' is only implemented for svn and cvs, not $repo_type");
     }
 
     foreach my $file (@$files) {
-	my ($repository, $fn, $version);
-	if (defined($foreign_arg_repos) &&
-	    defined($foreign_arg_fn) &&
-	    defined($foreign_arg_version)) {
-	    $repository = $foreign_arg_repos;
-	    $fn = $foreign_arg_fn;
-	    $version = $foreign_arg_version;
-	} else {
-	    ($repository, $fn, $version) = get_version($file, $repo_type);
-	}
-	$LOGGER->debug("file $file => repository: $repository fn:$fn vers:$version");
+        my ($repository, $fn, $version);
+        if (defined($foreign_arg_repos) &&
+            defined($foreign_arg_fn) &&
+            defined($foreign_arg_version)) {
+            $repository = $foreign_arg_repos;
+            $fn = $foreign_arg_fn;
+            $version = $foreign_arg_version;
+        } else {
+            ($repository, $fn, $version) = get_version($file, $repo_type);
+        }
+        $LOGGER->debug("file $file => repository: $repository fn:$fn vers:$version");
 
-	if ($repository eq "") {
-	    # Even knowing the repository wouldn't be enough because
-	    # the fn needs to be the full path from the repository to
-	    # the file (e.g. bin/share/foo.pl) not just the base name.
-	    # This is needed for both svn and cvs.
-	    $LOGGER->logconfess("Can't get repository from file name $fn for file $file");
-	}
+        if ($repository eq "") {
+            # Even knowing the repository wouldn't be enough because
+            # the fn needs to be the full path from the repository to
+            # the file (e.g. bin/share/foo.pl) not just the base name.
+            # This is needed for both svn and cvs.
+            $LOGGER->logconfess("Can't get repository from file name $fn for file $file");
+        }
 
-	my $cmd;
-	if ($repo_type eq "svn") {
-	    $cmd = "$SVN cat -r $version $repository/$fn | $DIFF -u - $file";
-	} else {
-	    $cmd = "$CVS -d $repository checkout -r $version -p $fn | $DIFF -u - $file";
-	}
-	# save the output to a variable before printing to force
-	# scalar context
-	my $output = run($cmd, {no_warn => 1});
-	print $output;
+        my $cmd;
+        if ($repo_type eq "svn") {
+            $cmd = "$SVN cat -r $version $repository/$fn | $DIFF -u - $file";
+        } else {
+            $cmd = "$CVS -d $repository checkout -r $version -p $fn | $DIFF -u - $file";
+        }
+        # save the output to a variable before printing to force
+        # scalar context
+        my $output = run($cmd, {no_warn => 1});
+        print $output;
     }
 }
 
 sub foreign_merge($$$) {
     my ($repo_type, $action, $files) = @_;
     if (scalar(@$files) < 2) {
-	$LOGGER->logconfess("'$action' requires at least two arguments: \n" .
+        $LOGGER->logconfess("'$action' requires at least two arguments: \n" .
               "  $0 $action [repository_file]* [foreign_file_or_dir]\n" .
               "got: " .  join(',', @$files));
     }
 
     if ($repo_type ne 'svn' and $repo_type ne 'cvs') {
-	$LOGGER->logconfess("'$action' is only implemented for svn and cvs, not $repo_type");
+        $LOGGER->logconfess("'$action' is only implemented for svn and cvs, not $repo_type");
     }
     if (!defined($CMDS{$repo_type})) {
-	$LOGGER->logconfess("Invalid repo_type $repo_type");
+        $LOGGER->logconfess("Invalid repo_type $repo_type");
     }
     my $cmd = $CMDS{$repo_type};
 
@@ -1538,72 +1541,72 @@ sub foreign_merge($$$) {
     my $foreign_file_or_dir = pop(@repository_files);
 
     if (scalar(@repository_files) > 1 && ! -d $foreign_file_or_dir) {
-	$LOGGER->logconfess("When '$action' is called on multiple files, the last argument must be a directory: $foreign_file_or_dir");
+        $LOGGER->logconfess("When '$action' is called on multiple files, the last argument must be a directory: $foreign_file_or_dir");
     }
     foreach my $repository_file (@repository_files) {
-	#
-	# Assert that the repository file is up to date so that we
-	# don't clobber any local changes.
-	#
-	if ($repo_type eq "cvs") {
-	    chomp(my $line = run("$cmd status $repository_file | grep Status | grep Up-to-date",
+        #
+        # Assert that the repository file is up to date so that we
+        # don't clobber any local changes.
+        #
+        if ($repo_type eq "cvs") {
+            chomp(my $line = run("$cmd status $repository_file | grep Status | grep Up-to-date",
                                  {always => 1, no_warn => 1}));
-	    if ($line eq "") {
-		$LOGGER->logconfess("$repository_file is not up to date");
-	    }
-	} else {
-	    chomp(my $line = run("$cmd status -u $repository_file | grep -v 'Status against revision'",
+            if ($line eq "") {
+                $LOGGER->logconfess("$repository_file is not up to date");
+            }
+        } else {
+            chomp(my $line = run("$cmd status -u $repository_file | grep -v 'Status against revision'",
                                  {always => 1, no_warn => 1}));
-	    if ($line ne "") {
-		$LOGGER->logconfess("$repository_file is not up to date");
-	    }
-	}
+            if ($line ne "") {
+                $LOGGER->logconfess("$repository_file is not up to date");
+            }
+        }
 
-	#
-	# Assert that the foreign file exists and is readable
-	#
-	my $foreign_file = $foreign_file_or_dir;
-	if (-d $foreign_file_or_dir) {
-	    $foreign_file .= '/' . basename($repository_file);
-	}
+        #
+        # Assert that the foreign file exists and is readable
+        #
+        my $foreign_file = $foreign_file_or_dir;
+        if (-d $foreign_file_or_dir) {
+            $foreign_file .= '/' . basename($repository_file);
+        }
 
-	if (! -r $foreign_file) {
-	    $LOGGER->logconfess("Can't find $foreign_file ($repository_file, $foreign_file_or_dir)");
-	}
+        if (! -r $foreign_file) {
+            $LOGGER->logconfess("Can't find $foreign_file ($repository_file, $foreign_file_or_dir)");
+        }
     }
 
     foreach my $repository_file (@repository_files) {
-	my $foreign_file = $foreign_file_or_dir;
-	if (-d $foreign_file_or_dir) {
-	    $foreign_file .= '/' . basename($repository_file);
-	}
+        my $foreign_file = $foreign_file_or_dir;
+        if (-d $foreign_file_or_dir) {
+            $foreign_file .= '/' . basename($repository_file);
+        }
 
-	#
-	# If we don't own the foreign file, it's ok, but only copy the
-	# foreign file to our local checkout, don't remove the
-	# original foreign file.
-	#
-	my $copy_instead_of_move = 0;
-	if (! -o $foreign_file) {
-	    $copy_instead_of_move = 1;
-	}
+        #
+        # If we don't own the foreign file, it's ok, but only copy the
+        # foreign file to our local checkout, don't remove the
+        # original foreign file.
+        #
+        my $copy_instead_of_move = 0;
+        if (! -o $foreign_file) {
+            $copy_instead_of_move = 1;
+        }
 
-	#
-	# Now the meat of it: update to the original version, move the
-	# file over, then update to the Head revision
-	#
-	my ($repository, $fn, $version) = get_version($foreign_file, $repo_type);
-	run("$cmd up -r $version $repository_file");
-	if ($copy_instead_of_move) {
-	    run("cp -f $foreign_file $repository_file");
-	} else {
-	    run("mv -f $foreign_file $repository_file");
-	}
-	if ($repo_type eq "svn") {
-	    run("$cmd up -rHEAD $repository_file");
-	} else {
-	    run("$cmd up -A $repository_file");
-	}
+        #
+        # Now the meat of it: update to the original version, move the
+        # file over, then update to the Head revision
+        #
+        my ($repository, $fn, $version) = get_version($foreign_file, $repo_type);
+        run("$cmd up -r $version $repository_file");
+        if ($copy_instead_of_move) {
+            run("cp -f $foreign_file $repository_file");
+        } else {
+            run("mv -f $foreign_file $repository_file");
+        }
+        if ($repo_type eq "svn") {
+            run("$cmd up -rHEAD $repository_file");
+        } else {
+            run("$cmd up -A $repository_file");
+        }
     }
 }
 
