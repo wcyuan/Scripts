@@ -55,14 +55,59 @@ def getopt():
 def parts(path):
     """
     Split a path by the path separator (/)
+
+    run doctests with the command:
+
+    python -m doctest -v randdiff.py
+
+    >>> parts('/')
+    ('/',)
+    >>> parts('2011')
+    ('2011',)
+    >>> parts('2011/')
+    ('2011',)
+    >>> parts('/2011')
+    ('/', '2011')
+    >>> parts('a/b')
+    ('a', 'b')
+    >>> parts('a/b/')
+    ('a', 'b')
+    >>> parts('/a/b')
+    ('/', 'a', 'b')
+    >>> parts('/a/b/')
+    ('/', 'a', 'b')
+    >>> pathjoin(*(parts('/')))
+    '/'
+    >>> pathjoin(*(parts('2011')))
+    '2011'
+    >>> pathjoin(*(parts('2011/')))
+    '2011'
+    >>> pathjoin(*(parts('/2011')))
+    '/2011'
+    >>> pathjoin(*(parts('a/b')))
+    'a/b'
+    >>> pathjoin(*(parts('a/b/')))
+    'a/b'
+    >>> pathjoin(*(parts('/a/b')))
+    '/a/b'
+    >>> pathjoin(*(parts('/a/b/')))
+    '/a/b'
+    >>>
+
     """
     (direc, base) = pathsplit(path)
     if direc == '':
-        return base
-    elif direc == '/':
-        return (direc, base)
+        return (base,)
+
+    if direc == '/':
+        direc = (direc,)
     else:
-        return parts(direc) + (base,)
+        direc = parts(direc)
+
+    if base == '':
+        return direc
+    else:
+        return direc + (base,)
 
 def randfile(orig):
     """
@@ -71,6 +116,8 @@ def randfile(orig):
     Returns a relative path from orig
     """
     curr = orig
+    if not exists(curr):
+        raise ValueError("Can't find {0}".format(curr))
     while isdir(curr):
         ls = listdir(curr)
         curr = pathjoin(curr, ls[randrange(len(ls))])
