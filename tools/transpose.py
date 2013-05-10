@@ -133,10 +133,30 @@ def getopts():
                       action='append',
                       help='Filter results.  If multiple filters given, '
                       'will only print lines that match them all.')
-    parser.add_option('--select',
+    parser.add_option('--columns', '--select', '--column',
                       dest='columns',
                       action='append',
                       help='Which columns to show')
+    parser.add_option('--noheader', '--no_header', '--no-header',
+                      action='store_true',
+                      help='do not print the header')
+    parser.add_option('--transpose',
+                      dest='should_transpose',
+                      action='store_true',
+                      help='transpose')
+    parser.add_option('--notranspose', '--no-transpose', '--no_transpose',
+                      '--notrans',
+                      dest='should_transpose',
+                      action='store_false',
+                      help='do not transpose')
+    parser.add_option('--no_filename', '--no-filename', '--nofilename',
+                      dest='add_filename',
+                      action='store_false',
+                      help='do not include the filename')
+    parser.add_option('--add_filename', '--add-filename',
+                      dest='add_filename',
+                      action='store_true',
+                      help='include the filename')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -148,7 +168,8 @@ def getopts():
     opts = dict((v, getattr(opts, v))
                 for v in ('patt', 'delim', 'left', 'reverse',
                           'kind', 'header_patt', 'head', 'filters',
-                          'by_col_no', 'columns'))
+                          'by_col_no', 'columns', 'noheader',
+                          'should_transpose', 'add_filename'))
 
     return (opts, args)
 
@@ -478,8 +499,8 @@ def texttable(table, transposed=None, delim=OFS, left=False):
                                       for (format, fld) in zip(formats, line))
                     for line in table)
 
-def pretty_print(intable, left=False):
-    if len(intable) < 6:
+def pretty_print(intable, left=False, should_transpose=None):
+    if ((should_transpose is None and len(intable) < 6) or should_transpose):
         ttable = transpose(intable)
         debug("transposed table: %s" % ttable)
     else:
@@ -490,7 +511,8 @@ def pretty_print(intable, left=False):
 def read_transpose(fd, patt=None, delim=None, left=False,
                    comment=COMMENT_CHAR, kind='delimited', reverse=False,
                    head=None, header_patt=None, filters=None, by_col_no=False,
-                   columns=()):
+                   columns=(), noheader=False, should_transpose=None,
+                   add_filename=None):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
     file, transposes (if necessary), and pretty-prints the output.
@@ -501,12 +523,15 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                          header_patt=header_patt,
                          filters=filters, by_col_no=by_col_no,
                          columns=columns)
-    pretty_print(intable, left)
+    if noheader:
+        intable = intable[1:]
+    pretty_print(intable, left=left, should_transpose=should_transpose)
 
 def read_files(fns, patt=None, delim=None, left=False,
                comment=COMMENT_CHAR, kind='delimited', reverse=False,
                head=None, header_patt=None, filters=None, by_col_no=False,
-               columns=()):
+               columns=(), noheader=False, should_transpose=None,
+               add_filename=None):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
@@ -530,23 +555,28 @@ def read_files(fns, patt=None, delim=None, left=False,
 
             # If there are multiple files, add a column of filenames
             # to the table.
-            if len(fns) > 1:
+            if (add_filename is None and len(fns) > 1) or add_filename:
                 filetable = ([['FILE'] + filetable[0]] +
                              [[fn] + l for l in filetable[1:]])
 
             if table is None:
+                if noheader:
+                    filetable = filetable[1:]
                 table = filetable
             elif prev_header == header:
                 # the header matches the previous file, so just stick
                 # the data onto the existing table.
                 table.extend(filetable[1:])
             else:
-                pretty_print(table, left)
+                pretty_print(table, left=left,
+                             should_transpose=should_transpose)
+                if noheader:
+                    filetable = filetable[1:]
                 table = filetable
             prev_header = header
 
     if table is not None:
-        pretty_print(table, left)
+        pretty_print(table, left=left, should_transpose=should_transpose)
 
 
 # --------------------------------------------------------------------
