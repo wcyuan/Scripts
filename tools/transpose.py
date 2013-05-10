@@ -121,7 +121,7 @@ def getopts():
     parser.add_option('--head',
                       type=int,
                       help="Only show the first <head> lines")
-    parser.add_option('--col_no', '--by_column_number',
+    parser.add_option('--by_col_no', '--by_column_number',
                       action="store_true",
                       help="Just number the columns instead of "
                       "using the header")
@@ -133,6 +133,10 @@ def getopts():
                       action='append',
                       help='Filter results.  If multiple filters given, '
                       'will only print lines that match them all.')
+    parser.add_option('--select',
+                      dest='columns',
+                      action='append',
+                      help='Which columns to show')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -143,7 +147,8 @@ def getopts():
 
     opts = dict((v, getattr(opts, v))
                 for v in ('patt', 'delim', 'left', 'reverse',
-                          'kind', 'header_patt', 'head', 'filters', 'col_no'))
+                          'kind', 'header_patt', 'head', 'filters',
+                          'by_col_no', 'columns'))
 
     return (opts, args)
 
@@ -367,7 +372,8 @@ def should_filter(values, names, filters):
 
 def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
-               header_patt=None, filters=None, col_no=False):
+               header_patt=None, filters=None, by_col_no=False,
+               columns=()):
     """
     Reads a file with tabular data.  Returns a list of rows, where a
     row is a list of fields.  The first row is the header.
@@ -383,6 +389,7 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
     """
     table = []
     header = None
+    keep_idx = None
     for line in fd:
         line = line.strip(IRS)
 
@@ -395,10 +402,16 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
             if delim is None:
                 (kind, delim) = guess_delim(line, kind)
             header = separate(line, kind, delim)
-            if col_no:
-                table.append([str(r) for r in range(1, len(header)+1)])
+            if by_col_no:
+                col_nos = [str(r) for r in range(1, len(header)+1)]
+                header = col_nos
+            if columns is not None and len(columns) > 0:
+                keep_idx = [header.index(c) for c in columns]
+                print_header = [header[i] for i in keep_idx]
             else:
-                table.append(header)
+                print_header = header
+            table.append(print_header)
+            if not by_col_no:
                 continue
 
         # Skip comments
@@ -416,6 +429,9 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
         # Apply filters
         if should_filter(row, header, filters):
             continue
+
+        if keep_idx is not None:
+            row = [row[i] for i in keep_idx]
 
         table.append(row)
 
@@ -473,7 +489,8 @@ def pretty_print(intable, left=False):
 
 def read_transpose(fd, patt=None, delim=None, left=False,
                    comment=COMMENT_CHAR, kind='delimited', reverse=False,
-                   head=None, header_patt=None, filters=None, col_no=False):
+                   head=None, header_patt=None, filters=None, by_col_no=False,
+                   columns=()):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
     file, transposes (if necessary), and pretty-prints the output.
@@ -482,12 +499,14 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                          comment=comment, kind=kind,
                          reverse=reverse, head=head,
                          header_patt=header_patt,
-                         filters=filters, col_no=col_no)
+                         filters=filters, by_col_no=by_col_no,
+                         columns=columns)
     pretty_print(intable, left)
 
 def read_files(fns, patt=None, delim=None, left=False,
                comment=COMMENT_CHAR, kind='delimited', reverse=False,
-               head=None, header_patt=None, filters=None, col_no=False):
+               head=None, header_patt=None, filters=None, by_col_no=False,
+               columns=()):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
@@ -500,7 +519,8 @@ def read_files(fns, patt=None, delim=None, left=False,
                                    comment=comment, kind=kind,
                                    reverse=reverse, head=head,
                                    header_patt=header_patt,
-                                   filters=filters, col_no=col_no)
+                                   filters=filters, by_col_no=by_col_no,
+                                   columns=columns)
 
             if len(filetable) == 0:
                 continue
