@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 """
 jarcat.py [-list|-cat] [-j <jar>] [<file>]*
 
