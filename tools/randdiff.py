@@ -120,7 +120,13 @@ def randfile(orig):
         raise ValueError("Can't find {0}".format(curr))
     while isdir(curr):
         ls = listdir(curr)
+        # handle empty directories
+        if len(ls) == 0:
+            break
         curr = pathjoin(curr, ls[randrange(len(ls))])
+    # handle the case where the orig directory is empty
+    if curr == orig:
+        return ""
     return pathjoin(*(parts(curr)[len(parts(orig)):]))
 
 def compare(fn1, fn2):
@@ -131,7 +137,7 @@ def compare(fn1, fn2):
         raise ValueError("Can't find {0}".format(fn1))
     if not exists(fn2):
         raise ValueError("Can't find {0}".format(fn2))
-    check_call(["ls", "-l", fn1, fn2])
+    check_call(["ls", "-ld", fn1, fn2])
     cmd = ['diff', fn1, fn2]
     print "Running {0}".format(cmd)
     check_call(cmd);
