@@ -78,7 +78,6 @@ For release (assumes a particular repository):
 
 use strict;
 use warnings 'all';
-use Pod::Usage;
 use Getopt::Long qw(GetOptions);
 use Carp;
 
@@ -114,7 +113,7 @@ sub parse_command_line() {
                'release!'         => \my $release,
                'both!'            => \my $both,
                'debug|no_write!'  => \$DEBUG)
-        or pod2usage();
+        or die("Bad arguments");
 
     #
     # no options means just do the master branch
