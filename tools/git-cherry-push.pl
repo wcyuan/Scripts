@@ -166,7 +166,7 @@ sub run($;$) {
         } else {
             my $rc = system($cmd);
             if (!$opts->{no_die_on_error} && $rc != 0) {
-                confesss("Error running $cmd: $rc $@ $!");
+                confess("Error running $cmd: $rc $@ $!");
             }
             return $rc == 0;
         }
