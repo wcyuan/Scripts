@@ -157,6 +157,10 @@ def getopts():
                       dest='add_filename',
                       action='store_true',
                       help='include the filename')
+    parser.add_option('--raw',
+                      dest='raw',
+                      action='store_true',
+                      help='just grep without any other processing')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -169,7 +173,7 @@ def getopts():
                 for v in ('patt', 'delim', 'left', 'reverse',
                           'kind', 'header_patt', 'head', 'filters',
                           'by_col_no', 'columns', 'noheader',
-                          'should_transpose', 'add_filename'))
+                          'should_transpose', 'add_filename', 'raw'))
 
     return (opts, args)
 
@@ -331,21 +335,22 @@ def is_match(line, patt, reverse=False):
     else:
         return match is not None
 
-def separate(line, kind, delim):
+def separate(line, kind, delim, raw=False):
     """
     Split a line according to its format.
     """
+    magic_word = None
     if kind == 'delimited':
         vals = re.split(delim, line.strip())
         # If the row starts with #@desc, we should get rid of that.
         if vals[0] in HEADERS:
-            vals.pop(0)
+            magic_word = vals.pop(0)
         # If we have escaped spaces, remove the backslashes in the output
-        if delim == '(?<!\\\) ':
+        if not raw and delim == '(?<!\\\) ':
             vals = [v.replace('\ ', ' ') for v in vals]
         debug("line (%s delim='%s') %s separated into %s" %
               (kind, delim, line, vals))
-        return vals
+        return (vals, magic_word)
     elif kind == 'fixed':
         # Fixed-width format.  To try to parse something like:
         #
@@ -365,7 +370,7 @@ def separate(line, kind, delim):
                                                           fillvalue=None))]
         debug("line (%s delim='%s') %s separated into %s" %
               (kind, delim, line, vals))
-        return vals
+        return (vals, magic_word)
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
 
@@ -394,7 +399,7 @@ def should_filter(values, names, filters):
 def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
                header_patt=None, filters=None, by_col_no=False,
-               columns=()):
+               columns=(), raw=False):
     """
     Reads a file with tabular data.  Returns a list of rows, where a
     row is a list of fields.  The first row is the header.
@@ -422,7 +427,7 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                 continue
             if delim is None:
                 (kind, delim) = guess_delim(line, kind)
-            header = separate(line, kind, delim)
+            (header, magic_word) = separate(line, kind, delim, raw=raw)
             if by_col_no:
                 col_nos = [str(r) for r in range(1, len(header)+1)]
                 header = col_nos
@@ -431,6 +436,9 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                 print_header = [header[i] for i in keep_idx]
             else:
                 print_header = header
+            if raw and magic_word is not None:
+                print_header.insert(0, magic_word)
+
             table.append(print_header)
             if not by_col_no:
                 continue
@@ -445,7 +453,7 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
             continue
 
         # Found a valid line!  Parse it into separate fields.
-        row = separate(line, kind, delim)
+        (row, _) = separate(line, kind, delim, raw=raw)
 
         # Apply filters
         if should_filter(row, header, filters):
@@ -499,7 +507,11 @@ def texttable(table, transposed=None, delim=OFS, left=False):
                                       for (format, fld) in zip(formats, line))
                     for line in table)
 
-def pretty_print(intable, left=False, should_transpose=None):
+def pretty_print(intable, left=False, should_transpose=None, raw=False):
+    if raw:
+        print ORS.join(("%s" % OFS.join(line)) for line in intable)
+        return
+
     if ((should_transpose is None and len(intable) < 6) or should_transpose):
         ttable = transpose(intable)
         debug("transposed table: %s" % ttable)
@@ -512,7 +524,7 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                    comment=COMMENT_CHAR, kind='delimited', reverse=False,
                    head=None, header_patt=None, filters=None, by_col_no=False,
                    columns=(), noheader=False, should_transpose=None,
-                   add_filename=None):
+                   add_filename=None, raw=False):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
     file, transposes (if necessary), and pretty-prints the output.
@@ -522,16 +534,16 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                          reverse=reverse, head=head,
                          header_patt=header_patt,
                          filters=filters, by_col_no=by_col_no,
-                         columns=columns)
+                         columns=columns, raw=raw)
     if noheader:
         intable = intable[1:]
-    pretty_print(intable, left=left, should_transpose=should_transpose)
+    pretty_print(intable, left=left, should_transpose=should_transpose, raw=raw)
 
 def read_files(fns, patt=None, delim=None, left=False,
                comment=COMMENT_CHAR, kind='delimited', reverse=False,
                head=None, header_patt=None, filters=None, by_col_no=False,
                columns=(), noheader=False, should_transpose=None,
-               add_filename=None):
+               add_filename=None, raw=False):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
@@ -545,7 +557,7 @@ def read_files(fns, patt=None, delim=None, left=False,
                                    reverse=reverse, head=head,
                                    header_patt=header_patt,
                                    filters=filters, by_col_no=by_col_no,
-                                   columns=columns)
+                                   columns=columns, raw=raw)
 
             if len(filetable) == 0:
                 continue
@@ -569,14 +581,15 @@ def read_files(fns, patt=None, delim=None, left=False,
                 table.extend(filetable[1:])
             else:
                 pretty_print(table, left=left,
-                             should_transpose=should_transpose)
+                             should_transpose=should_transpose, raw=raw)
                 if noheader:
                     filetable = filetable[1:]
                 table = filetable
             prev_header = header
 
     if table is not None:
-        pretty_print(table, left=left, should_transpose=should_transpose)
+        pretty_print(table, left=left, should_transpose=should_transpose,
+                     raw=raw)
 
 
 # --------------------------------------------------------------------
