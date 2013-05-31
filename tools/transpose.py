@@ -160,6 +160,19 @@ def getopts():
                       dest='raw',
                       action='store_true',
                       help='just grep without any other processing')
+    parser.add_option('--width',
+                      type=int,
+                      help='only show the first N characters of each column')
+    parser.add_option('--compact',
+                      action='store_const',
+                      const=30,
+                      dest='width',
+                      help='set width to 30')
+    parser.add_option('--full',
+                      action='store_const',
+                      const=None,
+                      dest='width',
+                      help='show full columns')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -172,7 +185,8 @@ def getopts():
                 for v in ('patt', 'delim', 'left', 'reverse',
                           'kind', 'header_patt', 'head', 'filters',
                           'by_col_no', 'columns', 'noheader',
-                          'should_transpose', 'add_filename', 'raw'))
+                          'should_transpose', 'add_filename', 'raw',
+                          'width'))
 
     return (opts, args)
 
@@ -398,7 +412,7 @@ def should_filter(values, names, filters):
 def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
                header_patt=None, filters=None, by_col_no=False,
-               columns=(), raw=False):
+               columns=(), raw=False, width=None):
     """
     Reads a file with tabular data.  Returns a list of rows, where a
     row is a list of fields.  The first row is the header.
@@ -460,6 +474,9 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
 
         if keep_idx is not None:
             row = [row[i] for i in keep_idx]
+
+        if width is not None:
+            row = [r if len(r) < width else (r[:width]+"...") for r in row]
 
         table.append(row)
 
@@ -523,7 +540,7 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                    comment=COMMENT_CHAR, kind='delimited', reverse=False,
                    head=None, header_patt=None, filters=None, by_col_no=False,
                    columns=(), noheader=False, should_transpose=None,
-                   add_filename=None, raw=False):
+                   add_filename=None, raw=False, width=None):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
     file, transposes (if necessary), and pretty-prints the output.
@@ -533,7 +550,7 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                          reverse=reverse, head=head,
                          header_patt=header_patt,
                          filters=filters, by_col_no=by_col_no,
-                         columns=columns, raw=raw)
+                         columns=columns, raw=raw, width=width)
     if noheader:
         intable = intable[1:]
     pretty_print(intable, left=left, should_transpose=should_transpose, raw=raw)
@@ -542,7 +559,7 @@ def read_files(fns, patt=None, delim=None, left=False,
                comment=COMMENT_CHAR, kind='delimited', reverse=False,
                head=None, header_patt=None, filters=None, by_col_no=False,
                columns=(), noheader=False, should_transpose=None,
-               add_filename=None, raw=False):
+               add_filename=None, raw=False, width=None):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
@@ -556,7 +573,7 @@ def read_files(fns, patt=None, delim=None, left=False,
                                    reverse=reverse, head=head,
                                    header_patt=header_patt,
                                    filters=filters, by_col_no=by_col_no,
-                                   columns=columns, raw=raw)
+                                   columns=columns, raw=raw, width=width)
 
             if len(filetable) == 0:
                 continue
