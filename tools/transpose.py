@@ -108,7 +108,6 @@ def getopts():
     parser.add_option('--right',
                       action="store_false",
                       dest='left',
-                      default=False,
                       help="right justify (False by default)")
     parser.add_option('--reverse', '-v',
                       action="store_true",
