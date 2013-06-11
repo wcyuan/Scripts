@@ -72,6 +72,13 @@ class Runner(object):
 
     @classmethod
     def run(cls, cmd, always=False, die_on_error=True):
+        '''
+        If die_on_error is False, then if the command exits with a
+        non-zero exit code, we will log a warning, but we won't throw
+        an exception.  However, if the command doesn't even exist, or
+        if Popen is called with invalid arguments, then we will still
+        throw an exception.
+        '''
         if cls.NO_WRITE and not always:
             print "NO WRITE: {0}".format(cmd)
             return
@@ -79,14 +86,15 @@ class Runner(object):
         print "Running:  {0}".format(cmd)
         process = subprocess.Popen(cmd.split(),
                                    stdout=subprocess.PIPE)
-        try:
-            output = process.communicate()[0]
-        except subprocess.CalledProcessError as e:
+        stdout = process.communicate()[0]
+        if process.returncode != 0:
             if die_on_error:
-                raise
+                raise RuntimeError("Failure running {0}".format(cmd))
             else:
-                print e
-        return output
+                logging.warning("Error running {0}".format(cmd))
+        logging.info("Command {0} finished with return code {1}".
+                     format(cmd, process.returncode))
+        return stdout
 
 # ------------------------------------------------------------------
 
