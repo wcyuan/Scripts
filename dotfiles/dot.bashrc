@@ -30,6 +30,7 @@ alias      la='ls -alF'
 alias     lsd='ls -dlF'
 alias     ltr='ls -lrt'
 alias      sa='unalias -a; . ~/.bashrc'
+
 # for using windows python from cygwin, ipython has to be started like this:
 # http://stackoverflow.com/questions/3250749/using-windows-python-from-cygwin
 alias ipython='PYTHONUNBUFFERED=1 python c:/cygwin/home/Yuan/usr/pkgs/ipython-0.12/ipython.py'
@@ -125,6 +126,10 @@ alias      xgrep='xargs -d"\n" grep -H --color'
 alias     xegrep='xargs -d"\n" egrep -H --color'
 # Should use ack instead?
 alias   findgrep='find . -name .svn -prune -o -type f  -print0 | xargs -0 grep -H --color'
+# Is this a dos style file or a unix style file?  Are the newlines
+# just CR (\n) or are the CRLF (\n\r)?  Returns 0 for a unix-style
+# file and non-zero for a dos-style file
+alias      isdos="grep -c '$'"
 
 # find
 alias   findtext='find . -name .svn -prune -o -type f -print'
