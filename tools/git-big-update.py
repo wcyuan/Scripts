@@ -1,7 +1,10 @@
 #!/usr/local/bin/python
 #
 """
-A simple helper script to pull changes through to multiple dependent branches
+A simple helper script to pull changes through to multiple dependent branches.
+
+Currently, this does no error handling, so it will fail if there are
+merge conflicts, or uncommitted changes, etc.
 """
 
 from __future__ import absolute_import, division, with_statement
@@ -23,7 +26,9 @@ TREE = [['/u/yuanc/proj/eomm',
           ['add-pcap',                  'git pull'],
           ['parallel_result_tree_diff', 'git pull']]],
         ['/u/yuanc/proj/scratcheomm',
-         [['master',                    'git pull']]]
+         [['master',                    'git pull'],
+          ['git-fastsim',               'git pull'],
+          ['two_forecasts',             'git pull']]]
         #[WINDOWS_EOMM_DIR,
         # [['master',                    'git pull'],
         #  ['add-pcap',                  'git pull']]]
@@ -90,6 +95,7 @@ def get_current_branch():
     for line in branches.split('\n'):
         if line.startswith('*'):
             return line.split()[1]
+    raise RuntimeError("Can't get current branch")
 
 @contextlib.contextmanager
 def checkout(branch):
