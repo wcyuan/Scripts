@@ -20,13 +20,13 @@ For example, given the input:
  Square     Red
 
 You can bucket by the first column (the shape) with
- $ bucket.py 0
+ $ bucket.py 1
  Column-0 N
  Circle   4
  Rect     1
  Square   3
 
-Columns are zero indexed.  You can bucket by the last column with
+You can bucket by the last column with
  $ bucket.py -1
  Column--1 N
  Blue      3
@@ -134,7 +134,11 @@ class Bucket(object):
 
     def get_value(self, line, splitline):
         if self.type == 'column':
-            if len(splitline) > self.bucket:
+            if self.bucket >= 0 and len(splitline) >= self.bucket:
+                # allow people to enter one indexed column numbers
+                return splitline[self.bucket-1]
+            elif self.bucket < 0 and len(splitline) >= -1 * self.bucket:
+                # but if the column number is negative, just use it
                 return splitline[self.bucket]
             else:
                 return None
