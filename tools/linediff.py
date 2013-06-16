@@ -194,10 +194,18 @@ def edit_path(list1, list2):
         current = next_path
 
     logging.info("cost: {0}".format(current_cost[len(list2)]))
-    return path_str(current[len(list2)])
+    return current[len(list2)]
+
+def edit_path_len(list1, list2):
+    len_at_a_time = 100
+    maxlen = max(len(list1), len(list2))
+    lengths = range(0, maxlen, len_at_a_time) + [maxlen]
+    sep = "\n{0}\n".format('=' * len_at_a_time)
+    return sep.join(path_str(edit_path(list1[start:end], list2[start:end]))
+                    for (start, end) in zip(lengths[:-1], lengths[1:]))
 
 def repeat_edit_path(wordlist1, wordlist2):
-    return '\n'.join(edit_path(w1.rstrip(), w2.rstrip())
+    return '\n'.join(edit_path_len(w1.rstrip(), w2.rstrip())
                      for (w1, w2) in zip(wordlist1, wordlist2))
 
 # ------------------------------------------------------------------
