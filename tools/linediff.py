@@ -50,7 +50,12 @@ def getopts():
     parser.add_option('--use_args',
                       action='store_true',
                       help='use the arguments instead of stdin')
+    parser.add_option('--verbose',
+                      action='store_true',
+                      help='verbose mode')
     opts, args = parser.parse_args()
+    if opts.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
     return (opts, args)
 
 def get_diff_func(name):
@@ -94,7 +99,21 @@ class Modification(object):
             raise ValueError("unknown operation: {0}".format(self.op))
 
 def path_str(path):
-    return ' '.join(str(m) for m in path)
+    top = ''.join((m.val1
+                   if m.val1 is not None
+                   else ' ')
+                  for m in path)
+    bottom = ''.join((m.val2
+                      if m.val2 is not None
+                      else ' ')
+                     for m in path)
+    middle = ''.join((' ' if m.op is Modification.EQUAL   else
+                      'x' if m.op is Modification.REPLACE else
+                      m.op)
+                     for m in path)
+    return '\n'.join((top, middle, bottom))
+    # an alternative, simpler string:
+    #return ' '.join(str(m) for m in path)
 
 def edit_path(list1, list2):
     """
@@ -178,7 +197,8 @@ def edit_path(list1, list2):
     return path_str(current[len(list2)])
 
 def repeat_edit_path(wordlist1, wordlist2):
-    return '\n'.join(edit_path(w1, w2) for (w1, w2) in zip(wordlist1, wordlist2))
+    return '\n'.join(edit_path(w1.rstrip(), w2.rstrip())
+                     for (w1, w2) in zip(wordlist1, wordlist2))
 
 # ------------------------------------------------------------------
 
