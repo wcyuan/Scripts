@@ -139,10 +139,21 @@ class Bucket(object):
     def __str__(self):
         return self.name
 
+    @classmethod
+    def _index(cls, values, idx):
+        if idx >= 0 and len(values) >= idx:
+            # allow people to enter one indexed column numbers
+            return values[idx-1]
+        elif idx < 0 and len(values) >= -1 * idx:
+            # but if the column number is negative, just use it
+            return values[idx]
+        else:
+            return None
+
     def _make_name(self, header=None):
         if self.type == 'column':
             if header is not None:
-                return header.split()[self.bucket]
+                return str(self._index(header.split(), self.bucket))
             else:
                 return 'Column-{0}'.format(self.bucket)
         else:
@@ -150,14 +161,7 @@ class Bucket(object):
 
     def get_value(self, line, splitline):
         if self.type == 'column':
-            if self.bucket >= 0 and len(splitline) >= self.bucket:
-                # allow people to enter one indexed column numbers
-                return splitline[self.bucket-1]
-            elif self.bucket < 0 and len(splitline) >= -1 * self.bucket:
-                # but if the column number is negative, just use it
-                return splitline[self.bucket]
-            else:
-                return None
+            return self._index(splitline, self.bucket)
         else:
             m = re.search(self.bucket, line)
             return m is not None
