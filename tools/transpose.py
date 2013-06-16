@@ -74,6 +74,7 @@ IRS = "\n"
 ORS = "\n"
 # output field separator
 OFS = " "
+CLEAN_CHAR = '-'
 
 # These are the types of filters that we support.  This is the order
 # in which we will look for the operator.  It's important that all
@@ -173,6 +174,13 @@ def getopts():
                       const=None,
                       dest='width',
                       help='show full columns')
+    parser.add_option('--ofs',
+                      dest='ofs',
+                      help='set the output field separator')
+    parser.add_option('--clean-output', '--clean',
+                      action='store_true',
+                      dest='clean_output',
+                      help='remove the ofs from output fields')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -181,12 +189,19 @@ def getopts():
     if opts.filters is not None:
         opts.filters = [parse_filter(f) for f in opts.filters]
 
+    if opts.ofs is not None:
+        global OFS
+        global CLEAN_CHAR
+        OFS = opts.ofs
+        if OFS == CLEAN_CHAR:
+            CLEAN_CHAR = '~'
+
     opts = dict((v, getattr(opts, v))
                 for v in ('patt', 'delim', 'left', 'reverse',
                           'kind', 'header_patt', 'head', 'filters',
                           'by_col_no', 'columns', 'noheader',
                           'should_transpose', 'add_filename', 'raw',
-                          'width'))
+                          'width', 'clean_output'))
 
     return (opts, args)
 
@@ -497,7 +512,8 @@ def transpose(intable):
     """
     return izip_longest(*intable, fillvalue="")
 
-def texttable(table, transposed=None, delim=OFS, left=False):
+def texttable(table, transposed=None, delim=OFS, left=False,
+              clean_output=False):
     """
     pretty-print a table.  Every column's width is the width of the
     widest field in that column.
@@ -519,11 +535,15 @@ def texttable(table, transposed=None, delim=OFS, left=False):
     widths = (max(len(fld) for fld in line) for line in transposed)
     lc = '-' if left else ''
     formats = ["%{0}{1}s".format(lc, width) for width in widths]
-    return ORS.join("%s" % delim.join(format % fld
+    return ORS.join("%s" % delim.join(format % (fld
+                                                if not clean_output
+                                                else fld.replace(OFS,
+                                                                 CLEAN_CHAR))
                                       for (format, fld) in zip(formats, line))
                     for line in table)
 
-def pretty_print(intable, left=False, should_transpose=None, raw=False):
+def pretty_print(intable, left=False, should_transpose=None, raw=False,
+                 clean_output=False):
     if raw:
         print ORS.join(("%s" % OFS.join(line)) for line in intable)
         return
@@ -534,13 +554,15 @@ def pretty_print(intable, left=False, should_transpose=None, raw=False):
     else:
         ttable = intable
         intable = None
-    print texttable(ttable, transposed=intable, left=left)
+    print texttable(ttable, transposed=intable, left=left,
+                    clean_output=clean_output)
 
 def read_transpose(fd, patt=None, delim=None, left=False,
                    comment=COMMENT_CHAR, kind='delimited', reverse=False,
                    head=None, header_patt=None, filters=None, by_col_no=False,
                    columns=(), noheader=False, should_transpose=None,
-                   add_filename=None, raw=False, width=None):
+                   add_filename=None, raw=False, width=None,
+                   clean_output=False):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
     file, transposes (if necessary), and pretty-prints the output.
@@ -553,13 +575,14 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                          columns=columns, raw=raw, width=width)
     if noheader:
         intable = intable[1:]
-    pretty_print(intable, left=left, should_transpose=should_transpose, raw=raw)
+    pretty_print(intable, left=left, should_transpose=should_transpose,
+                 raw=raw, clean_output=clean_output)
 
 def read_files(fns, patt=None, delim=None, left=False,
                comment=COMMENT_CHAR, kind='delimited', reverse=False,
                head=None, header_patt=None, filters=None, by_col_no=False,
                columns=(), noheader=False, should_transpose=None,
-               add_filename=None, raw=False, width=None):
+               add_filename=None, raw=False, width=None, clean_output=False):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
@@ -597,7 +620,8 @@ def read_files(fns, patt=None, delim=None, left=False,
                 table.extend(filetable[1:])
             else:
                 pretty_print(table, left=left,
-                             should_transpose=should_transpose, raw=raw)
+                             should_transpose=should_transpose,
+                             raw=raw, clean_output=clean_output)
                 if noheader:
                     filetable = filetable[1:]
                 table = filetable
@@ -605,7 +629,7 @@ def read_files(fns, patt=None, delim=None, left=False,
 
     if table is not None:
         pretty_print(table, left=left, should_transpose=should_transpose,
-                     raw=raw)
+                     raw=raw, clean_output=clean_output)
 
 
 # --------------------------------------------------------------------
