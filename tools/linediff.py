@@ -2,32 +2,70 @@
 """
 grep patt file1 file2 | linediff.py
 
+EXAMPLES:
+
+$ echo '1 2 3
+1 2 4' | linediff.py --differ differ
+- 1 2 3
+?     ^
++ 1 2 4
+?     ^
+
+$ linediff.py --use_args kitten sitting far bar
+r(k,s) =(i) =(t) =(t) r(e,i) =(n) +(g)
+r(f,b) =(a) =(r)
+
+$ echo '1 2 3
+1 2 4' | linediff.py
+=(1) =( ) =(2) =( ) r(3,4) =(
+)
+
 """
 
 from __future__ import absolute_import, division, with_statement
 
-from difflib import Differ
+import optparse
+import difflib
+import logging
 import sys
 
 # ------------------------------------------------------------------
 
 def main():
-    #diff_func = get_diff_func(sys.argv[0] if len(sys.argv) > 0 else None)
-    #lines = sys.stdin.readlines()
-    #sys.stdout.writelines(diff_func(lines[::2], lines[1::2]))
-    print ' '.join(str(m) for m in edit_path(sys.argv[1], sys.argv[2]))
+    (opts, args) = getopts()
+    if opts.use_args:
+        lists = args
+    else:
+        lists = sys.stdin.readlines()
+    diff_func = get_diff_func(opts.differ)
+    sys.stdout.writelines(diff_func(lists[::2], lists[1::2]))
 
 # ------------------------------------------------------------------
 
-def get_diff_func(arg):
-    if arg == 'differ':
+def getopts():
+    parser = optparse.OptionParser()
+    parser.add_option('--differ',
+                      choices=('differ', 'edit'),
+                      help='The diff method to use')
+    parser.add_option('--use_args',
+                      action='store_true',
+                      help='use the arguments instead of stdin')
+    opts, args = parser.parse_args()
+    return (opts, args)
+
+def get_diff_func(name):
+    if name == 'differ':
         return difflib_differ
     else:
-        return difflib_differ
+        return repeat_edit_path
+
+# ------------------------------------------------------------------
 
 def difflib_differ(lines1, lines2):
-    d = Differ()
+    d = difflib.Differ()
     return list(d.compare(lines1, lines2))
+
+# ------------------------------------------------------------------
 
 class Modification(object):
     EQUAL='='
@@ -52,6 +90,11 @@ class Modification(object):
             return '{0}({1})'.format(self.op, self.val1)
         if self.op == self.REPLACE:
             return '{0}({1},{2})'.format(self.op, self.val1, self.val2)
+        else:
+            raise ValueError("unknown operation: {0}".format(self.op))
+
+def path_str(path):
+    return ' '.join(str(m) for m in path)
 
 def edit_path(list1, list2):
     """
@@ -76,7 +119,7 @@ def edit_path(list1, list2):
     # where list1 = [f1, f2, f3, f4]
     # and   list2 = [e1, e2, e3, e4, e5]
     # and the element of the matrix for [ei, fj] is the edit path to
-    # go from list1[:i] to list2[:j]
+    # go from list1[:i+1] to list2[:j+1]
     #
 
     # In the first row of the matrix, list1 is empty, so all you do is
@@ -86,10 +129,10 @@ def edit_path(list1, list2):
     current = [edit_path([], list2[:j]) for j in range(len(list2) + 1)]
     for i in range(len(list1)):
         # The first element of the next row is the column where list2
-        # is empty, so all you do is subtract all the elements of
-        # list1.
-        next_cost = [i]
-        next_path = [edit_path(list1[:i], [])]
+        # is empty and we start with the first i+1 elements of list1,
+        # so all you do is subtract those i+1 elements.
+        next_cost = [i+1]
+        next_path = [edit_path(list1[:i+1], [])]
         for j in range(len(list2)):
             # In the inductive step, imagine that you know the edit
             # paths for these cases:
@@ -120,12 +163,22 @@ def edit_path(list1, list2):
             elif next_cost[j+1] == cost_sub:
                 next_path.append(current[j+1] +
                                  [Modification(Modification.SUB,
-                                               None, list1[i])])
+                                               list1[i], None)])
+            logging.debug("----------------")
+            logging.debug("i={0}({1}) to j={2}({3})".format(i, list1[:i+1],
+                                                            j, list2[:j+1]))
+            logging.debug("cost: {0}".format(next_cost[j+1]))
+            logging.debug(path_str(next_path[j+1]))
+            logging.debug("----------------")
 
         current_cost = next_cost
         current = next_path
 
-    return current[len(list2)]
+    logging.info("cost: {0}".format(current_cost[len(list2)]))
+    return path_str(current[len(list2)])
+
+def repeat_edit_path(wordlist1, wordlist2):
+    return '\n'.join(edit_path(w1, w2) for (w1, w2) in zip(wordlist1, wordlist2))
 
 # ------------------------------------------------------------------
 
