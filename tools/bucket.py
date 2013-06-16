@@ -129,7 +129,15 @@ class Bucket(object):
             self.bucket = int(bucket)
             self.type = 'column'
         except ValueError:
-            self.type = 'regexp'
+            if header is not None:
+                try:
+                    index = header.split().index(bucket)
+                    self.type = 'column'
+                    self.bucket = index + 1
+                except ValueError:
+                    self.type = 'regexp'
+            else:
+                self.type = 'regexp'
         self.name = self._make_name(header)
 
 
