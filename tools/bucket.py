@@ -61,8 +61,13 @@ ORS='\n'
 def main():
     args = getopts()
 
-    buckets = Buckets(args.buckets)
-    for line in args.input.readlines():
+    lines = args.input.readlines()
+    if args.header:
+        header = lines.pop(0)
+    else:
+        header = None
+    buckets = Buckets(args.buckets, header=header)
+    for line in lines:
         buckets.add(line)
     print buckets
 
@@ -75,6 +80,9 @@ def getopts():
                         type=argparse.FileType('r'),
                         default=sys.stdin,
                         help='the input file to read')
+    parser.add_argument('--header',
+                        action='store_true',
+                        help='first line is a header')
     parser.add_argument('buckets',
                         nargs='+',
                         help='buckets to use')
@@ -115,20 +123,28 @@ def texttable(table, left=False):
 # --------------------------------------------------------------------
 
 class Bucket(object):
-    def __init__(self, bucket):
+    def __init__(self, bucket, header=None):
         self.bucket = bucket
         try:
             self.bucket = int(bucket)
             self.type = 'column'
         except ValueError:
             self.type = 'regexp'
+        self.name = self._make_name(header)
+
 
     def __repr__(self):
         return "{0}({1})".format(self.__class__.__name__, self.bucket)
 
     def __str__(self):
+        return self.name
+
+    def _make_name(self, header=None):
         if self.type == 'column':
-            return 'Column-{0}'.format(self.bucket)
+            if header is not None:
+                return header.split()[self.bucket]
+            else:
+                return 'Column-{0}'.format(self.bucket)
         else:
             return '/{0}/'.format(self.bucket)
 
@@ -147,8 +163,9 @@ class Bucket(object):
             return m is not None
 
 class Buckets(object):
-    def __init__(self, buckets):
-        self.buckets = tuple(Bucket(b) for b in buckets)
+    def __init__(self, buckets, header=None):
+        self.buckets = tuple(Bucket(b, header=header)
+                             for b in buckets)
         self.values = {}
 
     def add(self, line):
