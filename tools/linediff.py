@@ -99,6 +99,10 @@ class Modification(object):
             raise ValueError("unknown operation: {0}".format(self.op))
 
 def path_str(path):
+    """
+    Pretty print a list of Modifications.  This assumes that each
+    value is a string and that all the strings have length 1.
+    """
     top = ''.join((m.val1
                    if m.val1 is not None
                    else ' ')
@@ -119,15 +123,35 @@ def edit_path(list1, list2):
     """
     Modified from:
     http://en.wikipedia.org/wiki/Levenshtein_distance#Iterative_with_two_matrix_rows
+
+    This returns the smallest set of Modifications necessary to change
+    list1 to list2 using the operations Add, Subtract, or Replace (as
+    well as the nop operation Equal).  The number of non-Equal
+    operations is usually referred to as the "edit distance", so I
+    think of this as returning the "edit path", though it would be
+    more accurately called something like the "minimum-edit-distance
+    operations".
+
+    This function is generally passed in strings as input, not lists,
+    but the function would work on lists too.  We refer to them lists
+    in order to be more general.
     """
+
+    # Handle base cases.
+    # If we are given two empty lists, return the empty list of
+    # Modifications.
     if len(list1) == 0 and len(list2) == 0:
         return []
+    # If the first list is empty, then the shortest path is to just
+    # add each element of the second list.
     if len(list1) == 0:
         return [Modification(Modification.ADD, None, e) for e in list2]
+    # If the second list is empty, then the shortest path is to just
+    # remove each element of the fist list.
     if len(list2) == 0:
         return [Modification(Modification.SUB, e, None) for e in list1]
 
-    # current and next are rows in the matrix:
+    # Otherwise, we need to construct this matrix:
     #    - e1 e2 e3 e4 e5
     # -
     # f1
@@ -140,6 +164,10 @@ def edit_path(list1, list2):
     # and the element of the matrix for [ei, fj] is the edit path to
     # go from list1[:i+1] to list2[:j+1]
     #
+    # We don't need to remember the full matrix.  We only need to
+    # remember the previous row and the row that we are currently
+    # filling in.  The previous row is called "current" and the row we
+    # are currently filling in is called "next".
 
     # In the first row of the matrix, list1 is empty, so all you do is
     # add all the elements of list2.  You do that for each prefix of
@@ -197,6 +225,18 @@ def edit_path(list1, list2):
     return current[len(list2)]
 
 def edit_path_len(list1, list2):
+    """
+    edit_path is not so fast and will have trouble with long
+    lists/strings.  So if the lists are longer than that, break them
+    into chunks of 100.
+
+    This obviously doesn't work perfectly.  If the only difference
+    between two lists is that you add an element to the second list,
+    then instead of just seeing the addition in the first chunk, for
+    each chunk of 100 elements, you'll see an addition at the
+    beginning and a removal at the end.  But at least it allows the
+    function to run in a reasonable amount of time.
+    """
     len_at_a_time = 100
     maxlen = max(len(list1), len(list2))
     lengths = range(0, maxlen, len_at_a_time) + [maxlen]
@@ -205,8 +245,16 @@ def edit_path_len(list1, list2):
                     for (start, end) in zip(lengths[:-1], lengths[1:]))
 
 def repeat_edit_path(wordlist1, wordlist2):
+    """
+    Given two lists of strings, run edit_path_len on each
+    corresponding pair of strings.  Also, remove trailing whitespace
+    on the strings before passing them to edit_path_len.  This is
+    useful because otherwise they will usually have a newline
+    character at the end (if we read the strings from stdin instead of
+    as arguments)
+    """
     return '\n'.join(edit_path_len(w1.rstrip(), w2.rstrip())
-                     for (w1, w2) in zip(wordlist1, wordlist2))
+                     for (w1, w2) in zip(wordlist1, wordlist2)) + "\n"
 
 # ------------------------------------------------------------------
 
