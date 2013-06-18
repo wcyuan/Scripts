@@ -129,7 +129,7 @@ alias   findgrep='find . -name .svn -prune -o -type f  -print0 | xargs -0 grep -
 # Is this a dos style file or a unix style file?  Are the newlines
 # just CR (\n) or are the CRLF (\n\r)?  Returns 0 for a unix-style
 # file and non-zero for a dos-style file
-alias      isdos="grep -c '$'"
+alias      isdos="\grep -c '$'"
 
 # find
 alias   findtext='find . -name .svn -prune -o -type f -print'
