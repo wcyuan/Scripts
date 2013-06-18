@@ -29,6 +29,7 @@ alias       l='ls -lF'
 alias      la='ls -alF'
 alias     lsd='ls -dlF'
 alias     ltr='ls -lrt'
+alias     lss='ls -Shr' # sort by human-readable file size ascending
 alias      sa='unalias -a; . ~/.bashrc'
 
 # for using windows python from cygwin, ipython has to be started like this:
