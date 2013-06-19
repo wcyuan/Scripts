@@ -75,6 +75,7 @@ ORS = "\n"
 # output field separator
 OFS = " "
 CLEAN_CHAR = '-'
+PADDING = 4
 
 # These are the types of filters that we support.  This is the order
 # in which we will look for the operator.  It's important that all
@@ -181,6 +182,10 @@ def getopts():
                       action='store_true',
                       dest='clean_output',
                       help='remove the ofs from output fields')
+    parser.add_option('--immediate',
+                      action='store_true',
+                      help="don't pretty-print, print rows "
+                      "immediately and guess at the format")
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -201,7 +206,7 @@ def getopts():
                           'kind', 'header_patt', 'head', 'filters',
                           'by_col_no', 'columns', 'noheader',
                           'should_transpose', 'add_filename', 'raw',
-                          'width', 'clean_output'))
+                          'width', 'clean_output', 'immediate'))
 
     return (opts, args)
 
@@ -427,7 +432,7 @@ def should_filter(values, names, filters):
 def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
                header_patt=None, filters=None, by_col_no=False,
-               columns=(), raw=False, width=None):
+               columns=(), raw=False, width=None, immediate=False):
     """
     Reads a file with tabular data.  Returns a list of rows, where a
     row is a list of fields.  The first row is the header.
@@ -444,6 +449,8 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
     table = []
     header = None
     keep_idx = None
+    formats = []
+    header_printed = False
     for line in fd:
         line = line.strip(IRS)
 
@@ -465,7 +472,7 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
             else:
                 print_header = header
             if raw and magic_word is not None:
-                print_header.insert(0, magic_word)
+                print_header[0] = magic_word + ' ' + print_header[0]
 
             table.append(print_header)
             if not by_col_no:
@@ -493,7 +500,39 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
         if width is not None:
             row = [r if len(r) < width else (r[:width]+"...") for r in row]
 
-        table.append(row)
+        if immediate:
+            # In immediate mode, we print our output right here,
+            # without transposing or aligning rows.  However, we still
+            # try to guess at a nice format.  We assume that the
+            # values in each row are about the same width, within
+            # PADDING characters.  We use the values first non-header
+            # row as an estimate for the width of the row.  The width
+            # we use is:
+            #
+            #  max(width of value, width of header) + PADDING
+            #
+            if len(formats) == 0:
+                if raw:
+                    formats = ["{0}"] * len(print_header)
+                else:
+                    formats = ["{{0:{0}}}".format(max(len(f), len(h) + PADDING))
+                               for (f, h) in zip(row, print_header)]
+                debug(formats)
+            if not header_printed:
+                print ' '.join(f.format(s)
+                               for (f, s)
+                               in zip(formats, table[0]))
+                header_printed = True
+            print ' '.join(f.format(s)
+                           for (f, s)
+                           in zip(formats, row))
+
+            # To save memory, don't save the row.  However, we still
+            # need to keep track of the number of rows for head, so
+            # just add a None.
+            table.append(None)
+        else:
+            table.append(row)
 
         # If we were given a number of lines to look for, stop after
         # that number.
@@ -501,6 +540,8 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
             if len(table) >= head+1:
                 break
 
+    if immediate:
+        return []
     return table
 
 def transpose(intable):
@@ -562,7 +603,7 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                    head=None, header_patt=None, filters=None, by_col_no=False,
                    columns=(), noheader=False, should_transpose=None,
                    add_filename=None, raw=False, width=None,
-                   clean_output=False):
+                   clean_output=False, immediate=False):
     """
     Puts it all together (for a single, uncompressed file).  Reads the
     file, transposes (if necessary), and pretty-prints the output.
@@ -572,7 +613,10 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                          reverse=reverse, head=head,
                          header_patt=header_patt,
                          filters=filters, by_col_no=by_col_no,
-                         columns=columns, raw=raw, width=width)
+                         columns=columns, raw=raw, width=width,
+                         immediate=immediate)
+    if len(intable) == 0:
+        return
     if noheader:
         intable = intable[1:]
     pretty_print(intable, left=left, should_transpose=should_transpose,
@@ -582,7 +626,8 @@ def read_files(fns, patt=None, delim=None, left=False,
                comment=COMMENT_CHAR, kind='delimited', reverse=False,
                head=None, header_patt=None, filters=None, by_col_no=False,
                columns=(), noheader=False, should_transpose=None,
-               add_filename=None, raw=False, width=None, clean_output=False):
+               add_filename=None, raw=False, width=None, clean_output=False,
+               immediate=False):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
@@ -596,7 +641,8 @@ def read_files(fns, patt=None, delim=None, left=False,
                                    reverse=reverse, head=head,
                                    header_patt=header_patt,
                                    filters=filters, by_col_no=by_col_no,
-                                   columns=columns, raw=raw, width=width)
+                                   columns=columns, raw=raw, width=width,
+                                   immediate=immediate)
 
             if len(filetable) == 0:
                 continue
