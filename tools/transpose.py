@@ -61,7 +61,7 @@ HEADERS = ('#@desc',)
 # assertion", it specifies what must come before the regexp being
 # matched.
 #
-DELIMITERS = (' \| ', "~", '\|', '@', ',', "\t", '(?<!\\\) ', "\s+")
+DELIMITERS = (' \| ', "~", '\|', '@', ',', "\t", '(?<!\\\)\s+', "\s+")
 
 DECOMPRESSORS = (('.bz2', 'bzcat'),
                  ('.gz', 'zcat'))
@@ -374,7 +374,7 @@ def separate(line, kind, delim, raw=False):
         if vals[0] in HEADERS:
             magic_word = vals.pop(0)
         # If we have escaped spaces, remove the backslashes in the output
-        if not raw and delim == '(?<!\\\) ':
+        if not raw and delim == '(?<!\\\)\s+':
             vals = [v.replace('\ ', ' ') for v in vals]
         debug("line (%s delim='%s') %s separated into %s" %
               (kind, delim, line, vals))
