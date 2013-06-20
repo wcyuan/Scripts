@@ -145,9 +145,9 @@ class Job(object):
         self.end_time   = None
 
     def run(self):
-        #if self.NO_WRITE:
-        #    logging.info("NO WRITE: {0}".format(self.strcmd))
-        #    return self
+        if self.NO_WRITE:
+            logging.info("NO WRITE: {0}".format(self.strcmd))
+            return self
 
         logging.info("Running:  {0}".format(self.strcmd))
         process = subprocess.Popen(self.cmd,
