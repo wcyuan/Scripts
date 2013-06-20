@@ -79,7 +79,7 @@ aws() {
     fi
     # e.g. ec2-23-22-197-139.compute-1.amazonaws.com
     host=$1
-    ssh $vncopt -i ~/code/aws/AWSEC2.pem ubuntu@$host
+    ssh $vncopt -i ~/code/aws/startup.pem ubuntu@$host
 }
 
 which() {
