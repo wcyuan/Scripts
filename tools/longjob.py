@@ -253,7 +253,7 @@ class JobTable(object):
     def add_job(self, job):
         # http://stackoverflow.com/questions/6242756/how-to-retrieve-inserted-id-after-inserting-row-in-sqlite-using-python
         self.cursor.execute("INSERT INTO {0} () VALUES (?, ?)", ())
-        return self.cursor
+        return self.cursor.lastrowid
 
     def update_job(self, job):
         pass
