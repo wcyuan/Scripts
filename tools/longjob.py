@@ -4,6 +4,14 @@
 Run a job, and send email when it is finished.
 """
 
+#
+# todo:
+#
+# save all jobs and their status to a sqlite database at ~/.longjob/job.db
+# allow querying this db to see the status of jobs
+# easily rerun failed jobs
+#
+
 from __future__ import absolute_import, division, with_statement
 
 import collections
@@ -207,6 +215,54 @@ class Job(object):
                 '{self.stderr}\n'
                 '-----------------------------------------------\n'
                 .format(self=self))
+
+# --------------------------------------------------------------------
+
+class JobTable(object):
+    def __init__(self, filename):
+        import sqlite3
+
+        # http://docs.python.org/2/library/sqlite3.html
+        # # This is the qmark style:
+        # cur.execute("insert into people values (?, ?)", (who, age))
+        #
+        # # And this is the named style:
+        # cur.execute("select * from people where name_last=:who and age=:age", {"who": who, "age": age})
+
+        self.conn = sqlite3.connect(filename)
+        self.cursor = self.conn.cursor()
+        self._create_table_if_necessary()
+
+    def _create_table_if_necessary(self):
+        # http://stackoverflow.com/questions/508627/auto-increment-in-sqlite-problem-with-python
+        #
+        # CREATE TABLE t1( a INTEGER PRIMARY KEY, b INTEGER ); With this table, the statement
+        #
+        # To create keys that are unique over the lifetime of the
+        # table, add the AUTOINCREMENT keyword to the INTEGER PRIMARY
+        # KEY declaration.
+        #
+        # http://stackoverflow.com/questions/305378/get-list-of-tables-db-schema-dump-etc-in-sqlite-databases
+        #
+        # con = sqlite3.connect('database.db')
+        # cursor = con.cursor()
+        # cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        # print(cursor.fetchall())
+        pass
+
+    def add_job(self, job):
+        # http://stackoverflow.com/questions/6242756/how-to-retrieve-inserted-id-after-inserting-row-in-sqlite-using-python
+        self.cursor.execute("INSERT INTO {0} () VALUES (?, ?)", ())
+        return self.cursor
+
+    def update_job(self, job):
+        pass
+
+    def get_job(self, job):
+        pass
+
+    def get_all_jobs(self):
+        pass
 
 # --------------------------------------------------------------------
 
