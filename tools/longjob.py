@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 #
 """
-Run a job, and send email when it is finished.
+Run a command, and send email when it is finished.
+
+If the ~/.longjob directory exists, then we will also save a record of
+the command to a sqlite database at ~/.longjob/job.db, so that we can
+see which jobs are currently running and which jobs finished recently.
 """
 
 #
 # todo:
 #
-# rerun failed jobs
-# print all jobs ever
-# clean up the table
+# ability to easily rerun past jobs
+# easily remove old jobs from the table (in bulk)
 #
 
 from __future__ import absolute_import, division, with_statement
@@ -45,6 +48,22 @@ def main():
                      format(opts.config_dir))
         table = None
 
+    if opts.detail or opts.delete or opts.all:
+        if table is None:
+            raise ValueError("No longjob database")
+        if opts.all:
+            for job in table.get_all_jobs():
+                print job.summary()
+        else:
+            for job_id in args:
+                job = table.get_job(job_id)
+                if opts.delete:
+                    table.delete_job(job)
+                else:
+                    print job.report()
+        return
+
+
     if len(args) == 0:
         if table is not None:
             for job in table.get_recent_jobs(7):
@@ -62,12 +81,21 @@ def getopts():
     parser.add_option('--no_write',
                       action='store_true',
                       help='turn off all side effects')
-    parser.add_option('-d', '--config_dir', '--dir',
+    parser.add_option('-c', '--config_dir', '--dir',
                       help='location of the config directory',
                       default=DEFAULT_CONFIG_DIR)
     parser.add_option('-s', '--shell',
                       action='store_true',
                       help='use the shell to parse the command')
+    parser.add_option('--delete',
+                      action='store_true',
+                      help='delete the given job ids')
+    parser.add_option('--detail',
+                      action='store_true',
+                      help='show details of the given job ids')
+    parser.add_option('--all',
+                      action='store_true',
+                      help='show all jobs in the database')
 
     opts, args = parser.parse_args()
 
@@ -94,6 +122,10 @@ def to_sequence(obj):
 # --------------------------------------------------------------------
 
 class Mailer(object):
+    """
+    Mailer is a class for sending email.  Each Mailer object
+    represents a single email.
+    """
     SENDMAIL = '/usr/lib/sendmail'
     NO_WRITE = False
 
@@ -152,6 +184,11 @@ class Mailer(object):
 # --------------------------------------------------------------------
 
 class Job(object):
+    """
+    A Job encompasses a command to run.  If given a JobTable, it will
+    save a record of the command to that table.  After a command has
+    finished, it will use the Mailer class to send an email to the user.
+    """
     NO_WRITE = False
 
     NEVER_RUN = 'never_run'
@@ -199,6 +236,14 @@ class Job(object):
     def new_job(cls, cmd, table=None, shell=False):
         """
         This is a constructor for a new job that has never been run.
+
+        @param cmd: a command as accepted by Popen.  It should be a
+        list, though a single string is also accepted.
+
+        @param table: the JobTable to use
+
+        @param shell: will be passed into Popen to tell it whether or
+        not to use the shell to parse the command before running it.
         """
         obj = cls(cmd=cmd, table=table, shell=shell)
         obj.addtodb()
@@ -208,6 +253,11 @@ class Job(object):
     # Running jobs
 
     def run(self):
+        """
+        Run a job while updating its status in the JobTable (if
+        necessary).  After the job completes, notify the user.  This
+        method respects the NO_WRITE attribute.
+        """
         self.start_time = time.localtime()
         self.status = self.RUNNING
         self.updatedb()
@@ -243,6 +293,11 @@ class Job(object):
         return self
 
     def _finish(self):
+        """
+        This method does the common work to clean up after the job
+        completes, whether successful or not.  It saves the job to the
+        database and sends mail.
+        """
         self.end_time = time.localtime()
         self.updatedb()
         Mailer(subject=self.summary(),
@@ -251,6 +306,12 @@ class Job(object):
 
 
     def _run_capture_output(self):
+        """
+        Run the command while saving stdout and stderr.  This does not
+        respect the NO_WRITE attribute, it is assumed that the caller
+        will already have confirmed that NO_WRITE is False before
+        calling this method.
+        """
         if self.shell:
             logging.info("Running (shell): {0}".format(self.strcmd))
             proc = subprocess.Popen(self.strcmd,
@@ -339,23 +400,30 @@ class Job(object):
 
     def updatedb(self):
         if self.table is not None:
-            self.table.update_job(DbJob(self))
+            self.table.update_job(self)
 
     def addtodb(self):
         if self.table is not None:
-            self.job_id = self.table.add_job(DbJob(self))
+            self.job_id = self.table.add_job(self)
             logging.info("Got job id {0}".format(self.job_id))
 
     # -----------------------
     # Text summaries
 
     def summary(self):
+        """
+        This appears as the subject of emails and this is the line we
+        print when summarizing the JobTable.
+        """
         return ('Job id {self.job_id:3} {self.status:10} '
                 'time {self.start_time_str}-{self.end_time_str} '
                 '({self.duration}) {self.strcmd}'.
                 format(self=self))
 
     def report(self):
+        """
+        This appears as the body of emails.
+        """
         return ('Command:  {self.strcmd}\n'
                 'Started:  {self.start_time_str}\n'
                 'End:      {self.end_time_str} ({self.duration})\n'
@@ -372,6 +440,10 @@ class Job(object):
 # --------------------------------------------------------------------
 
 class SqlDb(object):
+    """
+    SqlDb is a wrapper around a sqlite database with some added
+    convenience methods.
+    """
     NO_WRITE = False
 
     def __init__(self, filename):
@@ -402,7 +474,8 @@ class SqlDb(object):
 
     def execute(self, *args, **kwargs):
         """
-        Run state changing commands, if allowed by NO_WRITE
+        Run state changing commands, if allowed by NO_WRITE, then
+        commit the changes.
         """
         if self.NO_WRITE:
             logging.info("SqlDb NO WRITE: would run '{0}' '{1}'".
@@ -425,9 +498,12 @@ class SqlDb(object):
 
     def fetch_one_row(self):
         rows = self.cursor.fetchall()
-        if len(rows) != 1:
+        if len(rows) < 1:
+            raise ValueError("No matching rows")
+        elif len(rows) > 1:
             raise ValueError("Too many matching rows")
-        return rows[0]
+        else:
+            return rows[0]
 
     def fetch_one_value(self):
         return self.fetch_one_row()[0]
@@ -442,29 +518,49 @@ class SqlDb(object):
 # --------------------------------------------------------------------
 
 class SqlTable(object):
-    def __init__(self, filename,
-                 obj_constructor, columns,
-                 table, key_col, key_attr):
-        """
-        @param obj_constructor: this is a function which takes each of
-        the object_attributes as keyword arguments and returns an
-        instance of that object.
+    """
+    SqlTable is a wrapper around a table whose rows are supposed
+    to mimic the objects of a particular Python class.  The column
+    names of the table must be attributes of the Python object,
+    such that getattr(obj, col_name) returns the value to put in
+    that column (with the correct type).
 
-        @param columns: a mapping from the table's columns to the
-        object's attributes and the table's sql types.  Should be a
-        list of lists having this form:
+    When an object is written to the table, it will be given a
+    unique id, which will be attached to the object from then on.
+    """
+
+    def __init__(self,
+                 filename,
+                 table,
+                 columns,
+                 key_col,
+                 obj_constructor):
+        """
+        @param filename: the filename of the sqlite database
+
+        @param table: the name of the table in the sqlite database
+
+        @param columns: a list or tuple of the table's columns and
+        their sql types, not including the key.
+
+        Should be a list of lists having this form:
           [
-            [ table_column_name1, object_attribute_name1, sql_type1 ],
-            [ table_column_name2, object_attribute_name2, sql_type2 ],
-            [ table_column_name3, object_attribute_name3, sql_type3 ]
+            [ table_column_name1, sql_type1 ],
+            [ table_column_name2, sql_type2 ],
+            [ table_column_name3, sql_type3 ]
           ]
+
+        @param key_col: the name of the key column
+
+        @param obj_constructor: a function which takes each of the
+        column names as keyword arguments and produces the desired
+        Python object.
         """
         self.db = SqlDb(filename)
-        self.obj_ctor  = obj_constructor
-        self.columns   = columns
         self.table     = table
+        self.columns   = columns
         self.key_col   = key_col
-        self.key_attr  = key_attr
+        self.obj_ctor  = obj_constructor
         self._create_table_if_necessary()
 
     def _create_table_if_necessary(self):
@@ -510,7 +606,15 @@ class SqlTable(object):
                                          for ci in self.columns),
                                self.key_col),
                         [getattr(obj, ci[0]) for ci in self.columns] +
-                        [getattr(obj, self.key_attr)])
+                        [getattr(obj, self.key_col)])
+
+    def delete_obj(self, obj):
+        # Would be nice if we returned 1 if the object existed and was
+        # deleted and 0 if there was no row with this id.
+        self.db.execute("DELETE FROM {0} WHERE {1} = ?;".
+                        format(self.table,
+                               self.key_col),
+                        [getattr(obj, self.key_col)])
 
     def get_obj(self, key):
         return self._row_to_obj(self.db.query_one_row_always(
@@ -536,7 +640,7 @@ class SqlTable(object):
     def _row_to_obj(self, row):
         kwargs = dict((col_info[0], val)
                       for (val, col_info) in zip(row, self.columns))
-        kwargs[self.key_attr] = row[-1]
+        kwargs[self.key_col] = row[-1]
         logging.debug(kwargs)
         return self.obj_ctor(**kwargs)
 
@@ -581,10 +685,20 @@ class DbJob(object):
 # --------------------------------------------------------------------
 
 class JobTable(object):
+    """
+    This is a wrapper around a SqlTable for a table whose rows
+    correspond specifically to Job objects (using DbJob as a wrapper)
+
+    We *have* a SqlTable, instead of *being* (deriving from / subclassing)
+    a SqlTable (we use aggregation rather than inheritance).  That's
+    because we want to present a different API to the world, one which
+    is aware that the objects are jobs.
+    """
+
     def __init__(self, filename):
         self.table = SqlTable(
             filename,
-            obj_constructor=DbJob.make_job,
+            table='jobs',
             columns=(('command',    'TEXT'),
                      ('status',     'INTEGER'),
                      ('start_time', 'INTEGER'),
@@ -594,22 +708,24 @@ class JobTable(object):
                      ('stderr',     'TEXT'),
                      ('shell',      'INTEGER'),
                      ),
-            table='jobs',
             key_col='job_id',
-            key_attr='job_id')
+            obj_constructor=DbJob.make_job)
 
     def add_job(self, job):
-        return self.table.add_obj(job)
+        return self.table.add_obj(DbJob(job))
 
     def get_job(self, job_id):
         return self.table.get_obj(job_id)
 
     def update_job(self, job):
-        self.table.update_obj(job)
+        self.table.update_obj(DbJob(job))
 
     @classmethod
     def get_since(cls, since):
         '''
+        Return a SQL clause for selecting jobs that started recently
+        (within the last <since> days)
+
         @param since: number of days ago
         '''
         if since is None:
@@ -637,9 +753,27 @@ class JobTable(object):
                                    DbJob.status_name_to_id(Job.SUCCEEDED))
 
     def get_recent_jobs(self, since=None):
+        """
+        Return recent jobs in what we guess would be the most natural
+        order (most important first): running jobs, then failed jobs,
+        then successful jobs.
+        """
         return (self.get_running_jobs() +
                 self.get_incomplete_jobs(since) +
                 self.get_succeeded_jobs(since))
+
+    def delete_job(self, job):
+        # In a more pure world, we might wrap the job as a DbJob
+        # before passing it to the SqlTable.  But we know that it's
+        # only going to use the job_id and DbJob doesn't need to do
+        # any translation on the job_id, so just pass the Job directly
+        # and avoid the overhead of wrapping it.
+        if job.job_id is None:
+            raise AssertionError("Can't delete job with no job id: {0}".
+                                 format(job.summary()))
+        print "Deleting job {0}".format(job.job_id)
+        logging.info("Job to delete: {0}".format(job.summary()))
+        return self.table.delete_obj(job)
 
 # --------------------------------------------------------------------
 
