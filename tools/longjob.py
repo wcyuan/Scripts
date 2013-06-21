@@ -690,7 +690,7 @@ class JobTable(object):
     correspond specifically to Job objects (using DbJob as a wrapper)
 
     We *have* a SqlTable, instead of *being* (deriving from / subclassing)
-    a SqlTable (we use aggregation rather than inheritance).  That's
+    a SqlTable (we use composition rather than inheritance).  That's
     because we want to present a different API to the world, one which
     is aware that the objects are jobs.
     """
