@@ -153,7 +153,7 @@ class Job(object):
             self.cmd    = cmd
             self.strcmd = ' '.join(cmd)
         self.status     = (status if status is not None
-                           else self.status_id_to_string(status_id)
+                           else self.status_id_to_name(status_id)
                            if status_id is not None else self.NEVER_RUN)
         self.rc         = rc
         self.stdout     = stdout
@@ -201,10 +201,14 @@ class Job(object):
 
     @property
     def status_id(self):
-        return self._status_ids.index(self.status)
+        return self.status_name_to_id(self.status)
 
     @classmethod
-    def status_id_to_string(cls, status_id):
+    def status_name_to_id(cls, status_name):
+        return cls._status_ids.index(status_name)
+
+    @classmethod
+    def status_id_to_name(cls, status_id):
         return cls._status_ids[status_id]
 
     @property
@@ -250,11 +254,11 @@ class Job(object):
 
     def updatedb(self):
         if self.table is not None:
-            self.table.update_row(self)
+            self.table.update_job(self)
 
     def addtodb(self):
         if self.table is not None:
-            self.job_id = self.table.add_row(self)
+            self.job_id = self.table.add_job(self)
 
     def summary(self):
         # todo: make this more informative.  Include start/end times
@@ -393,7 +397,7 @@ class SqlTable(object):
                         format(', '.join('{0} {1}'.format(ci[0], ci[2])
                                          for ci in self.columns)))
 
-    def add_row(self, obj):
+    def add_obj(self, obj):
         # http://stackoverflow.com/questions/6242756/how-to-retrieve-inserted-id-after-inserting-row-in-sqlite-using-python
         self.db.execute("INSERT INTO {0} ({1}) VALUES ({2})".
                         format(self.table,
@@ -402,17 +406,16 @@ class SqlTable(object):
                         [getattr(obj, ci[1]) for ci in self.columns])
         return self.db.lastrowid
 
-    def update_obj(self, obj):
+    def update_obj(self, obj, key):
         self.db.execute("UPDATE {0} ({1}) VALUES ({2}) WHERE {3} = ?".
                         format(self.table,
                                ', '.join(ci[0] for ci in self.columns),
                                ', '.join('?' for ci in self.columns),
                                self.key_col),
-                        [getattr(obj, ci[1]) for ci in self.columns] +
-                        [getattr(obj, self.key_col)])
+                        [getattr(obj, ci[1]) for ci in self.columns] + [key])
 
     def get_obj(self, key):
-        return self.row_to_obj(self.db.query_one_row_always(
+        return self._row_to_obj(self.db.query_one_row_always(
                 "SELECT {0} FROM {1} WHERE {2} = {3}".
                 format(', '.join(ci[0] for ci in self.columns),
                        self.table, self.key_col, key)))
@@ -420,33 +423,43 @@ class SqlTable(object):
     def get_objs(self, where):
         self.db.execute_always("SELECT * FROM {0} {1}".
                                format(self.table, where))
-        return [self.row_to_obj(r) for r in self.db.fetchall()]
+        return [self._row_to_obj(r) for r in self.db.fetchall()]
 
-    def row_to_obj(self, row):
+    def _row_to_obj(self, row):
         kwargs = dict(col_info[1], val
                       for (val, col_info) in zip(row, self.columns))
         return self.obj_ctor(**kwargs)
 
 # --------------------------------------------------------------------
 
-class JobTable(SqlTable):
-    # Not clear if this should be a subclass if it should just have a
-    # SqlTable.  Maybe the latter, then we'll replace methods like
-    # get_obj with get_job.
+class JobTable(object):
     def __init__(self, filename):
-        super(JobTable, self).__init__(
-            filename,
-            obj_class=Job,
-            columns=(('command',    'strcmd',     'TEXT'),
-                     ('status',     'status_id',  'INTEGER'),
-                     ('start_time', 'start_time', 'INTEGER'),
-                     ('end_time',   'end_time',   'INTEGER'),
-                     ('returncode', 'rc',         'INTEGER'),
-                     ('stdout',     'stdout',     'TEXT'),
-                     ('stderr',     'stderr',     'TEXT'),
-                     ),
-            table='jobs',
-            key_col='job_id')
+        self.table = SqlTable(filename,
+                              obj_class=Job,
+                              columns=(('command',    'strcmd',     'TEXT'),
+                                       ('status',     'status_id',  'INTEGER'),
+                                       ('start_time', 'start_time', 'INTEGER'),
+                                       ('end_time',   'end_time',   'INTEGER'),
+                                       ('returncode', 'rc',         'INTEGER'),
+                                       ('stdout',     'stdout',     'TEXT'),
+                                       ('stderr',     'stderr',     'TEXT'),
+                                       ),
+                              table='jobs',
+                              key_col='job_id')
+
+    def add_job(self, job):
+        return self.table.add_obj(job)
+
+    def get_job(self, job_id):
+        return self.table.get_obj(job_id)
+
+    def update_job(self, job):
+        self.table.update_obj(job, job.job_id)
+
+    def get_running_jobs(self):
+        return self.table.get_objs('WHERE status in ({0})'.
+                                   format(Job.status_name_to_id(Job.RUNNING)))
+
 
 # --------------------------------------------------------------------
 
