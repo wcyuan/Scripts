@@ -7,9 +7,9 @@ Run a job, and send email when it is finished.
 #
 # todo:
 #
-# save all jobs and their status to a sqlite database at ~/.longjob/job.db
-# allow querying this db to see the status of jobs
-# easily rerun failed jobs
+# rerun failed jobs
+# print all jobs ever
+# clean up the table
 #
 
 from __future__ import absolute_import, division, with_statement
@@ -27,11 +27,28 @@ from email.mime.text import MIMEText
 
 # --------------------------------------------------------------------
 
-def main():
-    args = getopts()
+DB_FILENAME='job.db'
+DEFAULT_CONFIG_DIR=os.path.expanduser('~/.longjob')
 
-    result = Job(args).run()
-    Mailer(subject=result.summary(), body=result.report()).send()
+def main():
+    opts, args = getopts()
+
+    if os.path.exists(opts.config_dir):
+        logging.info("Using config dir {0} db {1}".
+                     format(opts.config_dir, DB_FILENAME))
+        table = JobTable(os.path.join(opts.config_dir, DB_FILENAME))
+    else:
+        logging.info("Config dir {0} does not exist".
+                     format(opts.config_dir))
+        table = None
+
+    if len(args) == 0:
+        if table is not None:
+            for job in table.get_recent_jobs(7):
+                print job.summary()
+    else:
+        result = Job.new_job(args, table=table).run()
+        Mailer(subject=result.summary(), body=result.report()).send()
 
 # --------------------------------------------------------------------
 
@@ -43,6 +60,9 @@ def getopts():
     parser.add_option('--no_write',
                       help='turn off all side effects',
                       action='store_true')
+    parser.add_option('-d', '--config_dir', '--dir',
+                      help='location of the config directory',
+                      default=DEFAULT_CONFIG_DIR)
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -51,7 +71,7 @@ def getopts():
     if opts.no_write:
         Job.NO_WRITE = True
 
-    return args
+    return (opts, args)
 
 # --------------------------------------------------------------------
 
@@ -134,18 +154,24 @@ class Job(object):
 
     def __init__(self,
                  cmd             = None,
+                 strcmd          = None,
                  table           = None,
                  status          = None,
                  status_id       = None,
-                 rc              = None,
-                 stdout          = None,
-                 stderr          = None,
+                 rc              = -1,
+                 stdout          = '',
+                 stderr          = '',
                  start_time      = None,
                  start_time_secs = None,
                  end_time        = None,
                  end_time_secs   = None,
                  job_id          = None):
 
+        if cmd is None:
+            if strcmd is None:
+                raise ValueError("No command provided")
+            else:
+                cmd = strcmd
         if isinstance(cmd, basestring):
             self.cmd    = cmd.split()
             self.strcmd = cmd
@@ -178,20 +204,25 @@ class Job(object):
     def run(self):
         if self.NO_WRITE:
             logging.info("NO WRITE: {0}".format(self.strcmd))
-            return self
-
-        logging.info("Running:  {0}".format(self.strcmd))
-        process = subprocess.Popen(self.cmd,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-
+            process = None
+        else:
+            logging.info("Running:  {0}".format(self.strcmd))
+            process = subprocess.Popen(self.cmd,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
         self.start_time = time.localtime()
         self.status = self.RUNNING
         self.updatedb()
-        (self.stdout, self.stderr) = process.communicate()
+        if self.NO_WRITE:
+            self.status = self.SUCCEEDED
+            self.rc = 0
+            self.stdout = ''
+            self.stderr = ''
+        else:
+            (self.stdout, self.stderr) = process.communicate()
+            self.rc = process.returncode
         self.end_time = time.localtime()
-        self.rc = process.returncode
-        if process.returncode == 0:
+        if self.rc == 0:
             self.status = self.SUCCEEDED
         else:
             self.status = self.FAILED
@@ -233,7 +264,7 @@ class Job(object):
 
     def _format_time(self, this_time):
         if not self.finished:
-            return None
+            return ''
         return time.strftime(self.TIME_FORMAT, this_time)
 
     @property
@@ -246,11 +277,17 @@ class Job(object):
 
     @property
     def start_time_secs(self):
-        return time.mktime(self.start_time)
+        if self.start_time is None:
+            return -1
+        else:
+            return time.mktime(self.start_time)
 
     @property
     def end_time_secs(self):
-        return time.mktime(self.end_time)
+        if self.end_time is None:
+            return -1
+        else:
+            return time.mktime(self.end_time)
 
     def updatedb(self):
         if self.table is not None:
@@ -259,11 +296,13 @@ class Job(object):
     def addtodb(self):
         if self.table is not None:
             self.job_id = self.table.add_job(self)
+            logging.info("Got job id {0}".format(self.job_id))
 
     def summary(self):
-        # todo: make this more informative.  Include start/end times
-        # and a portion of the command being run
-        return 'Job {0}'.format(self.status)
+        return ('Job id {self.job_id} {self.status} '
+                'time {self.start_time_str}-{self.end_time_str} '
+                '{self.strcmd}'.
+                format(self=self))
 
     def report(self):
         return ('Command:  {self.strcmd}\n'
@@ -348,7 +387,9 @@ class SqlDb(object):
 # --------------------------------------------------------------------
 
 class SqlTable(object):
-    def __init__(self, filename, obj_constructor, columns, table, key_col):
+    def __init__(self, filename,
+                 obj_constructor, columns,
+                 table, key_col, key_attr):
         """
         @param obj_constructor: this is a function which takes each of
         the object_attributes as keyword arguments and returns an
@@ -368,6 +409,7 @@ class SqlTable(object):
         self.columns   = columns
         self.table     = table
         self.key_col   = key_col
+        self.key_attr  = key_attr
         self._create_table_if_necessary()
 
     def _create_table_if_necessary(self):
@@ -399,53 +441,68 @@ class SqlTable(object):
 
     def add_obj(self, obj):
         # http://stackoverflow.com/questions/6242756/how-to-retrieve-inserted-id-after-inserting-row-in-sqlite-using-python
-        self.db.execute("INSERT INTO {0} ({1}) VALUES ({2})".
+        self.db.execute("INSERT INTO {0} ({1}) VALUES ({2});".
                         format(self.table,
                                ', '.join(ci[0] for ci in self.columns),
                                ', '.join('?' for ci in self.columns)),
                         [getattr(obj, ci[1]) for ci in self.columns])
         return self.db.lastrowid
 
-    def update_obj(self, obj, key):
-        self.db.execute("UPDATE {0} ({1}) VALUES ({2}) WHERE {3} = ?".
+    def update_obj(self, obj):
+        self.db.execute("UPDATE {0} SET {1} WHERE {2} = ?;".
                         format(self.table,
-                               ', '.join(ci[0] for ci in self.columns),
-                               ', '.join('?' for ci in self.columns),
+                               ', '.join('{0} = ?'.format(ci[0])
+                                         for ci in self.columns),
                                self.key_col),
-                        [getattr(obj, ci[1]) for ci in self.columns] + [key])
+                        [getattr(obj, ci[1]) for ci in self.columns] +
+                        [getattr(obj, self.key_attr)])
 
     def get_obj(self, key):
         return self._row_to_obj(self.db.query_one_row_always(
-                "SELECT {0} FROM {1} WHERE {2} = {3}".
-                format(', '.join(ci[0] for ci in self.columns),
-                       self.table, self.key_col, key)))
+                "SELECT {cols}, {key_col} "
+                "FROM {table} "
+                "WHERE {key_col} = {key};".
+                format(key_col=self.key_col,
+                       cols=', '.join(ci[0] for ci in self.columns),
+                       table=self.table,
+                       key=key)))
 
-    def get_objs(self, where):
-        self.db.execute_always("SELECT * FROM {0} {1}".
-                               format(self.table, where))
+    def get_objs(self, where='', *args):
+        self.db.execute_always(
+            "SELECT {cols}, {key_col} "
+            "FROM {table} {where};".
+            format(key_col=self.key_col,
+                   cols=', '.join(ci[0] for ci in self.columns),
+                   table=self.table,
+                   where=where),
+            *args)
         return [self._row_to_obj(r) for r in self.db.fetchall()]
 
     def _row_to_obj(self, row):
-        kwargs = dict(col_info[1], val
+        kwargs = dict((col_info[1], val)
                       for (val, col_info) in zip(row, self.columns))
+        kwargs[self.key_attr] = row[-1]
+        logging.debug(kwargs)
         return self.obj_ctor(**kwargs)
 
 # --------------------------------------------------------------------
 
 class JobTable(object):
     def __init__(self, filename):
-        self.table = SqlTable(filename,
-                              obj_class=Job,
-                              columns=(('command',    'strcmd',     'TEXT'),
-                                       ('status',     'status_id',  'INTEGER'),
-                                       ('start_time', 'start_time', 'INTEGER'),
-                                       ('end_time',   'end_time',   'INTEGER'),
-                                       ('returncode', 'rc',         'INTEGER'),
-                                       ('stdout',     'stdout',     'TEXT'),
-                                       ('stderr',     'stderr',     'TEXT'),
-                                       ),
-                              table='jobs',
-                              key_col='job_id')
+        self.table = SqlTable(
+            filename,
+            obj_constructor=Job,
+            columns=(('command',    'strcmd',          'TEXT'),
+                     ('status',     'status_id',       'INTEGER'),
+                     ('start_time', 'start_time_secs', 'INTEGER'),
+                     ('end_time',   'end_time_secs',   'INTEGER'),
+                     ('returncode', 'rc',              'INTEGER'),
+                     ('stdout',     'stdout',          'TEXT'),
+                     ('stderr',     'stderr',          'TEXT'),
+                     ),
+            table='jobs',
+            key_col='job_id',
+            key_attr='job_id')
 
     def add_job(self, job):
         return self.table.add_obj(job)
@@ -454,12 +511,43 @@ class JobTable(object):
         return self.table.get_obj(job_id)
 
     def update_job(self, job):
-        self.table.update_obj(job, job.job_id)
+        self.table.update_obj(job)
+
+    @classmethod
+    def get_since(cls, since):
+        '''
+        @param since: number of days ago
+        '''
+        if since is None:
+            return ''
+        else:
+            return ('AND (start_time >= {0} OR start_time <= 0)'.
+                    format(time.time() - since * 24 * 60 * 60))
+
+    def get_all_jobs(self):
+        return self.table.get_objs()
 
     def get_running_jobs(self):
-        return self.table.get_objs('WHERE status in ({0})'.
-                                   format(Job.status_name_to_id(Job.RUNNING)))
+        return self.table.get_objs('WHERE status IN (?)',
+                                   [Job.status_name_to_id(s)
+                                    for s in (Job.RUNNING,)])
 
+    def get_incomplete_jobs(self, since=None):
+        return self.table.get_objs('WHERE status NOT IN (?, ?) {0}'.
+                                   format(self.get_since(since)),
+                                   [Job.status_name_to_id(s)
+                                    for s in (Job.SUCCEEDED, Job.RUNNING)])
+
+    def get_succeeded_jobs(self, since=None):
+        return self.table.get_objs('WHERE status IN (?) {0}'.
+                                   format(self.get_since(since)),
+                                   [Job.status_name_to_id(s)
+                                    for s in (Job.SUCCEEDED,)])
+
+    def get_recent_jobs(self, since=None):
+        return (self.get_running_jobs() +
+                self.get_incomplete_jobs(since) +
+                self.get_succeeded_jobs(since))
 
 # --------------------------------------------------------------------
 
