@@ -69,7 +69,9 @@ def getopts():
         logging.getLogger().setLevel(logging.DEBUG)
 
     if opts.no_write:
-        Job.NO_WRITE = True
+        Job.NO_WRITE    = True
+        SqlDb.NO_WRITE  = True
+        Mailer.NO_WRITE = True
 
     return (opts, args)
 
@@ -87,6 +89,7 @@ def to_sequence(obj):
 
 class Mailer(object):
     SENDMAIL = '/usr/lib/sendmail'
+    NO_WRITE = False
 
     def __init__(self,
                  to=None,
@@ -119,20 +122,22 @@ class Mailer(object):
         msg['To']      = ','.join(self.to)
 
         if os.path.exists(self.SENDMAIL):
-            if Job.NO_WRITE:
+            if self.NO_WRITE:
                 logging.info('NO WRITE: Would send via {0}:\n{1}'.
                              format(self.SENDMAIL, msg.as_string()))
                 return
             logging.info("Sending mail via {0}".format(self.SENDMAIL))
+            logging.debug(msg.as_string())
             pipe = os.popen("%s -t" % self.SENDMAIL, "w")
             pipe.write(msg.as_string())
             pipe.close()
         else:
-            if Job.NO_WRITE:
+            if self.NO_WRITE:
                 logging.info('NO WRITE: Would send via smtplib:\n{0}'.
                              format(msg.as_string()))
                 return
             logging.info("Sending mail via smtplib")
+            logging.debug(msg.as_string())
             import smtplib
             s = smtplib.SMTP('localhost')
             s.sendmail(self.sender, self.to, msg.as_string())
@@ -212,15 +217,32 @@ class Job(object):
                                        stderr=subprocess.PIPE)
         self.start_time = time.localtime()
         self.status = self.RUNNING
+
+        # If we get a control-c, mark it as a failure
+        import signal
+        def handle():
+            logging.info("Received SIGTERM, marking job as a failure")
+            self.end_time = time.localtime()
+            self.status = self.FAILED
+            self.updatedb()
+        signal.signal(signal.SIGTERM, handle)
+
         self.updatedb()
+
         if self.NO_WRITE:
+            # in NO_WRITE mode, pretend we succeeded
             self.status = self.SUCCEEDED
             self.rc = 0
             self.stdout = ''
             self.stderr = ''
         else:
-            (self.stdout, self.stderr) = process.communicate()
-            self.rc = process.returncode
+            try:
+                (self.stdout, self.stderr) = process.communicate()
+                self.rc = process.returncode
+            except:
+                logging.info("Received exception, marking job as a failure")
+                self.rc = 1
+
         self.end_time = time.localtime()
         if self.rc == 0:
             self.status = self.SUCCEEDED
@@ -248,24 +270,36 @@ class Job(object):
 
     @property
     def duration(self):
-        if not self.finished:
-            return 'never_run'
         secs = self.end_time_secs - self.start_time_secs
+        if secs < 0:
+            return 'never finished'
         output = []
-        for (num, name) in ((24 * 60 * 60, 'day'),
-                            (60 * 60,      'hr'),
-                            (60,           'min')):
+        for (num, name) in ((7 * 24 * 60 * 60, 'week'),
+                            (    24 * 60 * 60, 'day'),
+                            (         60 * 60, 'hr'),
+                            (              60, 'min')):
             if secs > num:
                 output.append('{0} {1}'.format(int(secs / num),
                                                name))
                 secs = secs % num
-        output.append('{0} {1}'.format(secs, 'sec'))
+        output.append('{0} {1}'.format(int(secs), 'sec'))
         return ' '.join(output)
 
-    def _format_time(self, this_time):
-        if not self.finished:
-            return ''
-        return time.strftime(self.TIME_FORMAT, this_time)
+    @classmethod
+    def _format_time(cls, time_struct):
+        if time_struct is None:
+            return 'NEVER'
+        return time.strftime(cls.TIME_FORMAT, time_struct)
+
+    @classmethod
+    def _time_secs(cls, time_struct):
+        if time_struct is None:
+            return 0
+        else:
+            try:
+                return time.mktime(time_struct)
+            except OverflowError:
+                return 0
 
     @property
     def start_time_str(self):
@@ -277,17 +311,11 @@ class Job(object):
 
     @property
     def start_time_secs(self):
-        if self.start_time is None:
-            return -1
-        else:
-            return time.mktime(self.start_time)
+        return self._time_secs(self.start_time)
 
     @property
     def end_time_secs(self):
-        if self.end_time is None:
-            return -1
-        else:
-            return time.mktime(self.end_time)
+        return self._time_secs(self.end_time)
 
     def updatedb(self):
         if self.table is not None:
@@ -299,9 +327,9 @@ class Job(object):
             logging.info("Got job id {0}".format(self.job_id))
 
     def summary(self):
-        return ('Job id {self.job_id} {self.status} '
+        return ('Job id {self.job_id:3} {self.status:10} '
                 'time {self.start_time_str}-{self.end_time_str} '
-                '{self.strcmd}'.
+                '({self.duration}) {self.strcmd}'.
                 format(self=self))
 
     def report(self):
@@ -321,6 +349,8 @@ class Job(object):
 # --------------------------------------------------------------------
 
 class SqlDb(object):
+    NO_WRITE = False
+
     def __init__(self, filename):
         import sqlite3
         self.filename = filename
@@ -351,11 +381,13 @@ class SqlDb(object):
         """
         Run state changing commands, if allowed by NO_WRITE
         """
-        if Job.NO_WRITE:
+        if self.NO_WRITE:
             logging.info("SqlDb NO WRITE: would run '{0}' '{1}'".
                          format(args, kwargs))
+            logging.info("SqlDb NO_WRITE: would commit")
         else:
             self.execute_always(*args, **kwargs)
+            logging.info("SqlDb commit")
             self.commit()
 
     def commit(self):
