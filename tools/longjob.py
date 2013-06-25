@@ -6,6 +6,9 @@ Run a command, and send email when it is finished.
 If the ~/.longjob directory exists, then we will also save a record of
 the command to a sqlite database at ~/.longjob/job.db, so that we can
 see which jobs are currently running and which jobs finished recently.
+
+Run doctests with:
+  python -m doctest -v  longjob.py
 """
 
 #
@@ -19,6 +22,7 @@ from __future__ import absolute_import, division, with_statement
 
 import collections
 import getpass
+import itertools
 import logging
 import optparse
 import os
@@ -55,7 +59,7 @@ def main():
             for job in table.get_all_jobs():
                 print job.summary()
         else:
-            for job_id in args:
+            for job_id in unrange(uncomma(args)):
                 job = table.get_job(job_id)
                 if opts.delete:
                     table.delete_job(job)
@@ -87,7 +91,7 @@ def getopts():
     parser.add_option('-s', '--shell',
                       action='store_true',
                       help='use the shell to parse the command')
-    parser.add_option('--delete',
+    parser.add_option('--delete', '--rm',
                       action='store_true',
                       help='delete the given job ids')
     parser.add_option('--detail',
@@ -110,6 +114,32 @@ def getopts():
     return (opts, args)
 
 # --------------------------------------------------------------------
+
+def apply_list(job_ids, cond, func):
+    return itertools.chain.from_iterable(func(j) if cond(j) else (j,)
+                                         for j in job_ids)
+
+def uncomma(job_ids):
+    """
+    >>> list(uncomma(['a', 'b,c', 'd', 'e,f']))
+    ['a', 'b', 'c', 'd', 'e', 'f']
+    """
+    return apply_list(job_ids,
+                      lambda j: j.find(',') >= 0,
+                      lambda j: j.split(','))
+
+def unrange(job_ids):
+    """
+    >>> list(unrange(['1', '2-4', '5', '6-9']))
+    ['1', 2, 3, 4, '5', 6, 7, 8, 9]
+    """
+    def parse_range(job_range):
+        (start, stop) = job_range.split('-')
+        return range(int(start), int(stop)+1)
+
+    return apply_list(job_ids,
+                      lambda j: j.find('-') >= 0,
+                      parse_range)
 
 def is_non_string_sequence(obj):
     return (
