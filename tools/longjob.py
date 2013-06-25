@@ -742,7 +742,8 @@ class JobTable(object):
                                    DbJob.status_name_to_id(Job.RUNNING))
 
     def get_incomplete_jobs(self, since=None):
-        return self.table.get_objs('WHERE status NOT IN (?, ?) {0}'.
+        return self.table.get_objs('WHERE status NOT IN (?, ?) {0} '
+                                   'ORDER BY start_time DESC'.
                                    format(self.get_since(since)),
                                    DbJob.status_name_to_id(Job.SUCCEEDED,
                                                            Job.RUNNING))
