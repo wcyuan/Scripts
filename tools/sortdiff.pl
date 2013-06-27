@@ -90,6 +90,7 @@ sort files, then diff them.
 use strict;
 use Pod::Usage;
 use File::Basename;
+use File::Temp qw(tempfile);
 
 use Getopt::Long qw(:config pass_through no_auto_abbrev);
 use Log::Log4perl qw(:levels);
@@ -125,7 +126,7 @@ my $cmd_basename = basename($0);
 # in reverse order.
 for (my $ii = $nfiles; $ii > 0; $ii--) {
     $file{$ii}{name} = pop(@ARGV);
-    $file{$ii}{temp} = "/tmp/$cmd_basename.$ii.$$";
+    $file{$ii}{temp} = (tempfile())[1];
 }
 
 for (my $ii = 1; $ii <= $nfiles; $ii++) {
@@ -163,7 +164,7 @@ foreach my $fileno (keys %file) {
 	if (defined($file{$fileno}{col})) {
 	    my @fields = split(' ', $line);
 	    my @specified = split(',', $file{$fileno}{col});
-	    $line = join(' ', @fields[@specified]) . "\n";
+	    $line = join(' ', map {$_//""} @fields[@specified]) . "\n";
 	}
 	if (!$uniq || !exists($uniqlines{$_})) {
 	    push(@lines, $line);
