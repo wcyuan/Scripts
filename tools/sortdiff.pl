@@ -15,9 +15,9 @@ sortdiff.pl - diff two files unordered (sort them first).
   sortdiff.pl [options] <file1> <file2>
 
   Options:
-    --col 1=1,2 --col 2=1,5
-                      compare the first and second columns of the first file
-                      with the first and fifth columns of the second file
+    --col 1=1,2..5 --col 2=1,5..8
+                      compare columns 1, 2, 3, 4, 5 of the first file
+                      with columns 1, 5, 6, 7, 8 of the second file
                       column numbers are zero indexed
     --debug           create temporary files, but don't run the diff command
     --uniq            remove duplicate lines
@@ -163,7 +163,8 @@ foreach my $fileno (keys %file) {
 	my $line = $_;
 	if (defined($file{$fileno}{col})) {
 	    my @fields = split(' ', $line);
-	    my @specified = split(',', $file{$fileno}{col});
+            # Eval the argument so that 2..5 gets translated into (2, 3, 4, 5)
+	    my @specified = map {eval $_} split(',', $file{$fileno}{col});
 	    $line = join(' ', map {$_//""} @fields[@specified]) . "\n";
 	}
 	if (!$uniq || !exists($uniqlines{$_})) {
