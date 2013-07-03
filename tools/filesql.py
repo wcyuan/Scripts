@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, with_statement
 
 import logging
 import optparse
+import re
 import shlex
 import sqlite3
 import subprocess
@@ -54,6 +55,9 @@ def getopts():
     if opts.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    if opts.schema:
+        args.insert(0, 'SELECT name, sql FROM sqlite_master')
+
     return (opts, args)
 
 # --------------------------------------------------------------------
@@ -74,9 +78,12 @@ def read_lines(lines):
     header = None
     data = []
     for line in lines:
+        fields = re.split('(?<!\\\)\s+', line.strip())
+        if line.startswith('#@desc') and header is None:
+            header = fields[1:]
+            continue
         if line.startswith('#'):
             continue
-        fields = line.split()
         if header is None:
             header = fields
         else:
