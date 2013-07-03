@@ -29,6 +29,9 @@ def main():
 
     with stash_if_needed(repo, leave=args.leave):
         with checkout(repo, 'master'):
+            print ("Pushing commit {0} to master svn\n\n{1}\n".
+                   format(revision, revision.message))
+
             git_cmd(repo, 'cherry-pick', revision)
             git_cmd(repo, 'svn', 'dcommit')
             git_cmd(repo, 'big-update')
