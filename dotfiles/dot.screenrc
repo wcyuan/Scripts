@@ -32,7 +32,7 @@
 # ^A : shelltitle bash  - set the default window name to bash
 # ^A : title <win>      - set the current window name to <win>
 # ^A : chdir [<dir>]    - set the working directory for new windows
-# ^A : chdir [<dir>]    - set the working directory for new windows
+# ^A : screen <cmd>     - run <cmd> in a new window
 #
 # screen -S <name>         to start a new session with a given name
 # screen -ls               to list all running sessions
@@ -40,6 +40,8 @@
 # screen -s bash -t bash   to set the shell to bash
 # screen -r <name>         to reattach to a particular session
 # screen -dRR              to reattach, deattaching any other users, and creating a session if necessary.
+# screen -S <session> -X screen <cmd>
+#                          Run a command in the given screen session, in its own window
 #
 
 # automatically detach the screen session when the screen process receives a
