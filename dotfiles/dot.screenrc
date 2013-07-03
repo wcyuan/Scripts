@@ -3,13 +3,43 @@
 ## gacked from ransford 20070611
 
 #
-# ^A c  - create a new window
-# ^A n  - next window
-# ^A p  - previous window
-# ^A 1  - move to first window
-# ^A d  - detach
+# cheatsheet
+# http://aperiodic.net/screen/quick_reference
+# http://www.gnu.org/software/screen/manual/screen.html
 #
-# screen -D -R to reattach, deattaching any other users, and creating a session if necessary.
+# ^A c            - create a new window
+# ^A n            - window to the right
+# ^A <space>      - window to the right
+# ^A p            - window to the left
+# ^A <backspace>  - window to the left
+# ^A ^A           - flip to the last window you were in
+# ^A 1            - move to first window
+#
+# ^A d            - detach
+# ^A D D          - detach and close the enclosing window
+#
+# ^A a            - send a control-a to the shell
+# ^A ?            - show all keybindings
+#
+# ^A S            - Split the window horizontally into two regions
+# ^A <tab>        - Move to the other region
+# ^A X            - Kill this region
+# ^A Q            - Kill all but this region
+#
+#
+# ^A : quit             - quit and kill all windows
+# ^A : shell bash       - set the shell to bash
+# ^A : shelltitle bash  - set the default window name to bash
+# ^A : title <win>      - set the current window name to <win>
+# ^A : chdir [<dir>]    - set the working directory for new windows
+# ^A : chdir [<dir>]    - set the working directory for new windows
+#
+# screen -S <name>         to start a new session with a given name
+# screen -ls               to list all running sessions
+# screen -r                to reattach
+# screen -s bash -t bash   to set the shell to bash
+# screen -r <name>         to reattach to a particular session
+# screen -dRR              to reattach, deattaching any other users, and creating a session if necessary.
 #
 
 # automatically detach the screen session when the screen process receives a
