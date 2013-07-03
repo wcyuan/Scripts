@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 """
 Read in tabular data and perform sql queries on them
+
+This is pretty slow for large files, so it's probably not worth it.
+But it can be useful for small files or commands.
+
+EXAMPLE:
+
+filesql.py --cmd hosts='bhosts -s' --cmd jobs='bjobs -w -a -u brucem' 'select jobs.* from jobs, hosts where LOCATION = EXEC_HOST and RESOURCE="mem_total" and TOTAL < 50000' | trans
 """
 
 # --------------------------------------------------------------------
@@ -43,10 +50,12 @@ def getopts():
                       help='Logging Level DEBUG')
     parser.add_option('--file',
                       action='append',
-                      help='file to make into a table')
+                      help='file to make into a table: '
+                      '"tablename=<file>"')
     parser.add_option('--cmd',
                       action='append',
-                      help='command to make into a table')
+                      help='command to make into a table: '
+                      '"tablename=\'<command>\'"')
     parser.add_option('--schema',
                       action='store_true',
                       help='just show the schemas of the tables')
