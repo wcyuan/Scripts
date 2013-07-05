@@ -659,6 +659,7 @@ def read_files(fns, patt=None, delim=None, left=False,
     if sql is not None:
         db = sqlite3.connect(':memory:')
         cursor = db.cursor()
+        db.text_factory = str
 
     table = None
     prev_header = None
