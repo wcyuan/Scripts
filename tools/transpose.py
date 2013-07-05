@@ -310,7 +310,6 @@ def zopen(fn, input_type=None):
     else:
         for (sfx, cmd) in DECOMPRESSORS:
             if fn.endswith(sfx):
-                logging.info('running %s %s' % (cmd, fn))
                 command = [cmd, fn]
                 break
 
@@ -319,6 +318,7 @@ def zopen(fn, input_type=None):
             yield f
         return
 
+    logging.info('running {0}'.format(' '.join(command)))
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     stdout = proc.communicate()[0]
     logging.info('done running {0}'.format(' '.join(command)))
@@ -413,7 +413,7 @@ def separate(line, kind, delim, raw=False):
     """
     magic_word = None
     if kind == 'delimited':
-        vals = re.split(delim, line.strip())
+        vals = re.split(delim, line)
         # If the row starts with #@desc, we should get rid of that.
         if vals[0] in HEADERS:
             magic_word = vals.pop(0)
@@ -469,11 +469,15 @@ def should_filter(values, names, filters):
 
     return False
 
+def sanitize(row):
+    return [CLEAN_CHAR if r == '' else r.replace(OFS, CLEAN_CHAR)
+            for r in row]
+
 def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
                header_patt=None, filters=None, by_col_no=False,
                columns=(), raw=False, width=None, immediate=False,
-               noheader=False):
+               noheader=False, clean_output=False):
     """
     Reads a file with tabular data.  Returns a list of rows, where a
     row is a list of fields.  The first row is the header.
@@ -515,6 +519,9 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
             if raw and magic_word is not None:
                 print_header[0] = magic_word + ' ' + print_header[0]
 
+            if clean_output:
+                print_header = sanitize(print_header)
+
             table.append(print_header)
             if not by_col_no:
                 continue
@@ -541,6 +548,9 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
         if width is not None:
             row = [r if len(r) < width else (r[:width]+"...") for r in row]
 
+        if clean_output:
+            row = sanitize(row)
+
         if immediate:
             # In immediate mode, we print our output right here,
             # without transposing or aligning rows.  However, we still
@@ -560,11 +570,11 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                                for (f, h) in zip(row, print_header)]
                 logging.debug(formats)
             if not header_printed and not noheader:
-                print ' '.join(f.format(s)
+                print OFS.join(f.format(s)
                                for (f, s)
                                in zip(formats, table[0]))
                 header_printed = True
-            print ' '.join(f.format(s)
+            print OFS.join(f.format(s)
                            for (f, s)
                            in zip(formats, row))
 
@@ -594,8 +604,7 @@ def transpose(intable):
     """
     return itertools.izip_longest(*intable, fillvalue="")
 
-def texttable(table, transposed=None, delim=OFS, left=False,
-              clean_output=False):
+def texttable(table, transposed=None, delim=OFS, left=False):
     """
     pretty-print a table.  Every column's width is the width of the
     widest field in that column.
@@ -617,15 +626,11 @@ def texttable(table, transposed=None, delim=OFS, left=False,
     widths = (max(len(fld) for fld in line) for line in transposed)
     lc = '-' if left else ''
     formats = ["%{0}{1}s".format(lc, width) for width in widths]
-    return ORS.join("%s" % delim.join(format % (fld
-                                                if not clean_output
-                                                else fld.replace(OFS,
-                                                                 CLEAN_CHAR))
+    return ORS.join("%s" % delim.join(format % (fld)
                                       for (format, fld) in zip(formats, line))
                     for line in table)
 
-def pretty_print(intable, left=False, should_transpose=None, raw=False,
-                 clean_output=False):
+def pretty_print(intable, left=False, should_transpose=None, raw=False):
     if raw:
         print ORS.join(("%s" % OFS.join(line)) for line in intable)
         return
@@ -636,8 +641,7 @@ def pretty_print(intable, left=False, should_transpose=None, raw=False,
     else:
         ttable = intable
         intable = None
-    print texttable(ttable, transposed=intable, left=left,
-                    clean_output=clean_output)
+    print texttable(ttable, transposed=intable, left=left)
 
 def read_files(fns, patt=None, delim=None, left=False,
                comment=COMMENT_CHAR, kind='delimited', reverse=False,
@@ -659,7 +663,8 @@ def read_files(fns, patt=None, delim=None, left=False,
                                    header_patt=header_patt,
                                    filters=filters, by_col_no=by_col_no,
                                    columns=columns, raw=raw, width=width,
-                                   immediate=immediate, noheader=noheader)
+                                   immediate=immediate, noheader=noheader,
+                                   clean_output=clean_output)
 
             if len(filetable) == 0:
                 continue
@@ -684,7 +689,7 @@ def read_files(fns, patt=None, delim=None, left=False,
             else:
                 pretty_print(table, left=left,
                              should_transpose=should_transpose,
-                             raw=raw, clean_output=clean_output)
+                             raw=raw)
                 if noheader:
                     filetable = filetable[1:]
                 table = filetable
@@ -692,7 +697,7 @@ def read_files(fns, patt=None, delim=None, left=False,
 
     if table is not None:
         pretty_print(table, left=left, should_transpose=should_transpose,
-                     raw=raw, clean_output=clean_output)
+                     raw=raw)
 
 
 # --------------------------------------------------------------------
