@@ -42,6 +42,7 @@ from __future__ import absolute_import, division, with_statement
 import contextlib
 import itertools
 import logging
+import json
 import optparse
 import os.path
 import re
@@ -52,6 +53,8 @@ import subprocess
 import sys
 
 # --------------------------------------------------------------------
+
+DEFAULT_CONFIG_FILE = '~/.transrc'
 
 HEADERS = ('#@desc',)
 
@@ -92,16 +95,27 @@ def main():
     opts, args = getopts()
 
     rf_args = dict((v, getattr(opts, v))
-                   for v in ('patt', 'delim', 'left', 'reverse',
-                             'kind', 'header_patt', 'head', 'filters',
-                             'by_col_no', 'columns', 'noheader',
-                             'should_transpose', 'add_filename', 'raw',
-                             'width', 'clean_output', 'immediate', 'sql'))
+                   for v in ('patt', 'delim', 'reverse', 'kind', 'header_patt',
+                             'head', 'filters', 'by_col_no', 'columns',
+                             'noheader', 'add_filename', 'raw', 'width',
+                             'clean_output', 'immediate'))
 
-    if len(args) == 0:
-        read_files(sys.stdin, input_type='fd', **rf_args)
+    def get_input(fns):
+        return read_files(fns, **rf_args)
+
+    def output(table):
+        pretty_print(table,
+                     left=opts.left,
+                     should_transpose=opts.should_transpose,
+                     raw=opts.raw)
+
+    if opts.sql is not None:
+        do_sql(opts.sql, args, get_input, output, opts.config, cvars=opts.vars)
     else:
-        read_files(args, **rf_args)
+        if len(args) == 0:
+            args = [sys.stdin]
+        for table in get_input(args):
+            output(table)
 
 def getopts():
     """
@@ -197,6 +211,14 @@ def getopts():
                       "immediately and guess at the format")
     parser.add_option('--sql',
                       help="don't print the output, run a sql query on it")
+    parser.add_option('--config', '--config-file', '--config_file',
+                      '--configfile',
+                      help="A file that contains configuration",
+                      default=DEFAULT_CONFIG_FILE)
+    parser.add_option('--vars',
+                      action='append',
+                      help='Args to use for interpolating commands',
+                      default=[])
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -204,6 +226,9 @@ def getopts():
 
     if opts.filters is not None:
         opts.filters = [parse_filter(f) for f in opts.filters]
+
+    if opts.vars is not None:
+        opts.vars = dict(v.split('=', 1) for v in opts.vars)
 
     if opts.ofs is not None:
         global OFS
@@ -646,28 +671,20 @@ def pretty_print(intable, left=False, should_transpose=None, raw=False):
         intable = None
     print texttable(ttable, transposed=intable, left=left)
 
-def read_files(fns, patt=None, delim=None, left=False,
-               comment=COMMENT_CHAR, kind='delimited', reverse=False,
-               head=None, header_patt=None, filters=None, by_col_no=False,
-               columns=(), noheader=False, should_transpose=None,
+
+def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
+               kind='delimited', reverse=False, head=None, header_patt=None,
+               filters=None, by_col_no=False, columns=(), noheader=False,
                add_filename=None, raw=False, width=None, clean_output=False,
-               immediate=False, input_type=None, sql=None):
+               immediate=False, input_type=None):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
     """
-    if sql is not None:
-        db = sqlite3.connect(':memory:')
-        cursor = db.cursor()
-        db.text_factory = str
 
     table = None
     prev_header = None
-    prev_table_name = None
-    table_name = None
     for fn in fns:
-        if sql is not None:
-            (table_name, fn) = fn.split('=', 1)
         with zopen(fn, input_type=input_type) as fd:
             filetable = read_input(fd, patt=patt, delim=delim,
                                    comment=comment, kind=kind,
@@ -699,37 +716,70 @@ def read_files(fns, patt=None, delim=None, left=False,
                 # the data onto the existing table.
                 table.extend(filetable[1:])
             else:
-                if sql is not None:
-                    make_one_table(db, cursor, prev_table_name,
-                                   table[0], table[1:])
-                else:
-                    pretty_print(table, left=left,
-                                 should_transpose=should_transpose,
-                                 raw=raw)
+                yield(table)
                 if noheader:
                     filetable = filetable[1:]
                 table = filetable
             prev_header = header
-            prev_table_name = table_name
 
     if table is not None:
-        if sql is not None:
-            make_one_table(db, cursor, table_name, table[0], table[1:])
-        else:
-            pretty_print(table, left=left, should_transpose=should_transpose,
-                         raw=raw)
-
-    if sql is not None:
-        cursor.execute(sql)
-        data = cursor.fetchall()
-        table = [[d[0] for d in cursor.description]]
-        for row in data:
-            table.append([str(v) for v in row])
-        pretty_print(table, left=left, should_transpose=should_transpose,
-                     raw=raw)
-
+        yield(table)
 
 # --------------------------------------------------------------------
+
+def do_sql(sql, args, get_input, output, config=None, cvars={}):
+    tables = {}
+    for fn in args:
+        (table_name, fn) = fn.split('=', 1)
+        tables[table_name] = fn
+
+    if config is not None:
+        config = os.path.expanduser(config)
+        if os.path.exists(config):
+            logging.info("Reading config file {0}".format(config))
+            with zopen(config) as c:
+                data = json.load(c)
+                for table in data:
+                    logging.debug("Got table {0} = ({1}) from config file {2}".
+                                  format(table, data[table], config))
+                    if table in tables:
+                        logging.debug("Skipping table {0} = ({1}) "
+                                      "from config file {2}, overriden "
+                                      "on the command line".
+                                      format(table, data[table], config))
+                    else:
+                        tables[table] = str(data[table])
+
+    db = sqlite3.connect(':memory:')
+    cursor = db.cursor()
+    db.text_factory = str
+
+    while True:
+        try:
+            cursor.execute(sql)
+            data = cursor.fetchall()
+            table = [[d[0] for d in cursor.description]]
+            for row in data:
+                table.append([str(v) for v in row])
+            output(table)
+            return
+        except sqlite3.OperationalError as e:
+            msg = e.args[0]
+            if not msg.startswith('no such table: '):
+                raise
+            missing = msg[15:]
+            if missing not in tables:
+                raise
+            logging.info("Trying to load table {0} with file {1}".
+                         format(missing, tables[missing]))
+            try:
+                fn = tables[missing].format(**cvars)
+            except KeyError as ke:
+                raise KeyError("Table {0} command {1} needs var {2} to be set".
+                               format(missing, tables[missing], ke.args[0]))
+            table = list(get_input([fn]))[0]
+            make_one_table(db, cursor, missing, table[0], table[1:])
+
 
 def guess_type(value):
     for (pytype, sqltype) in ((int, 'INTEGER'),
