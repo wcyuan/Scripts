@@ -39,14 +39,15 @@ you can see what the fields mean.
 # --------------------------------------------------------------------
 from __future__ import absolute_import, division, with_statement
 
-from contextlib   import contextmanager
-from itertools    import izip_longest
-from logging      import getLogger, DEBUG, info, debug
-from optparse     import OptionParser
-from subprocess   import Popen, PIPE
-from StringIO     import StringIO
-
+import contextlib
+import itertools
+import logging
+import optparse
+import os.path
 import re
+import shlex
+import StringIO
+import subprocess
 import sys
 
 # --------------------------------------------------------------------
@@ -90,7 +91,7 @@ def main():
     opts, args = getopts()
 
     if len(args) == 0:
-        read_transpose(sys.stdin, **opts)
+        read_files(sys.stdin, input_type='fd', **opts)
     else:
         read_files(args, **opts)
 
@@ -98,7 +99,7 @@ def getopts():
     """
     Parse the command-line options
     """
-    parser = OptionParser()
+    parser = optparse.OptionParser()
     parser.add_option('--patt', '--pattern',
                       help="the pattern to look for")
     parser.add_option('--delim', '-d', '--delimiter',
@@ -189,7 +190,7 @@ def getopts():
     opts, args = parser.parse_args()
 
     if opts.verbose:
-        getLogger().setLevel(DEBUG)
+        logging.getLogger().setLevel(logging.DEBUG)
 
     if opts.filters is not None:
         opts.filters = [parse_filter(f) for f in opts.filters]
@@ -262,8 +263,8 @@ def parse_filter(filter_string):
 
 # --------------------------------------------------------------------
 
-@contextmanager
-def zopen(fn, input_type='file'):
+@contextlib.contextmanager
+def zopen(fn, input_type=None):
     """
     Return the contents of a file, even if it might be compressed.
     Returns a file object, just like open would return.  This is a
@@ -272,24 +273,62 @@ def zopen(fn, input_type='file'):
 
     with zopen(file_name) as file_object:
        ....
-    """
-    for (sfx, cmd) in DECOMPRESSORS:
-        if fn.endswith(sfx):
-            info('running %s %s' % (cmd, fn))
-            proc = Popen([cmd, fn], stdout=PIPE)
-            stdout = proc.communicate()[0]
-            info('done running %s %s' % (cmd, fn))
 
-            # stdout is just a string, but StringIO allows us to treat
-            # it like a file.  Just for convenience so that we can
-            # always return file objects.
-            string = StringIO(stdout)
-            yield string
-            string.close()
-            break
+
+    We are usually given a file name.  But we may have been given a
+    file dsecriptor, or we may have been given a command to run.  If
+    input_type is given, that will tell us what we were given.  If
+    input_type is None, we'll try to guess at what we were given:
+
+      if it's not a string, assume it's a file descriptor and just
+      return it
+
+      if it's not a file that exists, assume it's a command
+    """
+    if input_type not in (None, 'fd', 'cmd', 'file'):
+        raise ValueError("Invalid input_type {0}, must be one of "
+                         "None, 'fd', 'cmd', 'file'".format(input_type))
+
+    if input_type is None and not hasattr(fn, 'endswith'):
+        logging.debug("Input is not a string, assuming it's a file descriptor")
+        input_type = 'fd'
+
+    if input_type == 'fd':
+        yield fn
+        return
+
+    if (input_type is None
+        and not os.path.exists(fn)):
+        # if we are given a file that doesn't exist, maybe it's a
+        # command.
+        logging.debug("Input file does not exist, assuming it's a command")
+        input_type = 'cmd'
+
+    command = None
+    if input_type == 'cmd':
+        command = shlex.split(fn)
     else:
+        for (sfx, cmd) in DECOMPRESSORS:
+            if fn.endswith(sfx):
+                logging.info('running %s %s' % (cmd, fn))
+                command = [cmd, fn]
+                break
+
+    if command is None:
         with open(fn) as f:
             yield f
+        return
+
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+    stdout = proc.communicate()[0]
+    logging.info('done running {0}'.format(' '.join(command)))
+
+    # stdout is just a string, but StringIO allows us to treat
+    # it like a file.  Just for convenience so that we can
+    # always return file objects.
+    string = StringIO.StringIO(stdout)
+    yield string
+    string.close()
 
 # --------------------------------------------------------------------
 
@@ -331,8 +370,8 @@ def guess_delim(header, kind):
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
 
-    info("Guessing kind %s with delimiter '%s' from header %s" %
-         (kind, delim, header))
+    logging.info("Guessing kind %s with delimiter '%s' from header %s" %
+                 (kind, delim, header))
 
     return (kind, delim)
 
@@ -381,8 +420,8 @@ def separate(line, kind, delim, raw=False):
         # If we have escaped spaces, remove the backslashes in the output
         if not raw and delim == '(?<!\\\)\s+':
             vals = [v.replace('\ ', ' ') for v in vals]
-        debug("line (%s delim='%s') %s separated into %s" %
-              (kind, delim, line, vals))
+        logging.debug("line (%s delim='%s') %s separated into %s" %
+                      (kind, delim, line, vals))
         return (vals, magic_word)
     elif kind == 'fixed':
         # Fixed-width format.  To try to parse something like:
@@ -399,10 +438,11 @@ def separate(line, kind, delim, raw=False):
         indexes.extend(line.rfind(' ', 0, idx)+1 for idx in delim[1:])
         vals= [x.strip()
                for x in (line[start:] if end is None else line[start:end]
-                         for (start, end) in izip_longest(indexes, indexes[1:],
-                                                          fillvalue=None))]
-        debug("line (%s delim='%s') %s separated into %s" %
-              (kind, delim, line, vals))
+                         for (start, end) in
+                         itertools.izip_longest(indexes, indexes[1:],
+                                                fillvalue=None))]
+        logging.debug("line (%s delim='%s') %s separated into %s" %
+                      (kind, delim, line, vals))
         return (vals, magic_word)
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
@@ -518,7 +558,7 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                 else:
                     formats = ["{{0:{0}}}".format(max(len(f), len(h) + PADDING))
                                for (f, h) in zip(row, print_header)]
-                debug(formats)
+                logging.debug(formats)
             if not header_printed and not noheader:
                 print ' '.join(f.format(s)
                                for (f, s)
@@ -552,7 +592,7 @@ def transpose(intable):
 
     Returns an iterator, which can only be traversed once.
     """
-    return izip_longest(*intable, fillvalue="")
+    return itertools.izip_longest(*intable, fillvalue="")
 
 def texttable(table, transposed=None, delim=OFS, left=False,
               clean_output=False):
@@ -592,43 +632,19 @@ def pretty_print(intable, left=False, should_transpose=None, raw=False,
 
     if ((should_transpose is None and len(intable) < 6) or should_transpose):
         ttable = transpose(intable)
-        debug("transposed table: %s" % ttable)
+        logging.debug("transposed table: %s" % ttable)
     else:
         ttable = intable
         intable = None
     print texttable(ttable, transposed=intable, left=left,
                     clean_output=clean_output)
 
-def read_transpose(fd, patt=None, delim=None, left=False,
-                   comment=COMMENT_CHAR, kind='delimited', reverse=False,
-                   head=None, header_patt=None, filters=None, by_col_no=False,
-                   columns=(), noheader=False, should_transpose=None,
-                   add_filename=None, raw=False, width=None,
-                   clean_output=False, immediate=False):
-    """
-    Puts it all together (for a single, uncompressed file).  Reads the
-    file, transposes (if necessary), and pretty-prints the output.
-    """
-    intable = read_input(fd, patt=patt, delim=delim,
-                         comment=comment, kind=kind,
-                         reverse=reverse, head=head,
-                         header_patt=header_patt,
-                         filters=filters, by_col_no=by_col_no,
-                         columns=columns, raw=raw, width=width,
-                         immediate=immediate, noheader=noheader)
-    if len(intable) == 0:
-        return
-    if noheader:
-        intable = intable[1:]
-    pretty_print(intable, left=left, should_transpose=should_transpose,
-                 raw=raw, clean_output=clean_output)
-
 def read_files(fns, patt=None, delim=None, left=False,
                comment=COMMENT_CHAR, kind='delimited', reverse=False,
                head=None, header_patt=None, filters=None, by_col_no=False,
                columns=(), noheader=False, should_transpose=None,
                add_filename=None, raw=False, width=None, clean_output=False,
-               immediate=False, input_type='file'):
+               immediate=False, input_type=None):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
