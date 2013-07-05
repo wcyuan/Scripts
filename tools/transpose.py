@@ -263,7 +263,7 @@ def parse_filter(filter_string):
 # --------------------------------------------------------------------
 
 @contextmanager
-def zopen(fn):
+def zopen(fn, input_type='file'):
     """
     Return the contents of a file, even if it might be compressed.
     Returns a file object, just like open would return.  This is a
@@ -432,7 +432,8 @@ def should_filter(values, names, filters):
 def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
                header_patt=None, filters=None, by_col_no=False,
-               columns=(), raw=False, width=None, immediate=False):
+               columns=(), raw=False, width=None, immediate=False,
+               noheader=False):
     """
     Reads a file with tabular data.  Returns a list of rows, where a
     row is a list of fields.  The first row is the header.
@@ -518,7 +519,7 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                     formats = ["{{0:{0}}}".format(max(len(f), len(h) + PADDING))
                                for (f, h) in zip(row, print_header)]
                 debug(formats)
-            if not header_printed:
+            if not header_printed and not noheader:
                 print ' '.join(f.format(s)
                                for (f, s)
                                in zip(formats, table[0]))
@@ -614,7 +615,7 @@ def read_transpose(fd, patt=None, delim=None, left=False,
                          header_patt=header_patt,
                          filters=filters, by_col_no=by_col_no,
                          columns=columns, raw=raw, width=width,
-                         immediate=immediate)
+                         immediate=immediate, noheader=noheader)
     if len(intable) == 0:
         return
     if noheader:
@@ -627,7 +628,7 @@ def read_files(fns, patt=None, delim=None, left=False,
                head=None, header_patt=None, filters=None, by_col_no=False,
                columns=(), noheader=False, should_transpose=None,
                add_filename=None, raw=False, width=None, clean_output=False,
-               immediate=False):
+               immediate=False, input_type='file'):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
@@ -635,14 +636,14 @@ def read_files(fns, patt=None, delim=None, left=False,
     table = None
     prev_header = None
     for fn in fns:
-        with zopen(fn) as fd:
+        with zopen(fn, input_type=input_type) as fd:
             filetable = read_input(fd, patt=patt, delim=delim,
                                    comment=comment, kind=kind,
                                    reverse=reverse, head=head,
                                    header_patt=header_patt,
                                    filters=filters, by_col_no=by_col_no,
                                    columns=columns, raw=raw, width=width,
-                                   immediate=immediate)
+                                   immediate=immediate, noheader=noheader)
 
             if len(filetable) == 0:
                 continue
