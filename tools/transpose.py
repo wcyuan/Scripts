@@ -757,7 +757,7 @@ def make_one_table(db, cursor, name, header, data):
         logging.info("Running '{0}' with '{1}'".format(command, trunc))
         try:
             cursor.execute(command, trunc)
-        except sqlite3.OperationalError:
+        except:
             logging.error("Failed on line {0}.  Command {1}.  Truncated {2}".
                           format(row, command, trunc))
             raise
