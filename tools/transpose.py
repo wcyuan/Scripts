@@ -46,6 +46,7 @@ import optparse
 import os.path
 import re
 import shlex
+import sqlite3
 import StringIO
 import subprocess
 import sys
@@ -90,10 +91,17 @@ FILTER_OPS = ('!=', '<=', '>=', '<', '>', '=')
 def main():
     opts, args = getopts()
 
+    rf_args = dict((v, getattr(opts, v))
+                   for v in ('patt', 'delim', 'left', 'reverse',
+                             'kind', 'header_patt', 'head', 'filters',
+                             'by_col_no', 'columns', 'noheader',
+                             'should_transpose', 'add_filename', 'raw',
+                             'width', 'clean_output', 'immediate', 'sql'))
+
     if len(args) == 0:
-        read_files(sys.stdin, input_type='fd', **opts)
+        read_files(sys.stdin, input_type='fd', **rf_args)
     else:
-        read_files(args, **opts)
+        read_files(args, **rf_args)
 
 def getopts():
     """
@@ -187,6 +195,8 @@ def getopts():
                       action='store_true',
                       help="don't pretty-print, print rows "
                       "immediately and guess at the format")
+    parser.add_option('--sql',
+                      help="don't print the output, run a sql query on it")
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -201,13 +211,6 @@ def getopts():
         OFS = opts.ofs
         if OFS == CLEAN_CHAR:
             CLEAN_CHAR = '~'
-
-    opts = dict((v, getattr(opts, v))
-                for v in ('patt', 'delim', 'left', 'reverse',
-                          'kind', 'header_patt', 'head', 'filters',
-                          'by_col_no', 'columns', 'noheader',
-                          'should_transpose', 'add_filename', 'raw',
-                          'width', 'clean_output', 'immediate'))
 
     return (opts, args)
 
@@ -648,14 +651,22 @@ def read_files(fns, patt=None, delim=None, left=False,
                head=None, header_patt=None, filters=None, by_col_no=False,
                columns=(), noheader=False, should_transpose=None,
                add_filename=None, raw=False, width=None, clean_output=False,
-               immediate=False, input_type=None):
+               immediate=False, input_type=None, sql=None):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
     """
+    if sql is not None:
+        db = sqlite3.connect(':memory:')
+        cursor = db.cursor()
+
     table = None
     prev_header = None
+    prev_table_name = None
+    table_name = None
     for fn in fns:
+        if sql is not None:
+            (table_name, fn) = fn.split('=', 1)
         with zopen(fn, input_type=input_type) as fd:
             filetable = read_input(fd, patt=patt, delim=delim,
                                    comment=comment, kind=kind,
@@ -687,17 +698,70 @@ def read_files(fns, patt=None, delim=None, left=False,
                 # the data onto the existing table.
                 table.extend(filetable[1:])
             else:
-                pretty_print(table, left=left,
-                             should_transpose=should_transpose,
-                             raw=raw)
+                if sql is not None:
+                    make_one_table(db, cursor, prev_table_name,
+                                   table[0], table[1:])
+                else:
+                    pretty_print(table, left=left,
+                                 should_transpose=should_transpose,
+                                 raw=raw)
                 if noheader:
                     filetable = filetable[1:]
                 table = filetable
             prev_header = header
+            prev_table_name = table_name
 
     if table is not None:
+        if sql is not None:
+            make_one_table(db, cursor, table_name, table[0], table[1:])
+        else:
+            pretty_print(table, left=left, should_transpose=should_transpose,
+                         raw=raw)
+
+    if sql is not None:
+        cursor.execute(sql)
+        data = cursor.fetchall()
+        table = [[d[0] for d in cursor.description]]
+        for row in data:
+            table.append([str(v) for v in row])
         pretty_print(table, left=left, should_transpose=should_transpose,
                      raw=raw)
+
+
+# --------------------------------------------------------------------
+
+def guess_type(value):
+    for (pytype, sqltype) in ((int, 'INTEGER'),
+                              (float, 'FLOAT')):
+        try:
+            pytype(value)
+            return sqltype
+        except ValueError:
+            pass
+    return 'TEXT'
+
+def make_one_table(db, cursor, name, header, data):
+    command = ('CREATE TABLE {name} ({cols});'.
+               format(name=name,
+                      cols=', '.join("'{0}' {1}".
+                                     format(h, guess_type(d))
+                                     for (h, d) in zip(header, data[0]))))
+    logging.info(command)
+    cursor.execute(command)
+    for row in data:
+        # In case the header appears to have more columns than the rows
+        trunc = row[:len(header)]
+        command = ('INSERT INTO {0} VALUES ({1});'.
+                   format(name,
+                          ', '.join('?' for v in trunc)))
+        logging.info("Running '{0}' with '{1}'".format(command, trunc))
+        try:
+            cursor.execute(command, trunc)
+        except sqlite3.OperationalError:
+            logging.error("Failed on line {0}.  Command {1}.  Truncated {2}".
+                          format(row, command, trunc))
+            raise
+    db.commit()
 
 
 # --------------------------------------------------------------------
