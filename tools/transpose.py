@@ -366,6 +366,7 @@ def zopen(filename, input_type=None):
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     yield proc.stdout
     proc.wait()
+    proc.stdout.close()
     logging.info('done running {0}'.format(' '.join(command)))
 
 # --------------------------------------------------------------------
