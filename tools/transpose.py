@@ -48,7 +48,6 @@ import os.path
 import re
 import shlex
 import sqlite3
-import StringIO
 import subprocess
 import sys
 
@@ -365,15 +364,9 @@ def zopen(filename, input_type=None):
 
     logging.info('running {0}'.format(' '.join(command)))
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
-    stdout = proc.communicate()[0]
+    yield proc.stdout
+    proc.wait()
     logging.info('done running {0}'.format(' '.join(command)))
-
-    # stdout is just a string, but StringIO allows us to treat
-    # it like a file.  Just for convenience so that we can
-    # always return file objects.
-    string = StringIO.StringIO(stdout)
-    yield string
-    string.close()
 
 # --------------------------------------------------------------------
 
