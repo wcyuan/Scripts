@@ -71,7 +71,7 @@ DELIMITERS = (' \| ', "~", '\|', '@', ',', "\t", '(?<!\\\)\s+', "\s+")
 DECOMPRESSORS = (('.bz2', 'bzcat'),
                  ('.gz', 'zcat'))
 
-COMMENT_CHAR='#'
+COMMENT_CHAR = '#'
 
 # input record separator
 IRS = "\n"
@@ -89,9 +89,23 @@ PADDING = 4
 # '<='; '>' must come after '>='.
 FILTER_OPS = ('!=', '<=', '>=', '<', '>', '=')
 
+__all__ = ['zopen',
+           'read_input',
+           'transpose',
+           'texttable',
+           'pretty_print',
+           'read_files',
+           'do_sql',
+           'make_one_table',
+           ]
+
 # --------------------------------------------------------------------
 
 def main():
+    """
+    The main function, gets configuration from the command line, reads
+    input, and outputs pretty data
+    """
     opts, args = getopts()
 
     rf_args = dict((v, getattr(opts, v))
@@ -101,21 +115,23 @@ def main():
                              'clean_output', 'immediate'))
 
     def get_input(fns):
+        """
+        A wrapper around read_files
+        """
         return read_files(fns, **rf_args)
 
-    def output(table):
+    if opts.sql is not None and len(opts.sql) > 0:
+        tables = do_sql(opts.sql, args, get_input, opts.config, cvars=opts.vars)
+    else:
+        if len(args) == 0:
+            args = [sys.stdin]
+        tables = get_input(args)
+
+    for table in tables:
         pretty_print(table,
                      left=opts.left,
                      should_transpose=opts.should_transpose,
                      raw=opts.raw)
-
-    if opts.sql is not None:
-        do_sql(opts.sql, args, get_input, output, opts.config, cvars=opts.vars)
-    else:
-        if len(args) == 0:
-            args = [sys.stdin]
-        for table in get_input(args):
-            output(table)
 
 def getopts():
     """
@@ -210,6 +226,7 @@ def getopts():
                       help="don't pretty-print, print rows "
                       "immediately and guess at the format")
     parser.add_option('--sql',
+                      action='append',
                       help="don't print the output, run a sql query on it")
     parser.add_option('--config', '--config-file', '--config_file',
                       '--configfile',
@@ -225,7 +242,7 @@ def getopts():
         logging.getLogger().setLevel(logging.DEBUG)
 
     if opts.filters is not None:
-        opts.filters = [parse_filter(f) for f in opts.filters]
+        opts.filters = [_parse_filter(f) for f in opts.filters]
 
     if opts.vars is not None:
         opts.vars = dict(v.split('=', 1) for v in opts.vars)
@@ -239,27 +256,27 @@ def getopts():
 
     return (opts, args)
 
-def opfunc(op, val):
+def _opfunc(operator, val):
     """
     Translate a filter operator and a given value into a function that
     takes a new value and returns true if that new value passes the
     filter.
     """
-    if op == '=':
+    if operator == '=':
         return lambda v: v == val
-    if op == '!=':
+    if operator == '!=':
         return lambda v: v != val
-    if op == '>=':
+    if operator == '>=':
         return lambda v: float(v) >= float(val)
-    if op == '<=':
+    if operator == '<=':
         return lambda v: float(v) <= float(val)
-    if op == '>':
+    if operator == '>':
         return lambda v: float(v) > float(val)
-    if op == '<':
+    if operator == '<':
         return lambda v: float(v) < float(val)
-    raise AssertionError("Unknown op '%s'" % op)
+    raise AssertionError("Unknown operator '%s'" % operator)
 
-def parse_filter(filter_string):
+def _parse_filter(filter_string):
     """
     Parse the valid values for the filter argument.  Valid filters
     look like:
@@ -270,9 +287,9 @@ def parse_filter(filter_string):
     of the field that we are filtering on and func is a function that
     returns True if the value passes the filter.
     """
-    for op in FILTER_OPS:
-        if filter_string.find(op) >= 0:
-            (var, val) = filter_string.split(op, 2)
+    for operator in FILTER_OPS:
+        if filter_string.find(operator) >= 0:
+            (var, val) = filter_string.split(operator, 2)
 
             # Strip whitespace.  That way, we can parse expressions like
             #   count = 0
@@ -284,7 +301,7 @@ def parse_filter(filter_string):
             var = var.strip()
             val = val.strip()
 
-            return (var, opfunc(op, val))
+            return (var, _opfunc(operator, val))
 
     raise ValueError("Can't parse filter '%s', can't find an operator" %
                      filter_string)
@@ -292,7 +309,7 @@ def parse_filter(filter_string):
 # --------------------------------------------------------------------
 
 @contextlib.contextmanager
-def zopen(fn, input_type=None):
+def zopen(filename, input_type=None):
     """
     Return the contents of a file, even if it might be compressed.
     Returns a file object, just like open would return.  This is a
@@ -317,16 +334,16 @@ def zopen(fn, input_type=None):
         raise ValueError("Invalid input_type {0}, must be one of "
                          "None, 'fd', 'cmd', 'file'".format(input_type))
 
-    if input_type is None and not hasattr(fn, 'endswith'):
+    if input_type is None and not hasattr(filename, 'endswith'):
         logging.debug("Input is not a string, assuming it's a file descriptor")
         input_type = 'fd'
 
     if input_type == 'fd':
-        yield fn
+        yield filename
         return
 
     if (input_type is None
-        and not os.path.exists(fn)):
+        and not os.path.exists(filename)):
         # if we are given a file that doesn't exist, maybe it's a
         # command.
         logging.debug("Input file does not exist, assuming it's a command")
@@ -334,16 +351,16 @@ def zopen(fn, input_type=None):
 
     command = None
     if input_type == 'cmd':
-        command = shlex.split(fn)
+        command = shlex.split(filename)
     else:
         for (sfx, cmd) in DECOMPRESSORS:
-            if fn.endswith(sfx):
-                command = [cmd, fn]
+            if filename.endswith(sfx):
+                command = [cmd, filename]
                 break
 
     if command is None:
-        with open(fn) as f:
-            yield f
+        with open(filename) as filedesc:
+            yield filedesc
         return
 
     logging.info('running {0}'.format(' '.join(command)))
@@ -360,7 +377,7 @@ def zopen(fn, input_type=None):
 
 # --------------------------------------------------------------------
 
-def guess_delim(header, kind):
+def _guess_delim(header, kind):
     """
     Guess the form of the data based on the header.  Most cases are
     delimiter separated, so it's mostly a matter of figuring out the
@@ -381,9 +398,9 @@ def guess_delim(header, kind):
         # likely to most likely.  As soon as one of the delimiters
         # appears on the line more than 5 times, it's probably the
         # delimiter.
-        for d in DELIMITERS:
-            if len(re.findall(d, header)) > 5:
-                delim = d
+        for this_delim in DELIMITERS:
+            if len(re.findall(this_delim, header)) > 5:
+                delim = this_delim
                 break
         else:
             # If no delimiter appears more than 5 times, we're
@@ -403,7 +420,7 @@ def guess_delim(header, kind):
 
     return (kind, delim)
 
-def is_header(line, comment_char, header_patt):
+def _is_header(line, comment_char, header_patt):
     """
     Is this row the header?
     """
@@ -417,15 +434,15 @@ def is_header(line, comment_char, header_patt):
         return True
 
     # Otherwise we just take the first non-comment
-    return not is_comment(line, comment_char)
+    return not _is_comment(line, comment_char)
 
-def is_comment(line, char):
+def _is_comment(line, char):
     """
     Returns true if line is a comment.
     """
     return line.startswith(char)
 
-def is_match(line, patt, reverse=False):
+def _is_match(line, patt, reverse=False):
     """
     Returns true if the line matches the pattern.
     """
@@ -435,7 +452,7 @@ def is_match(line, patt, reverse=False):
     else:
         return match is not None
 
-def separate(line, kind, delim, raw=False):
+def _separate(line, kind, delim, raw=False):
     """
     Split a line according to its format.
     """
@@ -464,18 +481,18 @@ def separate(line, kind, delim, raw=False):
         # until we find a space.  We split the word in those places.
         indexes = [delim[0]]
         indexes.extend(line.rfind(' ', 0, idx)+1 for idx in delim[1:])
-        vals= [x.strip()
-               for x in (line[start:] if end is None else line[start:end]
-                         for (start, end) in
-                         itertools.izip_longest(indexes, indexes[1:],
-                                                fillvalue=None))]
+        vals = [x.strip()
+                for x in (line[start:] if end is None else line[start:end]
+                          for (start, end) in
+                          itertools.izip_longest(indexes, indexes[1:],
+                                                 fillvalue=None))]
         logging.debug("line (%s delim='%s') %s separated into %s" %
                       (kind, delim, line, vals))
         return (vals, magic_word)
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
 
-def should_filter(values, names, filters):
+def _should_filter(values, names, filters):
     """
     Returns False if and only if the set of values passes all the
     filters.  Otherwise we return True because we should filter out
@@ -497,11 +514,11 @@ def should_filter(values, names, filters):
 
     return False
 
-def sanitize(row):
+def _sanitize(row):
     return [CLEAN_CHAR if r == '' else r.replace(OFS, CLEAN_CHAR)
             for r in row]
 
-def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
+def read_input(filedesc, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
                header_patt=None, filters=None, by_col_no=False,
                columns=(), raw=False, width=None, immediate=False,
@@ -524,18 +541,18 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
     keep_idx = None
     formats = []
     header_printed = False
-    for line in fd:
+    for line in filedesc:
         line = line.strip(IRS)
 
         # First step is to look for the header.  If we haven't found
         # it yet, we'll skip all lines until we find it.  We use the
         # header to figure out the format for the rest of the file.
         if header is None:
-            if not is_header(line, comment, header_patt):
+            if not _is_header(line, comment, header_patt):
                 continue
             if delim is None:
-                (kind, delim) = guess_delim(line, kind)
-            (header, magic_word) = separate(line, kind, delim, raw=raw)
+                (kind, delim) = _guess_delim(line, kind)
+            (header, magic_word) = _separate(line, kind, delim, raw=raw)
             if by_col_no:
                 col_nos = [str(r) for r in range(1, len(header)+1)]
                 header = col_nos
@@ -548,26 +565,26 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
                 print_header[0] = magic_word + ' ' + print_header[0]
 
             if clean_output:
-                print_header = sanitize(print_header)
+                print_header = _sanitize(print_header)
 
             table.append(print_header)
             if not by_col_no:
                 continue
 
         # Skip comments
-        if is_comment(line, comment):
+        if _is_comment(line, comment):
             continue
 
         # If there is a pattern to match, skip until we find that pattern
         if (patt is not None and
-            not is_match(line, patt, reverse=reverse)):
+            not _is_match(line, patt, reverse=reverse)):
             continue
 
         # Found a valid line!  Parse it into separate fields.
-        (row, _) = separate(line, kind, delim, raw=raw)
+        (row, _) = _separate(line, kind, delim, raw=raw)
 
         # Apply filters
-        if should_filter(row, header, filters):
+        if _should_filter(row, header, filters):
             continue
 
         if keep_idx is not None:
@@ -577,7 +594,7 @@ def read_input(fd, patt=None, delim=None, comment=COMMENT_CHAR,
             row = [r if len(r) < width else (r[:width]+"...") for r in row]
 
         if clean_output:
-            row = sanitize(row)
+            row = _sanitize(row)
 
         if immediate:
             # In immediate mode, we print our output right here,
@@ -634,8 +651,8 @@ def transpose(intable):
 
 def texttable(table, transposed=None, delim=OFS, left=False):
     """
-    pretty-print a table.  Every column's width is the width of the
-    widest field in that column.
+    print a table with columns lined up.  Every column's width is the
+    width of the widest field in that column.
 
     The given table should be a list of lists.  That is, it should be
     a list of rows, where every row is a list of fields.
@@ -652,13 +669,17 @@ def texttable(table, transposed=None, delim=OFS, left=False):
     if transposed is None:
         transposed = transpose(table)
     widths = (max(len(fld) for fld in line) for line in transposed)
-    lc = '-' if left else ''
-    formats = ["%{0}{1}s".format(lc, width) for width in widths]
+    lch = '-' if left else ''
+    formats = ["%{0}{1}s".format(lch, width) for width in widths]
     return ORS.join("%s" % delim.join(format % (fld)
                                       for (format, fld) in zip(formats, line))
                     for line in table)
 
 def pretty_print(intable, left=False, should_transpose=None, raw=False):
+    """
+    Wrapper around texttable.  If the table has fewer than 6 rows,
+    transpose first.
+    """
     if raw:
         print ORS.join(("%s" % OFS.join(line)) for line in intable)
         return
@@ -684,9 +705,9 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
 
     table = None
     prev_header = None
-    for fn in fns:
-        with zopen(fn, input_type=input_type) as fd:
-            filetable = read_input(fd, patt=patt, delim=delim,
+    for filename in fns:
+        with zopen(filename, input_type=input_type) as filedesc:
+            filetable = read_input(filedesc, patt=patt, delim=delim,
                                    comment=comment, kind=kind,
                                    reverse=reverse, head=head,
                                    header_patt=header_patt,
@@ -705,7 +726,7 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
             # to the table.
             if (add_filename is None and len(fns) > 1) or add_filename:
                 filetable = ([['FILE'] + filetable[0]] +
-                             [[fn] + l for l in filetable[1:]])
+                             [[filename] + l for l in filetable[1:]])
 
             if table is None:
                 if noheader:
@@ -727,18 +748,30 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
 
 # --------------------------------------------------------------------
 
-def do_sql(sql, args, get_input, output, config=None, cvars={}):
+def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
+    """
+    Build an in memory sqlite database and execute a sql query against
+    it.  The tables of the database come from reading files or
+    executing commands that generate tabular data.  The files to read
+    or commands to run for each table are determined by the arguments
+    passed in, or the config file.  This only reads the tables that
+    are needed to execute the sql query.
+    """
+    if cvars is None:
+        cvars = {}
+
     tables = {}
-    for fn in args:
-        (table_name, fn) = fn.split('=', 1)
-        tables[table_name] = fn
+    if args is not None:
+        for arg in args:
+            (table_name, filename) = arg.split('=', 1)
+            tables[table_name] = filename
 
     if config is not None:
         config = os.path.expanduser(config)
         if os.path.exists(config):
             logging.info("Reading config file {0}".format(config))
-            with zopen(config) as c:
-                data = json.load(c)
+            with zopen(config) as config_fd:
+                data = json.load(config_fd)
                 for table in data:
                     logging.debug("Got table {0} = ({1}) from config file {2}".
                                   format(table, data[table], config))
@@ -750,38 +783,43 @@ def do_sql(sql, args, get_input, output, config=None, cvars={}):
                     else:
                         tables[table] = str(data[table])
 
-    db = sqlite3.connect(':memory:')
-    cursor = db.cursor()
-    db.text_factory = str
+    conn = sqlite3.connect(':memory:')
+    cursor = conn.cursor()
+    conn.text_factory = str
 
-    while True:
-        try:
-            cursor.execute(sql)
-            data = cursor.fetchall()
-            table = [[d[0] for d in cursor.description]]
-            for row in data:
-                table.append([str(v) for v in row])
-            output(table)
-            return
-        except sqlite3.OperationalError as e:
-            msg = e.args[0]
-            if not msg.startswith('no such table: '):
-                raise
-            missing = msg[15:]
-            if missing not in tables:
-                raise
-            logging.info("Trying to load table {0} with file {1}".
-                         format(missing, tables[missing]))
+    for query in sql:
+        while True:
             try:
-                fn = tables[missing].format(**cvars)
-            except KeyError as ke:
-                raise KeyError("Table {0} command {1} needs var {2} to be set".
-                               format(missing, tables[missing], ke.args[0]))
-            table = list(get_input([fn]))[0]
-            make_one_table(db, cursor, missing, table[0], table[1:])
+                cursor.execute(query)
+                data = cursor.fetchall()
+                table = [[d[0] for d in cursor.description]]
+                for row in data:
+                    table.append([str(v) for v in row])
+                yield table
+                break
+            except sqlite3.OperationalError as exc:
+                msg = exc.args[0]
+                if not msg.startswith('no such table: '):
+                    raise
+                missing = msg[15:]
+                if missing not in tables:
+                    raise
+                logging.info("Trying to load table {0} with file {1}".
+                             format(missing, tables[missing]))
+                try:
+                    filename = tables[missing].format(**cvars)
+                except KeyError as kexc:
+                    raise KeyError("Table {0} command {1} needs var {2} "
+                                   "to be set".format(missing, tables[missing],
+                                                      kexc.args[0]))
+                table = list(get_input([filename]))[0]
+                make_one_table(conn, cursor, missing, table[0], table[1:])
 
 
-def guess_type(value):
+def _guess_type(value):
+    """
+    Guess the sqlite type for a given value
+    """
     for (pytype, sqltype) in ((int, 'INTEGER'),
                               (float, 'FLOAT')):
         try:
@@ -791,11 +829,15 @@ def guess_type(value):
             pass
     return 'TEXT'
 
-def make_one_table(db, cursor, name, header, data):
+def make_one_table(database, cursor, name, header, data):
+    """
+    Given data in tabular form (as a list of rows, where each row has
+    the same columns), insert that table into a sqlite database.
+    """
     command = ('CREATE TABLE {name} ({cols});'.
                format(name=name,
                       cols=', '.join("'{0}' {1}".
-                                     format(h, guess_type(d))
+                                     format(h, _guess_type(d))
                                      for (h, d) in zip(header, data[0]))))
     logging.info(command)
     cursor.execute(command)
@@ -812,7 +854,7 @@ def make_one_table(db, cursor, name, header, data):
             logging.error("Failed on line {0}.  Command {1}.  Truncated {2}".
                           format(row, command, trunc))
             raise
-    db.commit()
+    database.commit()
 
 
 # --------------------------------------------------------------------
