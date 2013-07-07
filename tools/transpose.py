@@ -508,6 +508,11 @@ def _should_filter(values, names, filters):
     return False
 
 def _sanitize(row):
+    """
+    Given a list of strings, make sure none of the strings in the list
+    contain the OFS (output field separator).  If they do, replace it
+    with the CLEAN_CHAR.
+    """
     return [CLEAN_CHAR if r == '' else r.replace(OFS, CLEAN_CHAR)
             for r in row]
 
