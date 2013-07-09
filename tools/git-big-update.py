@@ -22,6 +22,7 @@ import subprocess
 TREE = [['/u/yuanc/proj/eomm',
          [['master',                    'git svn rebase'],
           ['rel_20130515-svn',          'git svn rebase'],
+          ['rel_20130715-svn',          'git svn rebase'],
           ['git-default',               'git pull'],
           ['add-pcap',                  'git pull'],
           ['parallel_result_tree_diff', 'git pull']]],
