@@ -760,6 +760,130 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
 
 # --------------------------------------------------------------------
 
+def read_config(config_filename):
+    """
+    The config file should have a form roughly like this:
+
+    {
+      "tables": {
+        "table1": "/home/user/myfilename.txt",
+        "table2": {
+          "create": "/usr/bin/mycmd",
+          "sql": ["create index _table2_id_ on table2 (id)"]
+        }
+      }
+    }
+    """
+    tables = {}
+    if config_filename is None:
+        return tables
+    config_filename = os.path.expanduser(config_filename)
+    if not os.path.exists(config_filename):
+        return tables
+    logging.info("Reading config file {0}".format(config_filename))
+    with zopen(config_filename) as config_fd:
+        config = json.load(config_fd)
+        # Everything should be in the tables subarea
+        if 'tables' not in config:
+            return tables
+        config = config['tables']
+        for table in config:
+            # Each table is either just a string, or a dictionary
+            # If a table is a dictionary, then it has two fields:
+            #   create - a string indicating the file to read or
+            #            command to run to build the table
+            #   sql    - extra sql statements to execute after creating
+            #            the table.  You can use this to build indexes
+            #            on the table, for example.
+            if isinstance(config[table], dict):
+                table_command = config[table]['create']
+                if isinstance(config[table]['sql'], basestring):
+                    table_sql = [config[table]['sql']]
+                elif isinstance(config[table]['sql'], list):
+                    table_sql = config[table]['sql']
+                else:
+                    raise ValueError("Malformed config file {0}: sql is "
+                                     "neither string nor list".format(table))
+            elif isinstance(config[table], basestring):
+                table_command = config[table]
+                table_sql = []
+            else:
+                raise ValueError("Malformed config file {0}: table info is "
+                                 "neither string nor dict".format(table))
+            logging.debug("Got table {0} = ({1}, {2}) from config file {3}".
+                          format(table, table_command, table_sql, config))
+            tables[table] = [str(table_command), table_sql]
+    return tables
+
+def get_table_list(config, args):
+    tables = read_config(config)
+    if args is not None:
+        for arg in args:
+            (table_name, filename) = arg.split('=', 1)
+            if table_name in tables:
+                logging.info("Skipping table {0} = ({1}) "
+                             "from config file {2}, overriden "
+                             "on the command line".
+                             format(table_name, tables[table_name], config))
+            tables[table_name] = [filename, []]
+    return tables
+
+def _guess_type(value):
+    """
+    Guess the sqlite type for a given value
+    """
+    for (pytype, sqltype) in ((int, 'INTEGER'),
+                              (float, 'FLOAT')):
+        try:
+            pytype(value)
+            return sqltype
+        except ValueError:
+            pass
+    return 'TEXT'
+
+def make_table_from_data(database, cursor, name, header, data):
+    """
+    Given data in tabular form (as a list of rows, where each row has
+    the same columns), insert that table into a sqlite database.
+    """
+    command = ('CREATE TABLE {name} ({cols});'.
+               format(name=name,
+                      cols=', '.join("'{0}' {1}".
+                                     format(h, _guess_type(d))
+                                     for (h, d) in zip(header, data[0]))))
+    logging.debug(command)
+    cursor.execute(command)
+
+    command = ('INSERT INTO {0} VALUES ({1});'.
+               format(name,
+                      ', '.join('?' for v in header)))
+    cursor.executemany(command, (row[:len(header)] for row in data))
+    database.commit()
+    logging.debug("Finished inserting rows")
+
+def make_table_from_command(database, cursor, table_name,
+                            tables_dict, get_input, cvars):
+    """
+    Run a command to get the data for a table, then create the table
+    in the database
+    """
+    (table_create, sql_commands) = tables_dict[table_name]
+    logging.info("Trying to load table {0} with file or command {1}".
+                 format(table_name, table_create))
+    try:
+        filename = table_create.format(**cvars)
+    except KeyError as kexc:
+        raise KeyError("Table {0} command {1} needs var {2} "
+                       "to be set".format(table_name, table_create,
+                                          kexc.args[0]))
+    table = list(get_input([filename]))[0]
+    make_table_from_data(database, cursor, table_name, table[0], table[1:])
+    for sql in sql_commands:
+        logging.info("Running extra sql command for table {0}: {1}".
+                     format(table_name, sql))
+        cursor.execute(sql)
+        database.commit()
+
 def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
     """
     Build an in memory sqlite database and execute a sql query against
@@ -772,29 +896,7 @@ def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
     if cvars is None:
         cvars = {}
 
-    tables = {}
-    if args is not None:
-        for arg in args:
-            (table_name, filename) = arg.split('=', 1)
-            tables[table_name] = filename
-
-    if config is not None:
-        config = os.path.expanduser(config)
-        if os.path.exists(config):
-            logging.info("Reading config file {0}".format(config))
-            with zopen(config) as config_fd:
-                data = json.load(config_fd)
-                for table in data:
-                    logging.debug("Got table {0} = ({1}) from config file {2}".
-                                  format(table, data[table], config))
-                    if table in tables:
-                        logging.debug("Skipping table {0} = ({1}) "
-                                      "from config file {2}, overriden "
-                                      "on the command line".
-                                      format(table, data[table], config))
-                    else:
-                        tables[table] = str(data[table])
-
+    tables = get_table_list(config, args)
     conn = sqlite3.connect(':memory:')
     cursor = conn.cursor()
     conn.text_factory = str
@@ -828,51 +930,8 @@ def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
                         missing = missing[5:]
                 if missing not in tables:
                     raise
-                logging.info("Trying to load table {0} with file {1}".
-                             format(missing, tables[missing]))
-                try:
-                    filename = tables[missing].format(**cvars)
-                except KeyError as kexc:
-                    raise KeyError("Table {0} command {1} needs var {2} "
-                                   "to be set".format(missing, tables[missing],
-                                                      kexc.args[0]))
-                table = list(get_input([filename]))[0]
-                make_one_table(conn, cursor, missing, table[0], table[1:])
-
-
-def _guess_type(value):
-    """
-    Guess the sqlite type for a given value
-    """
-    for (pytype, sqltype) in ((int, 'INTEGER'),
-                              (float, 'FLOAT')):
-        try:
-            pytype(value)
-            return sqltype
-        except ValueError:
-            pass
-    return 'TEXT'
-
-def make_one_table(database, cursor, name, header, data):
-    """
-    Given data in tabular form (as a list of rows, where each row has
-    the same columns), insert that table into a sqlite database.
-    """
-    command = ('CREATE TABLE {name} ({cols});'.
-               format(name=name,
-                      cols=', '.join("'{0}' {1}".
-                                     format(h, _guess_type(d))
-                                     for (h, d) in zip(header, data[0]))))
-    logging.debug(command)
-    cursor.execute(command)
-
-    command = ('INSERT INTO {0} VALUES ({1});'.
-               format(name,
-                      ', '.join('?' for v in header)))
-    cursor.executemany(command, (row[:len(header)] for row in data))
-    database.commit()
-    logging.debug("Finished inserting rows")
-
+                make_table_from_command(conn, cursor, missing, tables,
+                                        get_input, cvars)
 
 # --------------------------------------------------------------------
 
