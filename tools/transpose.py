@@ -806,16 +806,26 @@ def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
                 cursor.execute(query)
                 data = cursor.fetchall()
                 logging.info("Finished query {0}".format(query))
+                # If the query was a command, rather than a select
+                # statement, there may be no data to return.
+                if cursor.description is None:
+                    break
                 table = [[d[0] for d in cursor.description]]
                 for row in data:
                     table.append([str(v) for v in row])
                 yield table
-                break
             except sqlite3.OperationalError as exc:
                 msg = exc.args[0]
                 if not msg.startswith('no such table: '):
                     raise
                 missing = msg[15:]
+                if missing not in tables:
+                    # If you run the query 'create index spn on
+                    # esecurity (spn)' the error you get is that there
+                    # is no table called main.esecurity.  So try
+                    # stripping off the "main."
+                    if missing.startswith('main.'):
+                        missing = missing[5:]
                 if missing not in tables:
                     raise
                 logging.info("Trying to load table {0} with file {1}".
