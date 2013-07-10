@@ -98,6 +98,10 @@ __all__ = ['zopen',
            'make_one_table',
            ]
 
+logging.basicConfig(format='[%(asctime)s '
+                    '%(module)s:%(lineno)s %(levelname)-5s] '
+                    '%(message)s')
+
 # --------------------------------------------------------------------
 
 def main():
@@ -167,6 +171,8 @@ def getopts():
     parser.add_option('--verbose',
                       action='store_true',
                       help='verbose mode')
+    parser.add_option('--log_level',
+                      help='set the log level')
     parser.add_option('--filter',
                       dest='filters',
                       action='append',
@@ -239,6 +245,11 @@ def getopts():
 
     if opts.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    if opts.log_level is not None:
+        level = getattr(logging, opts.log_level.upper())
+        logging.getLogger().setLevel(level)
+        logging.info("Setting log level to {0}".format(level))
 
     if opts.filters is not None:
         opts.filters = [_parse_filter(f) for f in opts.filters]
@@ -838,7 +849,7 @@ def make_one_table(database, cursor, name, header, data):
                       cols=', '.join("'{0}' {1}".
                                      format(h, _guess_type(d))
                                      for (h, d) in zip(header, data[0]))))
-    logging.info(command)
+    logging.debug(command)
     cursor.execute(command)
     for row in data:
         # In case the header appears to have more columns than the rows
@@ -846,7 +857,7 @@ def make_one_table(database, cursor, name, header, data):
         command = ('INSERT INTO {0} VALUES ({1});'.
                    format(name,
                           ', '.join('?' for v in trunc)))
-        logging.info("Running '{0}' with '{1}'".format(command, trunc))
+        logging.debug("Running '{0}' with '{1}'".format(command, trunc))
         try:
             cursor.execute(command, trunc)
         except:
