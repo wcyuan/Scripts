@@ -41,6 +41,8 @@ from email.mime.text import MIMEText
 DB_FILENAME='job.db'
 DEFAULT_CONFIG_DIR=os.path.expanduser('~/.longjob')
 
+logging.basicConfig(format='%(asctime)-15s %(levelname)-5s %(message)s')
+
 def main():
     opts, args = getopts()
 
@@ -343,7 +345,7 @@ class Job(object):
         """
         self.end_time = time.localtime()
         self.updatedb()
-        Mailer(subject=self.summary(),
+        Mailer(subject='[longjob] {0}'.format(self.summary()),
                body=self.report()).send()
         logging.info("Finished")
 
