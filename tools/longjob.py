@@ -802,9 +802,10 @@ class JobTable(object):
                     format(time.time() - since * 24 * 60 * 60))
 
     def get_all_jobs(self, since=None):
-        return self.table.get_objs('WHERE {0} '
+        return self.table.get_objs('{0} {1} '
                                    'ORDER BY start_time DESC'.
-                                   format(self.get_since(since)))
+                                   format(('' if since is None else 'WHERE'),
+                                          self.get_since(since)))
 
     def get_running_jobs(self):
         return self.table.get_objs('WHERE status IN (?)',
