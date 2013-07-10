@@ -916,6 +916,7 @@ def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
                 for row in data:
                     table.append([str(v) for v in row])
                 yield table
+                break
             except sqlite3.OperationalError as exc:
                 msg = exc.args[0]
                 if not msg.startswith('no such table: '):
