@@ -28,6 +28,7 @@ import optparse
 import os
 import os.path
 import select
+import socket
 import subprocess
 import sys
 import time
@@ -67,6 +68,12 @@ def main():
                     print job.report()
         return
 
+    if opts.rerun:
+        if table is None:
+            raise ValueError("No longjob database")
+        job = table.get_job(opts.rerun)
+        Job.new_job(job.cmd, table=table, shell=job.shell).run()
+        return
 
     if len(args) == 0:
         if table is not None:
@@ -100,6 +107,8 @@ def getopts():
     parser.add_option('--all',
                       action='store_true',
                       help='show all jobs in the database')
+    parser.add_option('--rerun',
+                      help='rerun a particular job')
 
     opts, args = parser.parse_args()
 
@@ -241,7 +250,8 @@ class Job(object):
                  rc              = -1,
                  stdout          = '',
                  stderr          = '',
-                 shell           = False):
+                 shell           = False,
+                 host            = None):
         """
         This initialize could be for an existing job or a new job that
         has never been run.
@@ -261,6 +271,7 @@ class Job(object):
         self.stdout     = stdout
         self.stderr     = stderr
         self.shell      = shell
+        self.host       = host
 
     @classmethod
     def new_job(cls, cmd, table=None, shell=False):
@@ -290,6 +301,8 @@ class Job(object):
         """
         self.start_time = time.localtime()
         self.status = self.RUNNING
+        # http://stackoverflow.com/questions/4271740/how-can-i-use-python-to-get-the-system-name
+        self.host = socket.getfqdn()
         self.updatedb()
 
         # If we get a control-c, mark it as a failure
@@ -447,7 +460,7 @@ class Job(object):
         """
         return ('Job id {self.job_id:3} {self.status:10} '
                 'time {self.start_time_str}-{self.end_time_str} '
-                '({self.duration}) {self.strcmd}'.
+                '({self.duration}) {self.host} {self.strcmd}'.
                 format(self=self))
 
     def report(self):
@@ -608,16 +621,27 @@ class SqlTable(object):
         # cursor = con.cursor()
         # cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         # print(cursor.fetchall())
-        self.db.execute("SELECT name "
-                        "FROM   sqlite_master "
-                        "WHERE  type = 'table' "
-                        "  AND  name = '{0}';".format(self.table))
+        self.db.execute_always("SELECT name "
+                               "FROM   sqlite_master "
+                               "WHERE  type = 'table' "
+                               "  AND  name = '{0}';".format(self.table))
         matches = self.db.fetchall()
         if len(matches) > 0:
+            # http://stackoverflow.com/questions/604939/how-can-i-get-the-list-of-a-columns-in-a-table-for-a-sqlite-database
+            self.db.execute_always("pragma table_info({0})".
+                                   format(self.table))
+            existing = dict((ci[1], ci[2]) for ci in self.db.fetchall())
+            for ci in self.columns:
+                if ci[0] not in existing:
+                    # http://stackoverflow.com/questions/4253804/insert-new-column-into-table-in-sqlite
+                    self.db.execute("ALTER TABLE {0} ADD {1} {2}".
+                                    format(self.table, ci[0], ci[1]))
             return
-        self.db.execute("CREATE TABLE jobs ( "
-                        "job_id INTEGER PRIMARY KEY, {0});".
-                        format(', '.join('{0} {1}'.format(ci[0], ci[1])
+        self.db.execute("CREATE TABLE {0} ( "
+                        "{1} INTEGER PRIMARY KEY, {2});".
+                        format(self.table,
+                               self.key_col,
+                               ', '.join('{0} {1}'.format(ci[0], ci[1])
                                          for ci in self.columns)))
 
     def add_obj(self, obj):
@@ -694,10 +718,11 @@ class DbJob(object):
         self.stdout     = job.stdout
         self.stderr     = job.stderr
         self.shell      = bool(job.shell)
+        self.host       = job.host
 
     @classmethod
     def make_job(cls, job_id, command, status, start_time, end_time,
-                 returncode, stdout, stderr, shell):
+                 returncode, stdout, stderr, shell, host):
         return Job(job_id     = job_id,
                    cmd        = command.split(),
                    status     = cls.STATUS_IDS[status],
@@ -706,7 +731,8 @@ class DbJob(object):
                    rc         = returncode,
                    stdout     = stdout,
                    stderr     = stderr,
-                   shell      = bool(shell))
+                   shell      = bool(shell),
+                   host       = host)
 
     @classmethod
     def status_name_to_id(cls, *statuses):
@@ -737,6 +763,7 @@ class JobTable(object):
                      ('stdout',     'TEXT'),
                      ('stderr',     'TEXT'),
                      ('shell',      'INTEGER'),
+                     ('host',       'TEXT'),
                      ),
             key_col='job_id',
             obj_constructor=DbJob.make_job)
