@@ -425,18 +425,26 @@ class Job(object):
     def duration(self):
         secs = self.end_time_secs - self.start_time_secs
         if secs < 0:
-            return 'never finished'
+            return '-'
         output = []
-        for (num, name) in ((7 * 24 * 60 * 60, 'week'),
-                            (    24 * 60 * 60, 'day'),
-                            (         60 * 60, 'hr'),
-                            (              60, 'min')):
+        for (num, name) in ((7 * 24 * 60 * 60, 'wk'),
+                            (    24 * 60 * 60, 'd'),
+                            (         60 * 60, 'h'),
+                            (              60, 'm')):
             if secs > num:
-                output.append('{0} {1}'.format(int(secs / num),
-                                               name))
+                output.append('{0}{1}'.format(int(secs / num),
+                                              name))
                 secs = secs % num
-        output.append('{0} {1}'.format(int(secs), 'sec'))
-        return ' '.join(output)
+        output.append('{0}{1}'.format(int(secs), 's'))
+        return ''.join(output)
+
+    @property
+    def shorthost(self):
+        try:
+            dot = self.host.index('.')
+        except:
+            return self.host
+        return self.host[:dot]
 
     # -----------------------
     # DB updates
@@ -458,9 +466,9 @@ class Job(object):
         This appears as the subject of emails and this is the line we
         print when summarizing the JobTable.
         """
-        return ('Job id {self.job_id:3} {self.status:10} '
-                'time {self.start_time_str}-{self.end_time_str} '
-                '({self.duration}) {self.host} {self.strcmd}'.
+        return ('{self.job_id:3} {self.status:10} '
+                '{self.start_time_str} '
+                '({self.duration:8}) {self.shorthost:8} {self.strcmd}'.
                 format(self=self))
 
     def report(self):
@@ -788,26 +796,30 @@ class JobTable(object):
         if since is None:
             return ''
         else:
-            return ('AND (start_time >= {0} OR start_time <= 0)'.
+            return ('(start_time >= {0} OR start_time <= 0)'.
                     format(time.time() - since * 24 * 60 * 60))
 
-    def get_all_jobs(self):
-        return self.table.get_objs()
+    def get_all_jobs(self, since=None):
+        return self.table.get_objs('WHERE {0} '
+                                   'ORDER BY start_time DESC'.
+                                   format(self.get_since(since)))
 
     def get_running_jobs(self):
         return self.table.get_objs('WHERE status IN (?)',
                                    DbJob.status_name_to_id(Job.RUNNING))
 
     def get_incomplete_jobs(self, since=None):
-        return self.table.get_objs('WHERE status NOT IN (?, ?) {0} '
+        return self.table.get_objs('WHERE status NOT IN (?, ?) {0} {1} '
                                    'ORDER BY start_time DESC'.
-                                   format(self.get_since(since)),
+                                   format(('' if since is None else 'AND'),
+                                          self.get_since(since)),
                                    DbJob.status_name_to_id(Job.SUCCEEDED,
                                                            Job.RUNNING))
 
     def get_succeeded_jobs(self, since=None):
-        return self.table.get_objs('WHERE status IN (?) {0}'.
-                                   format(self.get_since(since)),
+        return self.table.get_objs('WHERE status IN (?) {0} {1}'.
+                                   format(('' if since is None else 'AND'),
+                                          self.get_since(since)),
                                    DbJob.status_name_to_id(Job.SUCCEEDED))
 
     def get_recent_jobs(self, since=None):
@@ -816,9 +828,7 @@ class JobTable(object):
         order (most important first): running jobs, then failed jobs,
         then successful jobs.
         """
-        return (self.get_running_jobs() +
-                self.get_incomplete_jobs(since) +
-                self.get_succeeded_jobs(since))
+        return (self.get_all_jobs(since))
 
     def delete_job(self, job):
         # In a more pure world, we might wrap the job as a DbJob
