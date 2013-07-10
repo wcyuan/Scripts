@@ -131,10 +131,12 @@ def main():
         tables = get_input(args)
 
     for table in tables:
+        logging.debug("Printing table")
         pretty_print(table,
                      left=opts.left,
                      should_transpose=opts.should_transpose,
                      raw=opts.raw)
+        logging.debug("Done printing table")
 
 def getopts():
     """
@@ -800,8 +802,10 @@ def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
     for query in sql:
         while True:
             try:
+                logging.info("Running query {0}".format(query))
                 cursor.execute(query)
                 data = cursor.fetchall()
+                logging.info("Finished query {0}".format(query))
                 table = [[d[0] for d in cursor.description]]
                 for row in data:
                     table.append([str(v) for v in row])
@@ -851,20 +855,13 @@ def make_one_table(database, cursor, name, header, data):
                                      for (h, d) in zip(header, data[0]))))
     logging.debug(command)
     cursor.execute(command)
-    for row in data:
-        # In case the header appears to have more columns than the rows
-        trunc = row[:len(header)]
-        command = ('INSERT INTO {0} VALUES ({1});'.
-                   format(name,
-                          ', '.join('?' for v in trunc)))
-        logging.debug("Running '{0}' with '{1}'".format(command, trunc))
-        try:
-            cursor.execute(command, trunc)
-        except:
-            logging.error("Failed on line {0}.  Command {1}.  Truncated {2}".
-                          format(row, command, trunc))
-            raise
+
+    command = ('INSERT INTO {0} VALUES ({1});'.
+               format(name,
+                      ', '.join('?' for v in header)))
+    cursor.executemany(command, (row[:len(header)] for row in data))
     database.commit()
+    logging.debug("Finished inserting rows")
 
 
 # --------------------------------------------------------------------
