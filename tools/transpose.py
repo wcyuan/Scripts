@@ -757,7 +757,8 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
 def file_to_table(filename, *args, **kwargs):
     """
     A helper function for the case where you just have a single file
-    and want a table instead of a generator
+    and want a table instead of a generator.  This isn't used from
+    main, but could be useful for someone loading this as a module.
     """
     return list(read_files([filename], *args, **kwargs))[0]
 
@@ -903,7 +904,7 @@ def make_table_from_command(table_name,
                             database=None,
                             cursor=None,
                             get_input=read_files):
-    table = file_to_table(command)
+    table = list(get_input([command]))[0]
     make_table_from_data(table_name, table[0], table[1:],
                          database=database, cursor=cursor)
 
