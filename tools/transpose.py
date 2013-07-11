@@ -873,15 +873,15 @@ def _get_default_dbs(reset=False):
         setattr(_get_default_dbs, 'cursor', _get_default_dbs.conn.cursor())
     return (_get_default_dbs.conn, _get_default_dbs.cursor)
 
-def make_table_from_data(database,
-                         cursor,
-                         name,
-                         header,
-                         data):
+def make_table_from_data(name, header, data,
+                         database=None, cursor=None):
     """
     Given data in tabular form (as a list of rows, where each row has
     the same columns), insert that table into a sqlite database.
     """
+    if database is None or cursor is None:
+        database, cursor = _get_default_dbs()
+
     command = ('CREATE TABLE {name} ({cols});'.
                format(name=name,
                       cols=', '.join("'{0}' {1}".
@@ -903,10 +903,9 @@ def make_table_from_command(table_name,
                             database=None,
                             cursor=None,
                             get_input=read_files):
-    if database is None or cursor is None:
-        database, cursor = _get_default_dbs()
     table = file_to_table(command)
-    make_table_from_data(database, cursor, table_name, table[0], table[1:])
+    make_table_from_data(table_name, table[0], table[1:],
+                         database=database, cursor=cursor)
 
 def make_table_by_name(table_name,
                        table_config,
