@@ -42,14 +42,9 @@ from __future__ import absolute_import, division, with_statement
 import contextlib
 import itertools
 import logging
-import json
 import optparse
 import os.path
 import re
-import shlex
-import sqlite3
-import subprocess
-import sys
 
 # --------------------------------------------------------------------
 
@@ -95,7 +90,6 @@ __all__ = ['zopen',
            'pretty_print',
            'read_files',
            'do_sql',
-           'make_one_table',
            ]
 
 logging.basicConfig(format='[%(asctime)s '
@@ -127,6 +121,7 @@ def main():
         tables = do_sql(opts.sql, args, get_input, opts.config, cvars=opts.vars)
     else:
         if len(args) == 0:
+            import sys
             args = [sys.stdin]
         tables = get_input(args)
 
@@ -363,6 +358,7 @@ def zopen(filename, input_type=None):
 
     command = None
     if input_type == 'cmd':
+        import shlex
         command = shlex.split(filename)
     else:
         for (sfx, cmd) in DECOMPRESSORS:
@@ -376,6 +372,7 @@ def zopen(filename, input_type=None):
         return
 
     logging.info('running {0}'.format(' '.join(command)))
+    import subprocess
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     yield proc.stdout
     proc.wait()
@@ -704,7 +701,6 @@ def pretty_print(intable, left=False, should_transpose=None, raw=False):
         intable = None
     print texttable(ttable, transposed=intable, left=left)
 
-
 def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None, header_patt=None,
                filters=None, by_col_no=False, columns=(), noheader=False,
@@ -758,75 +754,102 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
     if table is not None:
         yield(table)
 
+def file_to_table(filename, *args, **kwargs):
+    """
+    A helper function for the case where you just have a single file
+    and want a table instead of a generator
+    """
+    return list(read_files([filename], *args, **kwargs))[0]
+
 # --------------------------------------------------------------------
 
-def read_config(config_filename):
-    """
-    The config file should have a form roughly like this:
-
-    {
-      "tables": {
-        "table1": "/home/user/myfilename.txt",
-        "table2": {
-          "create": "/usr/bin/mycmd",
-          "sql": ["create index _table2_id_ on table2 (id)"]
-        }
-      }
-    }
-    """
-    tables = {}
-    if config_filename is None:
-        return tables
-    config_filename = os.path.expanduser(config_filename)
-    if not os.path.exists(config_filename):
-        return tables
-    logging.info("Reading config file {0}".format(config_filename))
-    with zopen(config_filename) as config_fd:
-        config = json.load(config_fd)
-        # Everything should be in the tables subarea
-        if 'tables' not in config:
-            return tables
-        config = config['tables']
-        for table in config:
-            # Each table is either just a string, or a dictionary
-            # If a table is a dictionary, then it has two fields:
-            #   create - a string indicating the file to read or
-            #            command to run to build the table
-            #   sql    - extra sql statements to execute after creating
-            #            the table.  You can use this to build indexes
-            #            on the table, for example.
-            if isinstance(config[table], dict):
-                table_command = config[table]['create']
-                if isinstance(config[table]['sql'], basestring):
-                    table_sql = [config[table]['sql']]
-                elif isinstance(config[table]['sql'], list):
-                    table_sql = config[table]['sql']
-                else:
-                    raise ValueError("Malformed config file {0}: sql is "
-                                     "neither string nor list".format(table))
-            elif isinstance(config[table], basestring):
-                table_command = config[table]
-                table_sql = []
-            else:
-                raise ValueError("Malformed config file {0}: table info is "
-                                 "neither string nor dict".format(table))
-            logging.debug("Got table {0} = ({1}, {2}) from config file {3}".
-                          format(table, table_command, table_sql, config))
-            tables[table] = [str(table_command), table_sql]
-    return tables
-
-def get_table_list(config, args):
-    tables = read_config(config)
-    if args is not None:
-        for arg in args:
-            (table_name, filename) = arg.split('=', 1)
-            if table_name in tables:
+class Config(object):
+    def __init__(self, config_filename, args):
+        self.config_filename = config_filename
+        self.tables = self.read_config(config_filename)
+        arg_tables = self.tables_from_args(args)
+        for table_name in arg_tables:
+            if table_name in self.tables:
                 logging.info("Skipping table {0} = ({1}) "
                              "from config file {2}, overriden "
                              "on the command line".
-                             format(table_name, tables[table_name], config))
+                             format(table_name, self.tables[table_name],
+                                    self.config_filename))
+        self.tables.update(arg_tables)
+
+    @classmethod
+    def tables_from_args(self, *args):
+        tables = {}
+        for arg in args:
+            (table_name, filename) = arg.split('=', 1)
             tables[table_name] = [filename, []]
-    return tables
+        return tables
+
+    @classmethod
+    def read_config(cls, config_filename):
+        """
+        The config file should have a form roughly like this:
+
+        {
+        "tables": {
+        "table1": "/home/user/myfilename.txt",
+        "table2": {
+        "create": "/usr/bin/mycmd",
+        "sql": ["create index _table2_id_ on table2 (id)"]
+        }
+        }
+        }
+        """
+        tables = {}
+        if config_filename is None:
+            return tables
+        config_filename = os.path.expanduser(config_filename)
+        if not os.path.exists(config_filename):
+            return tables
+        logging.info("Reading config file {0}".format(config_filename))
+        with zopen(config_filename) as config_fd:
+            import json
+            config = json.load(config_fd)
+            # Everything should be in the tables subarea
+            if 'tables' not in config:
+                return tables
+            config = config['tables']
+            for table in config:
+                # Each table is either just a string, or a dictionary
+                # If a table is a dictionary, then it has two fields:
+                #   create - a string indicating the file to read or
+                #            command to run to build the table
+                #   sql    - extra sql statements to execute after creating
+                #            the table.  You can use this to build indexes
+                #            on the table, for example.
+                if isinstance(config[table], dict):
+                    table_command = config[table]['create']
+                    if isinstance(config[table]['sql'], basestring):
+                        table_sql = [config[table]['sql']]
+                    elif isinstance(config[table]['sql'], list):
+                        table_sql = config[table]['sql']
+                    else:
+                        raise ValueError("Malformed config file {0}: sql is "
+                                         "neither string nor list".format(table))
+                elif isinstance(config[table], basestring):
+                    table_command = config[table]
+                    table_sql = []
+                else:
+                    raise ValueError("Malformed config file {0}: table info is "
+                                     "neither string nor dict".format(table))
+                logging.debug("Got table {0} = ({1}, {2}) from config file {3}".
+                              format(table, table_command, table_sql, config))
+                tables[table] = [str(table_command), table_sql]
+        return tables
+
+    def has_table(self, table_name):
+        return table_name in self.tables
+
+    def get_table_command(self, table_name):
+        return self.tables[table_name][0]
+
+    def get_table_sqls(self, table_name):
+        return self.tables[table_name][1]
 
 def _guess_type(value):
     """
@@ -841,7 +864,20 @@ def _guess_type(value):
             pass
     return 'TEXT'
 
-def make_table_from_data(database, cursor, name, header, data):
+def _get_default_dbs(reset=False):
+    if reset or not hasattr(_get_default_dbs, 'conn'):
+        import sqlite3
+        setattr(_get_default_dbs, 'conn', sqlite3.connect(':memory:'))
+        _get_default_dbs.conn.text_factory = str
+    if reset or not hasattr(_get_default_dbs, 'cursor'):
+        setattr(_get_default_dbs, 'cursor', _get_default_dbs.conn.cursor())
+    return (_get_default_dbs.conn, _get_default_dbs.cursor)
+
+def make_table_from_data(database,
+                         cursor,
+                         name,
+                         header,
+                         data):
     """
     Given data in tabular form (as a list of rows, where each row has
     the same columns), insert that table into a sqlite database.
@@ -857,17 +893,33 @@ def make_table_from_data(database, cursor, name, header, data):
     command = ('INSERT INTO {0} VALUES ({1});'.
                format(name,
                       ', '.join('?' for v in header)))
-    cursor.executemany(command, (row[:len(header)] for row in data))
+    pad = [None]*len(header)
+    cursor.executemany(command, ((row+pad)[:len(header)] for row in data))
     database.commit()
     logging.debug("Finished inserting rows")
 
-def make_table_from_command(database, cursor, table_name,
-                            tables_dict, get_input, cvars):
+def make_table_from_command(table_name,
+                            command,
+                            database=None,
+                            cursor=None,
+                            get_input=read_files):
+    if database is None or cursor is None:
+        database, cursor = _get_default_dbs()
+    table = file_to_table(command)
+    make_table_from_data(database, cursor, table_name, table[0], table[1:])
+
+def make_table_by_name(table_name,
+                       table_config,
+                       database=None,
+                       cursor=None,
+                       get_input=read_files,
+                       cvars=None):
     """
     Run a command to get the data for a table, then create the table
     in the database
     """
-    (table_create, sql_commands) = tables_dict[table_name]
+    table_create = table_config.get_table_command(table_name)
+    sql_commands = table_config.get_table_sqls(table_name)
     logging.info("Trying to load table {0} with file or command {1}".
                  format(table_name, table_create))
     try:
@@ -876,15 +928,16 @@ def make_table_from_command(database, cursor, table_name,
         raise KeyError("Table {0} command {1} needs var {2} "
                        "to be set".format(table_name, table_create,
                                           kexc.args[0]))
-    table = list(get_input([filename]))[0]
-    make_table_from_data(database, cursor, table_name, table[0], table[1:])
+    make_table_from_command(table_name, filename,
+                            database=database, cursor=cursor,
+                            get_input=get_input)
     for sql in sql_commands:
         logging.info("Running extra sql command for table {0}: {1}".
                      format(table_name, sql))
         cursor.execute(sql)
         database.commit()
 
-def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
+def do_sql(sql, args=None, get_input=read_files, config=None, cvars=None):
     """
     Build an in memory sqlite database and execute a sql query against
     it.  The tables of the database come from reading files or
@@ -896,10 +949,13 @@ def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
     if cvars is None:
         cvars = {}
 
-    tables = get_table_list(config, args)
-    conn = sqlite3.connect(':memory:')
-    cursor = conn.cursor()
-    conn.text_factory = str
+    if args is None:
+        args = []
+
+    import sqlite3
+
+    table_config = Config(config, args)
+    conn, cursor = _get_default_dbs()
 
     for query in sql:
         while True:
@@ -922,17 +978,18 @@ def do_sql(sql, args=None, get_input=read_input, config=None, cvars=None):
                 if not msg.startswith('no such table: '):
                     raise
                 missing = msg[15:]
-                if missing not in tables:
+                if not table_config.has_table(missing):
                     # If you run the query 'create index spn on
                     # esecurity (spn)' the error you get is that there
                     # is no table called main.esecurity.  So try
                     # stripping off the "main."
                     if missing.startswith('main.'):
                         missing = missing[5:]
-                if missing not in tables:
+                if not table_config.has_table(missing):
                     raise
-                make_table_from_command(conn, cursor, missing, tables,
-                                        get_input, cvars)
+                make_table_by_name(missing, table_config,
+                                   database=conn, cursor=cursor,
+                                   get_input=get_input, cvars=cvars)
 
 # --------------------------------------------------------------------
 
