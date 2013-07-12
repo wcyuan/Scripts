@@ -37,7 +37,21 @@ alias      sa='unalias -a; . ~/.bashrc'
 alias ipython='PYTHONUNBUFFERED=1 python c:/cygwin/home/Yuan/usr/pkgs/ipython-0.12/ipython.py'
 alias     irb='/cygdrive/c/Ruby193/bin/irb.bat --prompt default'
 
-alias     pgm='cd ~/code/local/octave/pgmclass/pa9/'
+#
+# ps BSD-style options
+#
+# u   = user format (shows username)
+# www = wide format (shows as many arguments as it can)
+# x   = show process that aren't attached to a terminal.  this has
+#       the effect of always showing the processes of the current
+#       user, even if you add a -U or -u option
+# f   = forest view: show ascii art representation of process tree
+#
+# to show sps for another user, try 'ps uwwwf -u <username> -U <username>'
+# or, if you do 'sps -u <user>' it'll work, but you'll see
+# processes for yourself and for <user>
+#
+alias     sps='ps uxwwwf'
 
 gitall() {
     cmd="$@"
@@ -146,6 +160,11 @@ alias    fixterm="echo -n "
 alias        hex='printf "%x\n"'
 alias       beep='perl -e "print \"\a\";"'
 alias        fep=rlwrap
+
+pynotebook() {
+    #cd ~/notebook-directory
+    ipython notebook --pylab=inline --no-browser --ip="*"
+}
 
 embolden() {
     # Takes one argument, which is a pattern.
