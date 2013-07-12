@@ -111,7 +111,7 @@ def main():
                    for v in ('patt', 'delim', 'reverse', 'kind', 'header_patt',
                              'head', 'filters', 'by_col_no', 'columns',
                              'noheader', 'add_filename', 'raw', 'width',
-                             'clean_output', 'immediate'))
+                             'clean_output', 'immediate', 'nopretty'))
 
     def get_input(fns):
         """
@@ -132,7 +132,7 @@ def main():
         pretty_print(table,
                      left=opts.left,
                      should_transpose=opts.should_transpose,
-                     raw=opts.raw)
+                     nopretty=opts.nopretty)
         logging.debug("Done printing table")
 
 def getopts():
@@ -205,6 +205,9 @@ def getopts():
                       dest='raw',
                       action='store_true',
                       help='just grep without any other processing')
+    parser.add_option('--nopretty', '--no_pretty',
+                      action='store_true',
+                      help='do not pretty pretty')
     parser.add_option('--width',
                       type=int,
                       help='only show the first N characters of each column')
@@ -255,6 +258,12 @@ def getopts():
 
     if opts.vars is not None:
         opts.vars = dict(v.split('=', 1) for v in opts.vars)
+
+    if opts.raw:
+        opts.nopretty = True
+
+    if opts.immediate and len(opts.sql) > 0:
+        raise ValueError("Cannot use immediate mode with sql mode")
 
     if opts.ofs is not None:
         global OFS
@@ -533,7 +542,7 @@ def read_input(filedesc, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None,
                header_patt=None, filters=None, by_col_no=False,
                columns=(), raw=False, width=None, immediate=False,
-               noheader=False, clean_output=False):
+               noheader=False, clean_output=False, nopretty=False):
     """
     Reads a file with tabular data.  Returns a list of rows, where a
     row is a list of fields.  The first row is the header.
@@ -619,7 +628,7 @@ def read_input(filedesc, patt=None, delim=None, comment=COMMENT_CHAR,
             #  max(width of value, width of header) + PADDING
             #
             if len(formats) == 0:
-                if raw:
+                if nopretty:
                     formats = ["{0}"] * len(print_header)
                 else:
                     formats = ["{{0:{0}}}".format(max(len(f), len(h) + PADDING))
@@ -686,12 +695,12 @@ def texttable(table, transposed=None, delim=OFS, left=False):
                                       for (format, fld) in zip(formats, line))
                     for line in table)
 
-def pretty_print(intable, left=False, should_transpose=None, raw=False):
+def pretty_print(intable, left=False, should_transpose=None, nopretty=False):
     """
     Wrapper around texttable.  If the table has fewer than 6 rows,
     transpose first.
     """
-    if raw:
+    if nopretty:
         print ORS.join(("%s" % OFS.join(line)) for line in intable)
         return
 
@@ -707,7 +716,7 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None, header_patt=None,
                filters=None, by_col_no=False, columns=(), noheader=False,
                add_filename=None, raw=False, width=None, clean_output=False,
-               immediate=False, input_type=None):
+               immediate=False, input_type=None, nopretty=False):
     """
     Reads multiple files, transposes (if necessary), and pretty-prints
     the output.
@@ -724,7 +733,7 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                                    filters=filters, by_col_no=by_col_no,
                                    columns=columns, raw=raw, width=width,
                                    immediate=immediate, noheader=noheader,
-                                   clean_output=clean_output)
+                                   clean_output=clean_output, nopretty=nopretty)
 
             if len(filetable) == 0:
                 continue
