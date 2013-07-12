@@ -95,7 +95,7 @@ __all__ = ['zopen',
            ]
 
 logging.basicConfig(format='[%(asctime)s '
-                    '%(module)s:%(lineno)s %(levelname)-5s] '
+                    '%(funcName)s:%(lineno)s %(levelname)-5s] '
                     '%(message)s')
 
 # --------------------------------------------------------------------
@@ -110,8 +110,8 @@ def main():
     rf_args = dict((v, getattr(opts, v))
                    for v in ('patt', 'delim', 'reverse', 'kind', 'header_patt',
                              'head', 'filters', 'by_col_no', 'columns',
-                             'noheader', 'add_filename', 'raw', 'width',
-                             'clean_output', 'immediate', 'nopretty'))
+                             'add_filename', 'raw', 'width',
+                             'clean_output'))
 
     def get_input(fns):
         """
@@ -132,7 +132,9 @@ def main():
         pretty_print(table,
                      left=opts.left,
                      should_transpose=opts.should_transpose,
-                     nopretty=opts.nopretty)
+                     nopretty=opts.nopretty,
+                     immediate=opts.immediate,
+                     noheader=opts.noheader)
         logging.debug("Done printing table")
 
 def getopts():
@@ -262,9 +264,6 @@ def getopts():
     if opts.raw:
         opts.nopretty = True
 
-    if opts.immediate and len(opts.sql) > 0:
-        raise ValueError("Cannot use immediate mode with sql mode")
-
     if opts.ofs is not None:
         global OFS
         global CLEAN_CHAR
@@ -378,15 +377,16 @@ def zopen(filename, input_type=None):
                 break
 
     if command is None:
+        logging.debug("opening filename")
         with open(filename) as filedesc:
             yield filedesc
+        logging.debug("Closing filename")
         return
 
     logging.info('running {0}'.format(' '.join(command)))
     import subprocess
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     yield proc.stdout
-    proc.wait()
     proc.stdout.close()
     logging.info('done running {0}'.format(' '.join(command)))
 
@@ -538,13 +538,13 @@ def _sanitize(row):
     return [CLEAN_CHAR if r == '' else r.replace(OFS, CLEAN_CHAR)
             for r in row]
 
-def read_input(filedesc, patt=None, delim=None, comment=COMMENT_CHAR,
-               kind='delimited', reverse=False, head=None,
-               header_patt=None, filters=None, by_col_no=False,
-               columns=(), raw=False, width=None, immediate=False,
-               noheader=False, clean_output=False, nopretty=False):
+def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
+                kind='delimited', reverse=False, head=None,
+                header_patt=None, filters=None, by_col_no=False,
+                columns=(), raw=False, width=None,
+                clean_output=False):
     """
-    Reads a file with tabular data.  Returns a list of rows, where a
+    Reads a file with tabular data.  Returns a generator of rows, where a
     row is a list of fields.  The first row is the header.
 
     So this function:
@@ -556,109 +556,73 @@ def read_input(filedesc, patt=None, delim=None, comment=COMMENT_CHAR,
      - Stops after <head> rows
 
     """
-    table = []
+    nrows = 0
     header = None
     keep_idx = None
-    formats = []
-    header_printed = False
-    for line in filedesc:
-        line = line.strip(IRS)
+    with zopen(filename) as filedesc:
+        for line in filedesc:
+            line = line.strip(IRS)
 
-        # First step is to look for the header.  If we haven't found
-        # it yet, we'll skip all lines until we find it.  We use the
-        # header to figure out the format for the rest of the file.
-        if header is None:
-            if not _is_header(line, comment, header_patt):
+            # First step is to look for the header.  If we haven't found
+            # it yet, we'll skip all lines until we find it.  We use the
+            # header to figure out the format for the rest of the file.
+            if header is None:
+                if not _is_header(line, comment, header_patt):
+                    continue
+                if delim is None:
+                    (kind, delim) = _guess_delim(line, kind)
+                (header, magic_word) = _separate(line, kind, delim, raw=raw)
+                if by_col_no:
+                    col_nos = [str(r) for r in range(1, len(header)+1)]
+                    header = col_nos
+                if columns is not None and len(columns) > 0:
+                    keep_idx = [header.index(c) for c in columns]
+                    print_header = [header[i] for i in keep_idx]
+                else:
+                    print_header = header
+                if raw and magic_word is not None:
+                    print_header[0] = magic_word + ' ' + print_header[0]
+
+                if clean_output:
+                    print_header = _sanitize(print_header)
+
+                yield print_header
+                if not by_col_no:
+                    continue
+
+            # Skip comments
+            if _is_comment(line, comment):
                 continue
-            if delim is None:
-                (kind, delim) = _guess_delim(line, kind)
-            (header, magic_word) = _separate(line, kind, delim, raw=raw)
-            if by_col_no:
-                col_nos = [str(r) for r in range(1, len(header)+1)]
-                header = col_nos
-            if columns is not None and len(columns) > 0:
-                keep_idx = [header.index(c) for c in columns]
-                print_header = [header[i] for i in keep_idx]
-            else:
-                print_header = header
-            if raw and magic_word is not None:
-                print_header[0] = magic_word + ' ' + print_header[0]
+
+            # If there is a pattern to match, skip until we find that pattern
+            if (patt is not None and
+                not _is_match(line, patt, reverse=reverse)):
+                continue
+
+            # Found a valid line!  Parse it into separate fields.
+            (row, _) = _separate(line, kind, delim, raw=raw)
+
+            # Apply filters
+            if _should_filter(row, header, filters):
+                continue
+
+            if keep_idx is not None:
+                row = [row[i] for i in keep_idx]
+
+            if width is not None:
+                row = [r if len(r) < width else (r[:width]+"...") for r in row]
 
             if clean_output:
-                print_header = _sanitize(print_header)
+                row = _sanitize(row)
 
-            table.append(print_header)
-            if not by_col_no:
-                continue
+            nrows += 1
+            yield row
 
-        # Skip comments
-        if _is_comment(line, comment):
-            continue
-
-        # If there is a pattern to match, skip until we find that pattern
-        if (patt is not None and
-            not _is_match(line, patt, reverse=reverse)):
-            continue
-
-        # Found a valid line!  Parse it into separate fields.
-        (row, _) = _separate(line, kind, delim, raw=raw)
-
-        # Apply filters
-        if _should_filter(row, header, filters):
-            continue
-
-        if keep_idx is not None:
-            row = [row[i] for i in keep_idx]
-
-        if width is not None:
-            row = [r if len(r) < width else (r[:width]+"...") for r in row]
-
-        if clean_output:
-            row = _sanitize(row)
-
-        if immediate:
-            # In immediate mode, we print our output right here,
-            # without transposing or aligning rows.  However, we still
-            # try to guess at a nice format.  We assume that the
-            # values in each row are about the same width, within
-            # PADDING characters.  We use the values first non-header
-            # row as an estimate for the width of the row.  The width
-            # we use is:
-            #
-            #  max(width of value, width of header) + PADDING
-            #
-            if len(formats) == 0:
-                if nopretty:
-                    formats = ["{0}"] * len(print_header)
-                else:
-                    formats = ["{{0:{0}}}".format(max(len(f), len(h) + PADDING))
-                               for (f, h) in zip(row, print_header)]
-                logging.debug(formats)
-            if not header_printed and not noheader:
-                print OFS.join(f.format(s)
-                               for (f, s)
-                               in zip(formats, table[0]))
-                header_printed = True
-            print OFS.join(f.format(s)
-                           for (f, s)
-                           in zip(formats, row))
-
-            # To save memory, don't save the row.  However, we still
-            # need to keep track of the number of rows for head, so
-            # just add a None.
-            table.append(None)
-        else:
-            table.append(row)
-
-        # If we were given a number of lines to look for, stop after
-        # that number.
-        if head is not None:
-            if len(table) >= head+1:
-                break
-
-    if immediate:
-        return []
-    return table
+            # If we were given a number of lines to look for, stop after
+            # that number.
+            if head is not None:
+                if nrows >= head:
+                    return
 
 def transpose(intable):
     """
@@ -695,8 +659,15 @@ def texttable(table, transposed=None, delim=OFS, left=False):
                                       for (format, fld) in zip(formats, line))
                     for line in table)
 
-def pretty_print(intable, left=False, should_transpose=None, nopretty=False):
+def pretty_print(intable, left=False, should_transpose=None, nopretty=False,
+                 immediate=False, noheader=False):
     """
+    If raw, just print each row of the table after joining with the
+    OFS.
+
+    If immediate, guess at the format based on the header and the
+    first row, then use that format to print each line.
+
     Wrapper around texttable.  If the table has fewer than 6 rows,
     transpose first.
     """
@@ -704,6 +675,42 @@ def pretty_print(intable, left=False, should_transpose=None, nopretty=False):
         print ORS.join(("%s" % OFS.join(line)) for line in intable)
         return
 
+    if immediate:
+        # In immediate mode, we print our output as it comes, without
+        # without transposing or aligning rows.  That way we don't
+        # need to wait for the last row before printing the first row.
+        #
+        # However, we still try to guess at a nice format.  We assume
+        # that the values in each row are about the same width, within
+        # PADDING characters.  We use the values first non-header row
+        # as an estimate for the width of the row.  The width we use
+        # is:
+        #
+        #  max(width of value, width of header) + PADDING
+        #
+        formats = []
+        header = intable.next()
+        header_printed = False
+        for row in intable:
+            if len(formats) == 0:
+                formats = ["{{0:{0}}}".format(max(len(f), len(h) + PADDING))
+                           for (f, h) in zip(row, header)]
+                logging.debug(formats)
+            if not header_printed and not noheader:
+                print OFS.join(f.format(s)
+                               for (f, s)
+                               in zip(formats, header))
+                header_printed = True
+            # if this row is longer than the number of formats, pad
+            # with extra formats so that we don't lose data
+            pad = ['{0}'] * max(0, len(row) - len(formats))
+            print OFS.join(f.format(s)
+                           for (f, s)
+                           in zip(formats + pad, row))
+        return
+
+    # convert generator to list
+    intable = tuple(intable)
     if ((should_transpose is None and len(intable) < 6) or should_transpose):
         ttable = transpose(intable)
         logging.debug("transposed table: %s" % ttable)
@@ -714,56 +721,55 @@ def pretty_print(intable, left=False, should_transpose=None, nopretty=False):
 
 def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None, header_patt=None,
-               filters=None, by_col_no=False, columns=(), noheader=False,
-               add_filename=None, raw=False, width=None, clean_output=False,
-               immediate=False, input_type=None, nopretty=False):
+               filters=None, by_col_no=False, columns=(),
+               add_filename=None, raw=False, width=None, clean_output=False):
     """
-    Reads multiple files, transposes (if necessary), and pretty-prints
-    the output.
+    Reads multiple files and returns a generator of tables, where a
+    table is a generator of rows.
     """
 
     table = None
     prev_header = None
     for filename in fns:
-        with zopen(filename, input_type=input_type) as filedesc:
-            filetable = read_input(filedesc, patt=patt, delim=delim,
-                                   comment=comment, kind=kind,
-                                   reverse=reverse, head=head,
-                                   header_patt=header_patt,
-                                   filters=filters, by_col_no=by_col_no,
-                                   columns=columns, raw=raw, width=width,
-                                   immediate=immediate, noheader=noheader,
-                                   clean_output=clean_output, nopretty=nopretty)
+        filetable = _read_input(filename, patt=patt, delim=delim,
+                                comment=comment, kind=kind,
+                                reverse=reverse, head=head,
+                                header_patt=header_patt,
+                                filters=filters, by_col_no=by_col_no,
+                                columns=columns, raw=raw, width=width,
+                                clean_output=clean_output)
 
-            if len(filetable) == 0:
-                continue
-
+        try:
             # Save the header from before we add filenames
-            header = filetable[0]
+            header = filetable.next()
+        except StopIteration:
+            continue
 
-            # If there are multiple files, add a column of filenames
-            # to the table.
-            if (add_filename is None and len(fns) > 1) or add_filename:
-                filetable = ([['FILE'] + filetable[0]] +
-                             [[filename] + l for l in filetable[1:]])
+        # If there are multiple files, add a column of filenames
+        # to the table.
+        if (add_filename is None and len(fns) > 1) or add_filename:
+            header = ['FILE'] + header
+            def _newfiletable(filename, filetable):
+                '''
+                Add the filename as the first column to each row
+                '''
+                yield [filename] + filetable.next()
+            filetable = _newfiletable(filename, filetable)
 
-            if table is None:
-                if noheader:
-                    filetable = filetable[1:]
-                table = filetable
-            elif prev_header == header:
-                # the header matches the previous file, so just stick
-                # the data onto the existing table.
-                table.extend(filetable[1:])
-            else:
-                yield(table)
-                if noheader:
-                    filetable = filetable[1:]
-                table = filetable
-            prev_header = header
+        if table is None:
+            table = itertools.chain([header], filetable)
+        elif prev_header == header:
+            # the header matches the previous file, so just stick
+            # the data onto the existing table.
+            table = itertools.chain(table, filetable)
+        else:
+            yield(table)
+            table = itertools.chain([header], filetable)
+        prev_header = header
 
     if table is not None:
         yield(table)
+
 
 def file_to_table(filename, *args, **kwargs):
     """
@@ -771,7 +777,7 @@ def file_to_table(filename, *args, **kwargs):
     and want a table instead of a generator.  This isn't used from
     main, but could be useful for someone loading this as a module.
     """
-    return list(read_files([filename], *args, **kwargs))[0]
+    return read_files([filename], *args, **kwargs).next().next()
 
 # --------------------------------------------------------------------
 
@@ -822,7 +828,7 @@ class Config(object):
         return self
 
     @classmethod
-    def tables_from_args(self, *args):
+    def tables_from_args(cls, *args):
         """
         Add tables as they are read from the command line.  Each
         argument should be a string like:
@@ -881,7 +887,8 @@ class Config(object):
                         table_sql = config[table]['sql']
                     else:
                         raise ValueError("Malformed config file {0}: sql is "
-                                         "neither string nor list".format(table))
+                                         "neither string nor list".
+                                         format(table))
                 elif isinstance(config[table], basestring):
                     table_command = config[table]
                     table_sql = []
@@ -926,6 +933,10 @@ class Config(object):
         return self.tables[table_name][1]
 
 class Database(object):
+    '''
+    Interface to an in-memory sqlite database that knows how to create
+    database tables from the tables returned by read_files.
+    '''
     DEFAULT_INSTANCE = None
 
     def __init__(self):
@@ -935,6 +946,9 @@ class Database(object):
 
     @classmethod
     def get(cls):
+        '''
+        Get the defaulting instance, initializing it if necessary
+        '''
         if cls.DEFAULT_INSTANCE is None:
             cls.DEFAULT_INSTANCE = cls()
         return cls.DEFAULT_INSTANCE
@@ -982,7 +996,7 @@ class Database(object):
         Given a table name and file to read or a command to run,
         create a table with that name from the file or command.
         """
-        table = list(get_input([command]))[0]
+        table = tuple(get_input([command]).next())
         self.make_table_from_data(table_name, table[0], table[1:])
 
     def make_table_by_name(self, table_name,
