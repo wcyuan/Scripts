@@ -61,9 +61,9 @@ defbce on
 # bindkey -d -k kD stuff "\010"
 
 ## The default action key is Ctrl-A.
-# Here's the command to rebind Ctrl-V to action key
-#defescape ^Vv
-#escape ^Vv
+# Here's the command to rebind Ctrl-T to action key
+defescape ^Tt
+escape ^Tt
 
 # maintain a neat little status bar at the bottom of the screen
 #caption always "%{kG}%?%-Lw%?%{bw}%n*%f %t%?(%u)%?%{kG}%?%+Lw%?"
