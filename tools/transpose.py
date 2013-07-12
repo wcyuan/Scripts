@@ -45,6 +45,7 @@ import logging
 import optparse
 import os.path
 import re
+import sqlite3
 
 # --------------------------------------------------------------------
 
@@ -84,12 +85,13 @@ PADDING = 4
 FILTER_OPS = ('!=', '<=', '>=', '<', '>', '=')
 
 __all__ = ['zopen',
-           'read_input',
            'transpose',
            'texttable',
            'pretty_print',
+           # The name "read_files" is a bit generic, maybe we
+           # shouldn't export it by default
            'read_files',
-           'do_sql',
+           'file_to_table',
            ]
 
 logging.basicConfig(format='[%(asctime)s '
@@ -765,21 +767,60 @@ def file_to_table(filename, *args, **kwargs):
 # --------------------------------------------------------------------
 
 class Config(object):
-    def __init__(self, config_filename, args):
-        self.config_filename = config_filename
-        self.tables = self.read_config(config_filename)
-        arg_tables = self.tables_from_args(args)
-        for table_name in arg_tables:
+    """
+    This class represents a map from table name to the file or command
+    to read in order to create that table.  Each table may also have a
+    set of sql commands that should be run after the table is created.
+    For example, the extra sql commands could be used to create an
+    index on the new table.
+
+    This class just keeps the map from table name to the file to read
+    or command to run.  It doesn't actually read the file or run the
+    command.  It doesn't actually add the data to the database.  It's
+    just the list of available tables.
+    """
+    def __init__(self, config=None, args=None):
+        """
+        All our data is in a map from table name to information about
+        that table.  The information about the table is a two element
+        list of the form:
+          [ file_or_command , [ extra_sql_commands ] ]
+
+        If no config file is given, try to read from the
+        DEFAULT_CONFIG_FILE
+        """
+        self.tables = {}
+        if config is None:
+            config = DEFAULT_CONFIG_FILE
+        self.add_config(config)
+        # Add args after adding config so that the args take
+        # precedence
+        if args is not None:
+            self.add_args_table(*args)
+
+    def add_tables(self, tables):
+        """
+        Add a new set of tables to the map.  These will override any
+        existing tables
+        """
+        for table_name in tables:
             if table_name in self.tables:
-                logging.info("Skipping table {0} = ({1}) "
-                             "from config file {2}, overriden "
-                             "on the command line".
-                             format(table_name, self.tables[table_name],
-                                    self.config_filename))
-        self.tables.update(arg_tables)
+                logging.warning("Overriding table {0} = ({1}) "
+                                "with ({2})".
+                                format(table_name, self.tables[table_name],
+                                       tables[table_name]))
+        self.tables.update(tables)
+        return self
 
     @classmethod
     def tables_from_args(self, *args):
+        """
+        Add tables as they are read from the command line.  Each
+        argument should be a string like:
+          table_name=filename
+        or
+          table_name=command
+        """
         tables = {}
         for arg in args:
             (table_name, filename) = arg.split('=', 1)
@@ -792,13 +833,13 @@ class Config(object):
         The config file should have a form roughly like this:
 
         {
-        "tables": {
-        "table1": "/home/user/myfilename.txt",
-        "table2": {
-        "create": "/usr/bin/mycmd",
-        "sql": ["create index _table2_id_ on table2 (id)"]
-        }
-        }
+          "tables": {
+            "table1": "/home/user/myfilename.txt",
+            "table2": {
+              "create": "/usr/bin/mycmd",
+              "sql": ["create index _table2_id_ on table2 (id)"]
+            }
+          }
         }
         """
         tables = {}
@@ -843,136 +884,155 @@ class Config(object):
                 tables[table] = [str(table_command), table_sql]
         return tables
 
+    def add_config(self, config_filename):
+        """
+        Read from a config file and add the tables.
+        """
+        return self.add_tables(self.read_config(config_filename))
+
+    def add_args_table(self, *args):
+        """
+        Read the arguments and add the tables
+        """
+        return self.add_tables(self.tables_from_args(*args))
+
     def has_table(self, table_name):
+        """
+        Returns True iff we know about this table.
+        """
         return table_name in self.tables
 
     def get_table_command(self, table_name):
+        """
+        Returns the filename to read or command to run to create this
+        table.
+        """
         return self.tables[table_name][0]
 
     def get_table_sqls(self, table_name):
+        """
+        Returns a list of the extra sql commands to run after this
+        table has been created.
+        """
         return self.tables[table_name][1]
 
-def _guess_type(value):
-    """
-    Guess the sqlite type for a given value
-    """
-    for (pytype, sqltype) in ((int, 'INTEGER'),
-                              (float, 'FLOAT')):
+class Database(object):
+    DEFAULT_INSTANCE = None
+
+    def __init__(self):
+        self.database = sqlite3.connect(':memory:')
+        self.database.text_factory = str
+        self.cursor = self.database.cursor()
+
+    @classmethod
+    def get(cls):
+        if cls.DEFAULT_INSTANCE is None:
+            cls.DEFAULT_INSTANCE = cls()
+        return cls.DEFAULT_INSTANCE
+
+    @classmethod
+    def _guess_type(cls, value):
+        """
+        Guess the sqlite type for a given value
+        """
+        for (pytype, sqltype) in ((int, 'INTEGER'),
+                                  (float, 'FLOAT')):
+            try:
+                pytype(value)
+                return sqltype
+            except ValueError:
+                pass
+        return 'TEXT'
+
+    def make_table_from_data(self, name, header, data):
+        """
+        Given data in tabular form (as a list of rows, where each row has
+        the same columns), insert that table into a sqlite database.
+        """
+
+        command = ('CREATE TABLE {name} ({cols});'.
+                   format(name=name,
+                          cols=', '.join("'{0}' {1}".
+                                         format(h, self._guess_type(d))
+                                         for (h, d) in zip(header, data[0]))))
+        logging.debug(command)
+        self.cursor.execute(command)
+
+        command = ('INSERT INTO {0} VALUES ({1});'.
+                   format(name,
+                          ', '.join('?' for v in header)))
+        pad = [None]*len(header)
+        self.cursor.executemany(command, ((row+pad)[:len(header)]
+                                          for row in data))
+        self.database.commit()
+        logging.debug("Finished inserting rows")
+
+    def make_table_from_command(self, table_name,
+                                command, get_input=read_files):
+        """
+        Given a table name and file to read or a command to run,
+        create a table with that name from the file or command.
+        """
+        table = list(get_input([command]))[0]
+        self.make_table_from_data(table_name, table[0], table[1:])
+
+    def make_table_by_name(self, table_name,
+                           table_config,
+                           get_input=read_files,
+                           cvars=None):
+        """
+        Given a Config object, plus the name of a table in that
+        Config, create the table.  Run any additional sql commands as
+        necessary.
+        """
+        table_create = table_config.get_table_command(table_name)
+        sql_commands = table_config.get_table_sqls(table_name)
+        logging.info("Trying to load table {0} with file or command {1}".
+                     format(table_name, table_create))
         try:
-            pytype(value)
-            return sqltype
-        except ValueError:
-            pass
-    return 'TEXT'
+            filename = table_create.format(**cvars)
+        except KeyError as kexc:
+            raise KeyError("Table {0} command {1} needs var {2} "
+                           "to be set".format(table_name, table_create,
+                                              kexc.args[0]))
+        self.make_table_from_command(table_name, filename,
+                                     get_input=get_input)
+        for sql in sql_commands:
+            logging.info("Running extra sql command for table {0}: {1}".
+                         format(table_name, sql))
+            self.cursor.execute(sql)
+            self.database.commit()
 
-def _get_default_dbs(reset=False):
-    if reset or not hasattr(_get_default_dbs, 'conn'):
-        import sqlite3
-        setattr(_get_default_dbs, 'conn', sqlite3.connect(':memory:'))
-        _get_default_dbs.conn.text_factory = str
-    if reset or not hasattr(_get_default_dbs, 'cursor'):
-        setattr(_get_default_dbs, 'cursor', _get_default_dbs.conn.cursor())
-    return (_get_default_dbs.conn, _get_default_dbs.cursor)
+    def query(self, sql, table_config=None, get_input=read_files, cvars=None):
+        """
+        Execute a command.
 
-def make_table_from_data(name, header, data,
-                         database=None, cursor=None):
-    """
-    Given data in tabular form (as a list of rows, where each row has
-    the same columns), insert that table into a sqlite database.
-    """
-    if database is None or cursor is None:
-        database, cursor = _get_default_dbs()
+        If there are no results to return, return None
 
-    command = ('CREATE TABLE {name} ({cols});'.
-               format(name=name,
-                      cols=', '.join("'{0}' {1}".
-                                     format(h, _guess_type(d))
-                                     for (h, d) in zip(header, data[0]))))
-    logging.debug(command)
-    cursor.execute(command)
+        If there are results to return, return them as a list of lists
+        (i.e., the same structure that is returned by read_files, etc)
 
-    command = ('INSERT INTO {0} VALUES ({1});'.
-               format(name,
-                      ', '.join('?' for v in header)))
-    pad = [None]*len(header)
-    cursor.executemany(command, ((row+pad)[:len(header)] for row in data))
-    database.commit()
-    logging.debug("Finished inserting rows")
-
-def make_table_from_command(table_name,
-                            command,
-                            database=None,
-                            cursor=None,
-                            get_input=read_files):
-    table = list(get_input([command]))[0]
-    make_table_from_data(table_name, table[0], table[1:],
-                         database=database, cursor=cursor)
-
-def make_table_by_name(table_name,
-                       table_config,
-                       database=None,
-                       cursor=None,
-                       get_input=read_files,
-                       cvars=None):
-    """
-    Run a command to get the data for a table, then create the table
-    in the database
-    """
-    table_create = table_config.get_table_command(table_name)
-    sql_commands = table_config.get_table_sqls(table_name)
-    logging.info("Trying to load table {0} with file or command {1}".
-                 format(table_name, table_create))
-    try:
-        filename = table_create.format(**cvars)
-    except KeyError as kexc:
-        raise KeyError("Table {0} command {1} needs var {2} "
-                       "to be set".format(table_name, table_create,
-                                          kexc.args[0]))
-    make_table_from_command(table_name, filename,
-                            database=database, cursor=cursor,
-                            get_input=get_input)
-    for sql in sql_commands:
-        logging.info("Running extra sql command for table {0}: {1}".
-                     format(table_name, sql))
-        cursor.execute(sql)
-        database.commit()
-
-def do_sql(sql, args=None, get_input=read_files, config=None, cvars=None):
-    """
-    Build an in memory sqlite database and execute a sql query against
-    it.  The tables of the database come from reading files or
-    executing commands that generate tabular data.  The files to read
-    or commands to run for each table are determined by the arguments
-    passed in, or the config file.  This only reads the tables that
-    are needed to execute the sql query.
-    """
-    if cvars is None:
-        cvars = {}
-
-    if args is None:
-        args = []
-
-    import sqlite3
-
-    table_config = Config(config, args)
-    conn, cursor = _get_default_dbs()
-
-    for query in sql:
+        If the query requires a table that hasn't yet been loaded into
+        the database, load it as required.
+        """
+        if table_config is None:
+            table_config = Config()
+        if cvars is None:
+            cvars = {}
         while True:
             try:
-                logging.info("Running query {0}".format(query))
-                cursor.execute(query)
-                data = cursor.fetchall()
-                logging.info("Finished query {0}".format(query))
+                logging.info("Running query {0}".format(sql))
+                self.cursor.execute(sql)
+                data = self.cursor.fetchall()
+                logging.info("Finished query {0}".format(sql))
                 # If the query was a command, rather than a select
                 # statement, there may be no data to return.
-                if cursor.description is None:
-                    break
-                table = [[d[0] for d in cursor.description]]
+                if self.cursor.description is None:
+                    return
+                table = [[d[0] for d in self.cursor.description]]
                 for row in data:
                     table.append([str(v) for v in row])
-                yield table
-                break
+                return table
             except sqlite3.OperationalError as exc:
                 msg = exc.args[0]
                 if not msg.startswith('no such table: '):
@@ -987,9 +1047,25 @@ def do_sql(sql, args=None, get_input=read_files, config=None, cvars=None):
                         missing = missing[5:]
                 if not table_config.has_table(missing):
                     raise
-                make_table_by_name(missing, table_config,
-                                   database=conn, cursor=cursor,
-                                   get_input=get_input, cvars=cvars)
+                self.make_table_by_name(missing, table_config,
+                                        get_input=get_input, cvars=cvars)
+
+def do_sql(sql, args=None, get_input=read_files, config=None, cvars=None):
+    """
+    Build an in memory sqlite database and execute a sql query against
+    it.  The tables of the database come from reading files or
+    executing commands that generate tabular data.  The files to read
+    or commands to run for each table are determined by the arguments
+    passed in, or the config file.  This only reads the tables that
+    are needed to execute the sql query.
+    """
+    database = Database.get()
+    table_config = Config(config, args)
+    for query in sql:
+        data = database.query(query, table_config=table_config,
+                              get_input=get_input, cvars=cvars)
+        if data is not None:
+            yield data
 
 # --------------------------------------------------------------------
 
