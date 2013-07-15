@@ -445,7 +445,11 @@ class Job(object):
     def shorthost(self):
         try:
             dot = self.host.index('.')
-        except:
+        except AttributeError:
+            # In case self.host is None
+            return self.host
+        except ValueError:
+            # In case self.host does not have a '.' in it
             return self.host
         return self.host[:dot]
 
@@ -784,7 +788,12 @@ class JobTable(object):
         return self.table.add_obj(DbJob(job))
 
     def get_job(self, job_id):
-        return self.table.get_obj(job_id)
+        try:
+            return self.table.get_obj(job_id)
+        except ValueError:
+            (errortype, value, tb) = sys.exc_info()
+            msg = "Could not find job with id {0}: {1}".format(job_id, value)
+            raise errortype, msg, tb
 
     def update_job(self, job):
         self.table.update_obj(DbJob(job))
