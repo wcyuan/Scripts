@@ -103,10 +103,10 @@ def getopts():
     parser.add_option('--delete', '--rm',
                       action='store_true',
                       help='delete the given job ids')
-    parser.add_option('--detail',
+    parser.add_option('--detail', '--details',
                       action='store_true',
                       help='show details of the given job ids')
-    parser.add_option('--all',
+    parser.add_option('--all', '-a',
                       action='store_true',
                       help='show all jobs in the database')
     parser.add_option('--rerun',
@@ -384,6 +384,7 @@ class Job(object):
                     read = proc.stderr.readline()
                     sys.stderr.write(read)
                     self.stderr += read
+            self.updatedb()
             if proc.poll() != None:
                 break
         self.rc = proc.returncode
@@ -504,6 +505,7 @@ class SqlDb(object):
         self.filename = filename
         self.conn = sqlite3.connect(filename)
         self.cursor = self.conn.cursor()
+        self.conn.text_factory = str
 
     def __repr__(self):
         return ('{cn}({fn!r})'.format(cn=type(self).__name__,
