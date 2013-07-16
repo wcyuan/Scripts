@@ -78,9 +78,12 @@ def main():
                   else opts.redo if opts.redo is not None
                   else table.get_most_recent_job_id())
         job = table.get_job(job_id)
+        new_job_id = None
         if opts.redo or opts.redolast:
+            new_job_id = job_id
             table.delete_job(job)
-        Job.new_job(job.cmd, table=table, shell=job.shell).run()
+        Job.new_job(job.cmd, table=table, shell=job.shell,
+                    job_id=new_job_id).run()
         return
 
     if len(args) == 0:
@@ -291,7 +294,7 @@ class Job(object):
         self.host       = host
 
     @classmethod
-    def new_job(cls, cmd, table=None, shell=False):
+    def new_job(cls, cmd, table=None, shell=False, job_id=None):
         """
         This is a constructor for a new job that has never been run.
 
@@ -304,7 +307,7 @@ class Job(object):
         not to use the shell to parse the command before running it.
         """
         obj = cls(cmd=cmd, table=table, shell=shell)
-        obj.addtodb()
+        obj.addtodb(job_id=job_id)
         return obj
 
     # -----------------------
@@ -475,9 +478,9 @@ class Job(object):
         if self.table is not None:
             self.table.update_job(self)
 
-    def addtodb(self):
+    def addtodb(self, job_id):
         if self.table is not None:
-            self.job_id = self.table.add_job(self)
+            self.job_id = self.table.add_job(self, job_id=job_id)
             logging.info("Got job id {0}".format(self.job_id))
 
     # -----------------------
@@ -675,13 +678,16 @@ class SqlTable(object):
                                ', '.join('{0} {1}'.format(ci[0], ci[1])
                                          for ci in self.columns)))
 
-    def add_obj(self, obj):
+    def add_obj(self, obj, key_value=None):
         # http://stackoverflow.com/questions/6242756/how-to-retrieve-inserted-id-after-inserting-row-in-sqlite-using-python
+        values = [(ci[0], getattr(obj, ci[0])) for ci in self.columns]
+        if key_value is not None:
+            values.insert(0, (self.key_col, key_value))
         self.db.execute("INSERT INTO {0} ({1}) VALUES ({2});".
                         format(self.table,
-                               ', '.join(ci[0] for ci in self.columns),
-                               ', '.join('?' for ci in self.columns)),
-                        [getattr(obj, ci[0]) for ci in self.columns])
+                               ', '.join(pair[0] for pair in values),
+                               ', '.join('?' for pair in values)),
+                        [pair[1] for pair in values])
         return self.db.lastrowid
 
     def update_obj(self, obj):
@@ -799,8 +805,8 @@ class JobTable(object):
             key_col='job_id',
             obj_constructor=DbJob.make_job)
 
-    def add_job(self, job):
-        return self.table.add_obj(DbJob(job))
+    def add_job(self, job, job_id=None):
+        return self.table.add_obj(DbJob(job), key_value=job_id)
 
     def get_job(self, job_id):
         try:
