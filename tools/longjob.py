@@ -70,10 +70,16 @@ def main():
                     print job.report()
         return
 
-    if opts.rerun:
+    if (opts.rerun or opts.redo or opts.redolast):
         if table is None:
             raise ValueError("No longjob database")
-        job = table.get_job(opts.rerun)
+        job_id = (opts.rerun
+                  if opts.rerun is not None
+                  else opts.redo if opts.redo is not None
+                  else table.get_most_recent_job_id())
+        job = table.get_job(job_id)
+        if opts.redo or opts.redolast:
+            table.delete_job(job)
         Job.new_job(job.cmd, table=table, shell=job.shell).run()
         return
 
@@ -111,6 +117,11 @@ def getopts():
                       help='show all jobs in the database')
     parser.add_option('--rerun',
                       help='rerun a particular job')
+    parser.add_option('--redo',
+                      help='rerun a particular job, replacing the old record')
+    parser.add_option('--redolast',
+                      action='store_true',
+                      help='rerun the last job, replacing the old record')
 
     opts, args = parser.parse_args()
 
@@ -121,6 +132,10 @@ def getopts():
         Job.NO_WRITE    = True
         SqlDb.NO_WRITE  = True
         Mailer.NO_WRITE = True
+
+    if (sum(int(opt is not None)
+            for opt in (opts.rerun, opts.redo, opts.redolast)) > 1):
+        raise ValueError("May only specify one of rerun, redo, and redolast")
 
     return (opts, args)
 
@@ -568,7 +583,7 @@ class SqlDb(object):
         return self.fetch_one_row()[0]
 
     def query_one_value_always(self, *args, **kwargs):
-        self.query_one_row_always(*args, **kwargs)[0]
+        return self.query_one_row_always(*args, **kwargs)[0]
 
     @property
     def lastrowid(self):
@@ -856,6 +871,10 @@ class JobTable(object):
         print "Deleting job {0}".format(job.job_id)
         logging.info("Job to delete: {0}".format(job.summary()))
         return self.table.delete_obj(job)
+
+    def get_most_recent_job_id(self):
+        return self.table.db.query_one_value_always(
+            'SELECT MAX(job_id) FROM jobs')
 
 # --------------------------------------------------------------------
 
