@@ -25,7 +25,7 @@ def main():
 
     revision = (repo.head.commit
                 if args.revision is None
-                else get_revision(args.revision))
+                else get_revision(repo, args.revision))
 
     with stash_if_needed(repo, leave=args.leave):
         with checkout(repo, 'master'):
@@ -175,7 +175,7 @@ def get_revision(repo, rev):
 
     try:
         return repo.commit(rev)
-    except BadObject:
+    except git.BadObject:
         if os.path.exists(rev):
             fullpath = os.path.abspath(rev)
             gen = repo.iter_commits(paths=fullpath)
