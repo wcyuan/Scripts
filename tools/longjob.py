@@ -44,54 +44,9 @@ DEFAULT_CONFIG_DIR=os.path.expanduser('~/.longjob')
 logging.basicConfig(format='%(asctime)-15s %(levelname)-5s %(message)s')
 
 def main():
-    opts, args = getopts()
-
-    if os.path.exists(opts.config_dir):
-        logging.info("Using config dir {0} db {1}".
-                     format(opts.config_dir, DB_FILENAME))
-        table = JobTable(os.path.join(opts.config_dir, DB_FILENAME))
-    else:
-        logging.info("Config dir {0} does not exist".
-                     format(opts.config_dir))
-        table = None
-
-    if opts.detail or opts.delete or opts.all:
-        if table is None:
-            raise ValueError("No longjob database")
-        if opts.all:
-            for job in table.get_all_jobs():
-                print job.summary()
-        else:
-            for job_id in unrange(uncomma(args)):
-                job = table.get_job(job_id)
-                if opts.delete:
-                    table.delete_job(job)
-                else:
-                    print job.report()
-        return
-
-    if (opts.rerun or opts.redo or opts.redolast):
-        if table is None:
-            raise ValueError("No longjob database")
-        job_id = (opts.rerun
-                  if opts.rerun is not None
-                  else opts.redo if opts.redo is not None
-                  else table.get_most_recent_job_id())
-        job = table.get_job(job_id)
-        new_job_id = None
-        if opts.redo or opts.redolast:
-            new_job_id = job_id
-            table.delete_job(job)
-        Job.new_job(job.cmd, table=table, shell=job.shell,
-                    job_id=new_job_id).run()
-        return
-
-    if len(args) == 0:
-        if table is not None:
-            for job in table.get_recent_jobs(7):
-                print job.summary()
-    else:
-        Job.new_job(args, table=table, shell=opts.shell).run()
+    job_to_run = process_args()
+    if job_to_run is not None:
+        job_to_run.run()
 
 # --------------------------------------------------------------------
 
@@ -141,6 +96,54 @@ def getopts():
         raise ValueError("May only specify one of rerun, redo, and redolast")
 
     return (opts, args)
+
+def process_args():
+    opts, args = getopts()
+    if os.path.exists(opts.config_dir):
+        logging.info("Using config dir {0} db {1}".
+                     format(opts.config_dir, DB_FILENAME))
+        table = JobTable(os.path.join(opts.config_dir, DB_FILENAME))
+    else:
+        logging.info("Config dir {0} does not exist".
+                     format(opts.config_dir))
+        table = None
+
+    if opts.detail or opts.delete or opts.all:
+        if table is None:
+            raise ValueError("No longjob database")
+        if opts.all:
+            for job in table.get_all_jobs():
+                print job.summary()
+        else:
+            for job_id in unrange(uncomma(args)):
+                job = table.get_job(job_id)
+                if opts.delete:
+                    table.delete_job(job)
+                else:
+                    print job.report()
+        return
+
+    if (opts.rerun or opts.redo or opts.redolast):
+        if table is None:
+            raise ValueError("No longjob database")
+        job_id = (opts.rerun
+                  if opts.rerun is not None
+                  else opts.redo if opts.redo is not None
+                  else table.get_most_recent_job_id())
+        job = table.get_job(job_id)
+        new_job_id = None
+        if opts.redo or opts.redolast:
+            new_job_id = job_id
+            table.delete_job(job)
+        return Job.new_job(job.cmd, table=table, shell=job.shell,
+                           job_id=new_job_id)
+
+    if len(args) == 0:
+        if table is not None:
+            for job in table.get_recent_jobs(7):
+                print job.summary()
+    else:
+        return Job.new_job(args, table=table, shell=opts.shell)
 
 # --------------------------------------------------------------------
 
