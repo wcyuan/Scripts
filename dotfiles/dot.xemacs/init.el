@@ -140,6 +140,13 @@
 ;; system-wide emacs lisp files typically live at /usr/share/{x,}emacs
 ;;
 ;; ---------------------------------------------------------------- ;;
+;;
+;; In this file, use two semi-colons (;;) for comments at the
+;; beginning of a line.  For comments on the line after some code, use
+;; either one semi-colon or two.  This is what emacs auto-indent seems
+;; to expect.
+;;
+;; ---------------------------------------------------------------- ;;
 
 
 ;; ---------------------------------------------------------------- ;;
@@ -222,262 +229,262 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; Perl
 ;;
 
-; Prefer cperl-mode to perl-mode.
-;
-; http://www.emacswiki.org/emacs/CPerlMode
-;; cperl-mode is preferred to perl-mode
-;; "Brevity is the soul of wit" <foo at acm.org>
-;
-; One way to do this is to alias perl-mode to cperl-mode
+;; Prefer cperl-mode to perl-mode.
+;;
+;; http://www.emacswiki.org/emacs/CPerlMode
+;;; cperl-mode is preferred to perl-mode
+;;; "Brevity is the soul of wit" <foo at acm.org>
+;;
+;; One way to do this is to alias perl-mode to cperl-mode
 (defalias 'perl-mode 'cperl-mode)
 
-; the defalias doesn't always seem to work, so try these too.
+;; the defalias doesn't always seem to work, so try these too.
 (fset 'perl-mode 'cperl-mode)
 
-; In case the aliases don't work, we can also change the
-; auto-mode-alist
+;; In case the aliases don't work, we can also change the
+;; auto-mode-alist
 (mapc
  (lambda (pair)
    (if (eq (cdr pair) 'perl-mode)
        (setcdr pair 'cperl-mode)))
  (append auto-mode-alist interpreter-mode-alist))
 
-;
-; Example of cperl-continued-statement-offset
-; value of 0:
-;
-;   if (one() &&
-;       two())
-;   {
-;       my $a = 'abc' .
-;       'def';
-;   }
-;   print
-;   one(),
-;   two();
-;   dothis()
-;   or die();
-;
-; value of 4:
-;
-;   if (one() &&
-;           two())
-;       {
-;           my $a = 'abc' .
-;               'def';
-;       }
-;   dothis()
-;       or die();
-;   print
-;       one(),
-;           two();
-;
-; This is annoying.  I want an offset of 4 for things like "a or
-; die()" and for "print one()" but an offset of 0 for open braces on
-; new lines.  I want an offset on the first line continuation after a
-; print, but not the second continuation line.
-;
-; For now, I'll probably choose an offset of 0.
-;
+;;
+;; Example of cperl-continued-statement-offset
+;; value of 0:
+;;
+;;   if (one() &&
+;;       two())
+;;   {
+;;       my $a = 'abc' .
+;;       'def';
+;;   }
+;;   print
+;;   one(),
+;;   two();
+;;   dothis()
+;;   or die();
+;;
+;; value of 4:
+;;
+;;   if (one() &&
+;;           two())
+;;       {
+;;           my $a = 'abc' .
+;;               'def';
+;;       }
+;;   dothis()
+;;       or die();
+;;   print
+;;       one(),
+;;           two();
+;;
+;; This is annoying.  I want an offset of 4 for things like "a or
+;; die()" and for "print one()" but an offset of 0 for open braces on
+;; new lines.  I want an offset on the first line continuation after a
+;; print, but not the second continuation line.
+;;
+;; For now, I'll probably choose an offset of 0.
+;;
 
-;
-; Example of cperl-close-paren-offset
-; value of 0:
-;
-;   unless ($a
-;           )
-;   unless (
-;       $a
-;       )
-;
-; value of -4:
-;
-;   unless ($a
-;       )
-;   unless (
-;       $a
-;   )
-;
-;
+;;
+;; Example of cperl-close-paren-offset
+;; value of 0:
+;;
+;;   unless ($a
+;;           )
+;;   unless (
+;;       $a
+;;       )
+;;
+;; value of -4:
+;;
+;;   unless ($a
+;;       )
+;;   unless (
+;;       $a
+;;   )
+;;
+;;
 
-;
-; Examples of cperl-indent-parens-as-block and cperl-close-paren-offset,
-; All with cperl-close-paren-offset=0
+;;
+;; Examples of cperl-indent-parens-as-block and cperl-close-paren-offset,
+;; All with cperl-close-paren-offset=0
 
-; cperl-indent-parens-as-block t, cperl-close-paren-offset 0
-;
-;    $foo = {
-;        $a
-;        };
-;    $foo = { $a
-;             };
-;    $foo = {$a
-;            };
-;    $foo =
-;    {
-;        $a
-;        };
-;    unless (
-;        $a
-;        ) {
-;    }
-;    unless ( $a
-;             ) {
-;    }
-;    unless ($a
-;            ) {
-;    }
-;    unless (
-;        $a
-;        )
-;    {
-;    }
-;    unless ( $a
-;             )
-;    {
-;    }
-;    unless ($a
-;            )
-;    {
-;    }
-;    function_call(
-;        $arg1,
-;        $arg2,
-;        another_function_call(
-;            $arg3
+;; cperl-indent-parens-as-block t, cperl-close-paren-offset 0
+;;
+;;    $foo = {
+;;        $a
+;;        };
+;;    $foo = { $a
+;;             };
+;;    $foo = {$a
+;;            };
+;;    $foo =
+;;    {
+;;        $a
+;;        };
+;;    unless (
+;;        $a
+;;        ) {
+;;    }
+;;    unless ( $a
+;;             ) {
+;;    }
+;;    unless ($a
+;;            ) {
+;;    }
+;;    unless (
+;;        $a
+;;        )
+;;    {
+;;    }
+;;    unless ( $a
+;;             )
+;;    {
+;;    }
+;;    unless ($a
+;;            )
+;;    {
+;;    }
+;;    function_call(
+;;        $arg1,
+;;        $arg2,
+;;        another_function_call(
+;;            $arg3
 
-; cperl-indent-parens-as-block t, cperl-close-paren-offset -4
-; (this one looks the best to me)
-;
-;    $foo = {
-;        $a
-;    };
-;    $foo = { $a
-;         };
-;    $foo = {$a
-;        };
-;    $foo =
-;    {
-;        $a
-;    };
-;    unless (
-;        $a
-;    ) {
-;    }
-;    unless ( $a
-;         ) {
-;    }
-;    unless ($a
-;        ) {
-;    }
-;    unless (
-;        $a
-;    )
-;    {
-;    }
-;    unless ( $a
-;         )
-;    {
-;    }
-;    unless ($a
-;        )
-;    {
-;    }
-;    function_call(
-;        $arg1,
-;        $arg2,
-;        another_function_call(
-;            $arg3
+;; cperl-indent-parens-as-block t, cperl-close-paren-offset -4
+;; (this one looks the best to me)
+;;
+;;    $foo = {
+;;        $a
+;;    };
+;;    $foo = { $a
+;;         };
+;;    $foo = {$a
+;;        };
+;;    $foo =
+;;    {
+;;        $a
+;;    };
+;;    unless (
+;;        $a
+;;    ) {
+;;    }
+;;    unless ( $a
+;;         ) {
+;;    }
+;;    unless ($a
+;;        ) {
+;;    }
+;;    unless (
+;;        $a
+;;    )
+;;    {
+;;    }
+;;    unless ( $a
+;;         )
+;;    {
+;;    }
+;;    unless ($a
+;;        )
+;;    {
+;;    }
+;;    function_call(
+;;        $arg1,
+;;        $arg2,
+;;        another_function_call(
+;;            $arg3
 
-; cperl-indent-parens-as-block nil, cperl-close-paren-offset 0
-;
-;    $foo = {
-;            $a
-;            };
-;    $foo = { $a
-;            };
-;    $foo = {$a
-;            };
-;    $foo =
-;    {
-;        $a
-;        };
-;    unless (
-;        $a
-;        ) {
-;    }
-;    unless ( $a
-;             ) {
-;    }
-;    unless ($a
-;            ) {
-;    }
-;    unless (
-;        $a
-;        )
-;    {
-;    }
-;    unless ( $a
-;             )
-;    {
-;    }
-;    unless ($a
-;            )
-;    {
-;    }
-;    function_call(
-;                  $arg1,
-;                  $arg2,
-;                  another_function_call(
-;                                        $arg3
+;; cperl-indent-parens-as-block nil, cperl-close-paren-offset 0
+;;
+;;    $foo = {
+;;            $a
+;;            };
+;;    $foo = { $a
+;;            };
+;;    $foo = {$a
+;;            };
+;;    $foo =
+;;    {
+;;        $a
+;;        };
+;;    unless (
+;;        $a
+;;        ) {
+;;    }
+;;    unless ( $a
+;;             ) {
+;;    }
+;;    unless ($a
+;;            ) {
+;;    }
+;;    unless (
+;;        $a
+;;        )
+;;    {
+;;    }
+;;    unless ( $a
+;;             )
+;;    {
+;;    }
+;;    unless ($a
+;;            )
+;;    {
+;;    }
+;;    function_call(
+;;                  $arg1,
+;;                  $arg2,
+;;                  another_function_call(
+;;                                        $arg3
 
-; cperl-indent-parens-as-block nil, cperl-close-paren-offset -4
-;    $foo = {
-;            $a
-;        };
-;    $foo = { $a
-;        };
-;    $foo = {$a
-;        };
-;    $foo =
-;    {
-;     $a
-; };
-;    unless (
-;            $a
-;        ) {
-;    }
-;    unless ( $a
-;        ) {
-;    }
-;    unless ($a
-;        ) {
-;    }
-;    unless (
-;            $a
-;        )
-;    {
-;    }
-;    unless ( $a
-;        )
-;    {
-;    }
-;    unless ($a
-;        )
-;    {
-;    }
-;    function_call(
-;                  $arg1,
-;                  $arg2,
-;                  another_function_call(
-;                                        $arg3
+;; cperl-indent-parens-as-block nil, cperl-close-paren-offset -4
+;;    $foo = {
+;;            $a
+;;        };
+;;    $foo = { $a
+;;        };
+;;    $foo = {$a
+;;        };
+;;    $foo =
+;;    {
+;;     $a
+;; };
+;;    unless (
+;;            $a
+;;        ) {
+;;    }
+;;    unless ( $a
+;;        ) {
+;;    }
+;;    unless ($a
+;;        ) {
+;;    }
+;;    unless (
+;;            $a
+;;        )
+;;    {
+;;    }
+;;    unless ( $a
+;;        )
+;;    {
+;;    }
+;;    unless ($a
+;;        )
+;;    {
+;;    }
+;;    function_call(
+;;                  $arg1,
+;;                  $arg2,
+;;                  another_function_call(
+;;                                        $arg3
 
-; http://www.emacswiki.org/emacs/IndentingPerl
+;; http://www.emacswiki.org/emacs/IndentingPerl
 (setq cperl-indent-level 4
       cperl-continued-statement-offset 0
       cperl-close-paren-offset -4
       cperl-indent-parens-as-block t
-      ;cperl-tab-always-indent t
+      ;;cperl-tab-always-indent t
       )
 
 ;; ---------------------------------------------------------------- ;;
@@ -590,12 +597,12 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 (GNUEmacs (show-paren-mode 1)                   ;; highlight matching parens
           (setq show-paren-style 'expression))  ;; highlight entire expression
 
-; sexp mode will highlight the entire block contained in the parens,
-; when the cursor is placed right after a paren
+;; sexp mode will highlight the entire block contained in the parens,
+;; when the cursor is placed right after a paren
 (XEmacs (require 'paren)                        ;; XEmacs
         (paren-set-mode 'sexp))                 ;; highlight entire expression
 
-; From http://www.emacswiki.org/emacs/ParenthesisMatching#toc6
+;; From http://www.emacswiki.org/emacs/ParenthesisMatching#toc6
 (defun goto-match-paren (arg)
   "Go to the matching parenthesis if on parenthesis.
    vi style of % jumping to matching brace."
@@ -650,10 +657,10 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; http://www.emacswiki.org/emacs/PythonMode#toc8
 ;;
 
-; Put flymake temp files into a common local directory so they don't
-; clutter the directory the file is in.  This allows flymake to work
-; on directories where you don't have permission to write.  It also
-; reduces clutter from left over flymake files.
+;; Put flymake temp files into a common local directory so they don't
+;; clutter the directory the file is in.  This allows flymake to work
+;; on directories where you don't have permission to write.  It also
+;; reduces clutter from left over flymake files.
 (defun flymake-create-temp-local-temp-dir (file-name prefix)
   (unless (stringp file-name)
     (error "Invalid file-name"))
@@ -673,18 +680,19 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 
                        'flymake-create-temp-local-temp-dir
 
-                       ; If you just wanted to have the temp files go
-                       ; in the same directory as the script, comment
-                       ; out the line above and uncomment this line
+                       ;; If you just wanted to have the temp files go
+                       ;; in the same directory as the script, comment
+                       ;; out the line above and uncomment the line
+                       ;; below
 
-                       ;'flymake-create-temp-inplace
+                       ;;'flymake-create-temp-inplace
 
                        ))
            (local-file (file-relative-name
                         temp-file
                         (file-name-directory buffer-file-name))))
 
-      ; pyflakes is an alternative to epylint which is less strict
+      ;; pyflakes is an alternative to epylint which is less strict
       (list "epylint" (list temp-file))))
 
   (add-to-list 'flymake-allowed-file-name-masks
@@ -699,12 +707,12 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
          ("[0-9]+\\.tex\\'" flymake-master-tex-init flymake-master-cleanup)
          ("\\.tex\\'" flymake-simple-tex-init)
          ("\\.idl\\'" flymake-simple-make-init)))
-  ; remove the c, java, and xml flymake hooks since those don't seem to work.
-  ;("\\.c\\'" flymake-simple-make-init)
-  ;("\\.cpp\\'" flymake-simple-make-init)
-  ;("\\.xml\\'" flymake-xml-init)
-  ;("\\.h\\'" flymake-master-make-header-init flymake-master-cleanup)
-  ;("\\.java\\'" flymake-simple-make-java-init flymake-simple-java-cleanup)
+ ;; remove the c, java, and xml flymake hooks since those don't seem to work.
+ ;;("\\.c\\'" flymake-simple-make-init)
+ ;;("\\.cpp\\'" flymake-simple-make-init)
+ ;;("\\.xml\\'" flymake-xml-init)
+ ;;("\\.h\\'" flymake-master-make-header-init flymake-master-cleanup)
+ ;;("\\.java\\'" flymake-simple-make-java-init flymake-simple-java-cleanup)
  (add-hook 'find-file-hook 'flymake-find-file-hook))
 
 
@@ -728,25 +736,25 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;;;
 ;;; Tags
 ;;;
-;
-; ;; M-. <tag>       -- search for a tag
-; ;; C-u M-.         -- go to next instance of the tag
-; ;; C-u - M-.       -- go to previous instance of the tag
-; ;; M-*             -- go back to where you were before M-.
-; ;; C-M-. <patt>    -- regexp tag search
-; ;; M-x tags-search -- search for a regexp in all the files that have tags
-; ;; M-,             -- go to next result in the tags-search
-;
-;(setq tags-file-name '"/u/yuanc/usr/tags/TAGS")
-;(setq tags-build-completion-table t)
-;(setq tags-auto-read-changed-tag-files t)
-;(setq tags-always-exact t)             ;; make tags work "correctly"
-;(Unix (setq tags-table-list '("/u/yuanc/usr/tags/TAGS")))
-;(if (>= (emacs-number) 20.3)
-;    (setq tags-revert-without-query t) ;; always revert tags tables w/o query
-;  (setq revert-without-query '(".*"))) ;; always revert tags tables w/o query
-;
-;
+;;
+;; ;; M-. <tag>       -- search for a tag
+;; ;; C-u M-.         -- go to next instance of the tag
+;; ;; C-u - M-.       -- go to previous instance of the tag
+;; ;; M-*             -- go back to where you were before M-.
+;; ;; C-M-. <patt>    -- regexp tag search
+;; ;; M-x tags-search -- search for a regexp in all the files that have tags
+;; ;; M-,             -- go to next result in the tags-search
+;;
+;;(setq tags-file-name '"/u/yuanc/usr/tags/TAGS")
+;;(setq tags-build-completion-table t)
+;;(setq tags-auto-read-changed-tag-files t)
+;;(setq tags-always-exact t)             ;; make tags work "correctly"
+;;(Unix (setq tags-table-list '("/u/yuanc/usr/tags/TAGS")))
+;;(if (>= (emacs-number) 20.3)
+;;    (setq tags-revert-without-query t) ;; always revert tags tables w/o query
+;;  (setq revert-without-query '(".*"))) ;; always revert tags tables w/o query
+;;
+;;
 
 ;; ---------------------------------------------------------------- ;;
 ;;
@@ -800,33 +808,33 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
  (global-set-key "\C-cv" 'toggle-rev-video))
 
 ;;; ---------------------------------------------------------------- ;;
-;
-;(defun toggle-trunc-lines ()
-;  "toggles truncate-lines variable between nil and non-nil for this buffer"
-;  (interactive)
-;  (if truncate-lines
-;    (setq truncate-lines nil)
-;    (setq truncate-lines 1)))
-;
+;;
+;;(defun toggle-trunc-lines ()
+;;  "toggles truncate-lines variable between nil and non-nil for this buffer"
+;;  (interactive)
+;;  (if truncate-lines
+;;    (setq truncate-lines nil)
+;;    (setq truncate-lines 1)))
+;;
 ;;; ---------------------------------------------------------------- ;;
 ;; I don't think I need these
-;
-;(setq search-highlight t)              ;; highlight search strings
-;;(Windows (require 'cygwin32-mount))   ;; read cygwin mount points
-;(GNUEmacs (transient-mark-mode 1))      ;; highlight region when mark is active
-;(setq next-line-add-newlines nil)      ;; no newlines at end of buffer
-;(setq scroll-step 3)                   ;; set scrolling
-;(setq make-backup-files nil)           ;; no *~ files
-;(setq angry-mob-with-torches-and-pitchforks t)
-;(GNUEmacs (menu-bar-mode -1))          ;; turn off menu bar
-;(resize-minibuffer-mode 1)             ;; automatically resize minibuffer
-;(hscroll-global-mode)                  ;; horizontal scroll
-;(set-input-mode nil nil t)             ;; use accents
-;(setq default-major-mode 'text-mode)   ;; text mode as default
-;(setq find-file-existing-other-name t) ;; handle symbolic links
-;(setq-default mode-line-mule-info "-")
-;(setq display-time-mail-file t)        ;; don't check for new mail
-;
+;;
+;;(setq search-highlight t)              ;; highlight search strings
+;;;(Windows (require 'cygwin32-mount))   ;; read cygwin mount points
+;;(GNUEmacs (transient-mark-mode 1))      ;; highlight region when mark is active
+;;(setq next-line-add-newlines nil)      ;; no newlines at end of buffer
+;;(setq scroll-step 3)                   ;; set scrolling
+;;(setq make-backup-files nil)           ;; no *~ files
+;;(setq angry-mob-with-torches-and-pitchforks t)
+;;(GNUEmacs (menu-bar-mode -1))          ;; turn off menu bar
+;;(resize-minibuffer-mode 1)             ;; automatically resize minibuffer
+;;(hscroll-global-mode)                  ;; horizontal scroll
+;;(set-input-mode nil nil t)             ;; use accents
+;;(setq default-major-mode 'text-mode)   ;; text mode as default
+;;(setq find-file-existing-other-name t) ;; handle symbolic links
+;;(setq-default mode-line-mule-info "-")
+;;(setq display-time-mail-file t)        ;; don't check for new mail
+;;
 ;; ---------------------------------------------------------------- ;;
 ;; Cscope
 ;;
