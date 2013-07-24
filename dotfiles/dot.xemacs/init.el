@@ -659,7 +659,7 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
     (error "Invalid file-name"))
   (or prefix
       (setq prefix "flymake"))
-  (let* ((temp-name   (concat "~/.emacs.d/flymake-py/"
+  (let* ((temp-name   (concat (expand-file-name "~/.emacs.d/flymake-py/")
                               (file-name-nondirectory file-name)
                               "_" prefix
                               (and (file-name-extension file-name)
@@ -670,10 +670,21 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 (when (load "flymake" t)
   (defun flymake-pylint-init ()
     (let* ((temp-file (flymake-init-create-temp-buffer-copy
-                       'flymake-create-temp-local-temp-dir))
+
+                       'flymake-create-temp-local-temp-dir
+
+                       ; If you just wanted to have the temp files go
+                       ; in the same directory as the script, comment
+                       ; out the line above and uncomment this line
+
+                       ;'flymake-create-temp-inplace
+
+                       ))
            (local-file (file-relative-name
                         temp-file
                         (file-name-directory buffer-file-name))))
+
+      ; pyflakes is an alternative to epylint which is less strict
       (list "epylint" (list temp-file))))
 
   (add-to-list 'flymake-allowed-file-name-masks
@@ -681,7 +692,7 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 
 (GNUEmacs
  (setq flymake-allowed-file-name-masks
-       '(("\\.py\\'" flymake-pylint-init)
+       '(("\\.py\\'" flymake-pylint-init) ; a bit redundant since this was already added above
          ("\\.html?\\'" flymake-xml-init)
          ("\\.cs\\'" flymake-simple-make-init)
          ("\\.pl\\'" flymake-perl-init)
