@@ -537,6 +537,12 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; make-backup-files (or vc-make-backup-files, for version controlled
 ;; files).
 ;;
+;; This code puts all autosaves and backups into a common directory,
+;; rather than in the local directory, so you don't end up with stray
+;; temp files everywhere.  Note that you should make sure the common
+;; directory is only readable by you, otherwise this will defeat
+;; whatever file permissions you have.
+;;
 
 (GNUEmacs
  ;; Put autosave files (ie #foo#) and backup files (ie foo~) in ~/.emacs.d/.
