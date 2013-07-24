@@ -99,6 +99,8 @@
 ;; M-q       -- re-justify block
 ;; C-M-\     -- re-tabify a block
 ;; M-;       -- comment or uncomment out a region
+;; C-c >     -- Python: increase indent of a region (python-shift-right)
+;; C-c <     -- Python: decrease indent of a region (python-shift-left)
 ;;
 ;; C-x n n   -- narrow to region.  This only shows this portion of the
 ;;              buffer and makes the rest inaccessible.
