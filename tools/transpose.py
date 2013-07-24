@@ -522,7 +522,7 @@ def _should_filter(values, names, filters):
         # only construct valdict if necessary
         return False
 
-    valdict = dict(zip(names, values))
+    valdict = dict(itertools.izip_longest(names, values, fillvalue=None))
     for (var, criteria) in filters:
         if not criteria(valdict[var]):
             return True
