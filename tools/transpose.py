@@ -253,7 +253,7 @@ def getopts():
     if opts.log_level is not None:
         level = getattr(logging, opts.log_level.upper())
         logging.getLogger().setLevel(level)
-        logging.info("Setting log level to {0}".format(level))
+        logging.info("Setting log level to %s", level)
 
     if opts.filters is not None:
         opts.filters = [_parse_filter(f) for f in opts.filters]
@@ -383,12 +383,12 @@ def zopen(filename, input_type=None):
         logging.debug("Closing filename")
         return
 
-    logging.info('running {0}'.format(' '.join(command)))
+    logging.info('running %s', ' '.join(command))
     import subprocess
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     yield proc.stdout
     proc.stdout.close()
-    logging.info('done running {0}'.format(' '.join(command)))
+    logging.info('done running %s', ' '.join(command))
 
 # --------------------------------------------------------------------
 
@@ -430,8 +430,8 @@ def _guess_delim(header, kind):
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
 
-    logging.info("Guessing kind %s with delimiter '%s' from header %s" %
-                 (kind, delim, header))
+    logging.info("Guessing kind %s with delimiter '%s' from header %s",
+                 kind, delim, header)
 
     return (kind, delim)
 
@@ -480,8 +480,8 @@ def _separate(line, kind, delim, raw=False):
         # If we have escaped spaces, remove the backslashes in the output
         if not raw and delim == '(?<!\\\)\s+':
             vals = [v.replace('\ ', ' ') for v in vals]
-        logging.debug("line (%s delim='%s') %s separated into %s" %
-                      (kind, delim, line, vals))
+        logging.debug("line (%s delim='%s') %s separated into %s",
+                      kind, delim, line, vals)
         return (vals, magic_word)
     elif kind == 'fixed':
         # Fixed-width format.  To try to parse something like:
@@ -501,8 +501,8 @@ def _separate(line, kind, delim, raw=False):
                           for (start, end) in
                           itertools.izip_longest(indexes, indexes[1:],
                                                  fillvalue=None))]
-        logging.debug("line (%s delim='%s') %s separated into %s" %
-                      (kind, delim, line, vals))
+        logging.debug("line (%s delim='%s') %s separated into %s",
+                      kind, delim, line, vals)
         return (vals, magic_word)
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
@@ -713,7 +713,7 @@ def pretty_print(intable, left=False, should_transpose=None, nopretty=False,
     intable = tuple(intable)
     if ((should_transpose is None and len(intable) < 6) or should_transpose):
         ttable = transpose(intable)
-        logging.debug("transposed table: %s" % ttable)
+        logging.debug("transposed table: %s", ttable)
     else:
         ttable = intable
         intable = None
@@ -820,10 +820,11 @@ class Config(object):
         """
         for table_name in tables:
             if table_name in self.tables:
-                logging.warning("Overriding table {0} = ({1}) "
-                                "with ({2})".
-                                format(table_name, self.tables[table_name],
-                                       tables[table_name]))
+                logging.warning("Overriding table %s = (%s) "
+                                "with (%s)",
+                                table_name,
+                                self.tables[table_name],
+                                tables[table_name])
         self.tables.update(tables)
         return self
 
@@ -863,7 +864,7 @@ class Config(object):
         config_filename = os.path.expanduser(config_filename)
         if not os.path.exists(config_filename):
             return tables
-        logging.info("Reading config file {0}".format(config_filename))
+        logging.info("Reading config file %s", config_filename)
         with zopen(config_filename) as config_fd:
             import json
             config = json.load(config_fd)
@@ -895,8 +896,8 @@ class Config(object):
                 else:
                     raise ValueError("Malformed config file {0}: table info is "
                                      "neither string nor dict".format(table))
-                logging.debug("Got table {0} = ({1}, {2}) from config file {3}".
-                              format(table, table_command, table_sql, config))
+                logging.debug("Got table %s = (%s, %s) from config file %s",
+                              table, table_command, table_sql, config)
                 tables[table] = [str(table_command), table_sql]
         return tables
 
@@ -1010,8 +1011,8 @@ class Database(object):
         """
         table_create = table_config.get_table_command(table_name)
         sql_commands = table_config.get_table_sqls(table_name)
-        logging.info("Trying to load table {0} with file or command {1}".
-                     format(table_name, table_create))
+        logging.info("Trying to load table %s with file or command %s",
+                     table_name, table_create)
         try:
             filename = table_create.format(**cvars)
         except KeyError as kexc:
@@ -1021,8 +1022,8 @@ class Database(object):
         self.make_table_from_command(table_name, filename,
                                      get_input=get_input)
         for sql in sql_commands:
-            logging.info("Running extra sql command for table {0}: {1}".
-                         format(table_name, sql))
+            logging.info("Running extra sql command for table %s: %s",
+                         table_name, sql)
             self.cursor.execute(sql)
             self.database.commit()
 
@@ -1044,10 +1045,10 @@ class Database(object):
             cvars = {}
         while True:
             try:
-                logging.info("Running query {0}".format(sql))
+                logging.info("Running query %s", sql)
                 self.cursor.execute(sql)
                 data = self.cursor.fetchall()
-                logging.info("Finished query {0}".format(sql))
+                logging.info("Finished query %s", sql)
                 # If the query was a command, rather than a select
                 # statement, there may be no data to return.
                 if self.cursor.description is None:
