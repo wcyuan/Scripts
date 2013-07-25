@@ -28,7 +28,7 @@
 #
 #
 # ^A : quit             - quit and kill all windows
-# ^A : shell bash       - set the shell to bash
+# ^A : shell bash       - set the shell to bash (defshell is an alias for shell)
 # ^A : shelltitle bash  - set the default window name to bash
 # ^A : title <win>      - set the current window name to <win>
 # ^A : chdir [<dir>]    - set the working directory for new windows
@@ -107,6 +107,10 @@ multiuser on
 # ssh agent support
 unsetenv SSH_AUTH_SOCK
 setenv SSH_AUTH_SOCK $HOME/.screen/sasock.$HOST
+
+# default to bash
+shell bash
+shelltitle bash
 
 # start with a few screens
 screen bash
