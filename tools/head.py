@@ -10,7 +10,7 @@ import itertools
 
 # --------------------------------------------------------------------
 
-def head_indices(seq, *args):
+def indices(seq, *args):
     """
     Print a part of a sequence
 
@@ -90,7 +90,7 @@ def head_indices(seq, *args):
 
 
 def head(seq, *args, **kwargs):
-    (start, end, step) = head_indices(seq, *args)
+    (start, end, step) = indices(seq, *args)
     return tuple(itertools.islice(seq, start, end, step, **kwargs))
 
 # --------------------------------------------------------------------
