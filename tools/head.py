@@ -10,7 +10,7 @@ import itertools
 
 # --------------------------------------------------------------------
 
-def head(seq, *args, **kwargs):
+def head_indices(seq, *args):
     """
     Print a part of a sequence
 
@@ -86,8 +86,11 @@ def head(seq, *args, **kwargs):
     except:
         length = max(abs(x) for x in (start, end) if x is not None)
 
-    (start, end, step) = slice(start, end, step).indices(length)
+    return slice(start, end, step).indices(length)
 
+
+def head(seq, *args, **kwargs):
+    (start, end, step) = head_indices(seq, *args)
     return tuple(itertools.islice(seq, start, end, step, **kwargs))
 
 # --------------------------------------------------------------------
