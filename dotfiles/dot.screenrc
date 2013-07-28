@@ -35,7 +35,8 @@
 # ^A : screen <cmd>     - run <cmd> in a new window
 #
 # screen -S <name>         to start a new session with a given name
-# screen -ls               to list all running sessions
+# screen -ls or -list      to list all running sessions
+# screen -wipe             to remove dead sessions
 # screen -r                to reattach
 # screen -s bash -t bash   to set the shell to bash
 # screen -r <name>         to reattach to a particular session
