@@ -26,6 +26,14 @@
 # ^A X            - Kill this region
 # ^A Q            - Kill all but this region
 #
+# -- Copy mode:
+#
+# ^A [            - enter copy (scrollback) mode
+# <esc>           - exit copy mode
+# <space>         - start highlighting / stop highlighting and copy to clipboard
+# ^A ]            - paste text copied while in copy mode
+#
+# -- From within screen:
 #
 # ^A : quit             - quit and kill all windows
 # ^A : shell bash       - set the shell to bash (defshell is an alias for shell)
@@ -33,6 +41,8 @@
 # ^A : title <win>      - set the current window name to <win>
 # ^A : chdir [<dir>]    - set the working directory for new windows
 # ^A : screen <cmd>     - run <cmd> in a new window
+#
+# -- From outside of screen:
 #
 # screen -S <name>         to start a new session with a given name
 # screen -ls or -list      to list all running sessions
