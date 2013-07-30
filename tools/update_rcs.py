@@ -10,6 +10,9 @@ Update a file under rcs control
 3. If the command fails, restore the original file
 4. If the file hasn't changed, restore the original file
 5. If the file has changed, check it in
+
+Run doctests with:
+  python -m doctest -v  update_rcs.py
 """
 from __future__ import absolute_import, division, with_statement
 
@@ -30,8 +33,8 @@ def main():
     Runner.run('co -l -f {0}'.format(args.file))
     Runner.run('{0} > {1}'.format(' '.join(args.command), args.file),
                shell=True)
-    Runner.run("ci -m'Update by {0}' -u {1}".format(' '.join(sys.argv),
-                                                     args.file),
+    Runner.run('ci -m"Update by {0}" -u {1}'.format(quotejoin(sys.argv),
+                                                    args.file),
                shell=True)
 
 # --------------------------------------------------------------------
@@ -98,6 +101,25 @@ class Runner(object):
                      format(cmd, process.returncode))
         return stdout
 
+def quotejoin(args):
+    """
+    >>> print quotejoin("a")
+    a
+    >>> print quotejoin("a'")
+    'a''
+    >>> print quotejoin('a"')
+    'a\\"'
+    >>> print Runner.run('echo "{0}"'.format(quotejoin("this is a 'test of \\"quoting\\"!'")), shell=True)
+    Running:  echo "'this is a 'test of \\"quoting\\"!''"
+    'this is a 'test of "quoting"!''
+    <BLANKLINE>
+
+    """
+    if not isinstance(args, basestring):
+        return ' '.join(quotejoin(a) for a in args)
+    if not any([c in args for c in ' \t\n\'"']):
+        return args
+    return "'{0}'".format(args.replace('"',  '\\"'))
 
 # --------------------------------------------------------------------
 
