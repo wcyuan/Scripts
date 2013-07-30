@@ -163,10 +163,6 @@
   (interactive)
   ;(+ emacs-major-version (/ emacs-minor-version 10.0))
   (string-to-number emacs-version))
-(defun emacs-atleast (version)
-  "True if this emacs is version X or higher"
-  (interactive)
-  (>= (emacs-number) version))
 (defmacro Unix (&rest x)
   (list 'if (not (eq system-type 'windows-nt)) (cons 'progn x)))
 (defmacro Windows (&rest x)
