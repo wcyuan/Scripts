@@ -990,6 +990,9 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; installation will take some time to run.  Doesn't seem right to run
 ;; this every time emacs starts, so I'm leaving this commented out.
 ;;
+;; Note that el-get installs itself to ~/.emacs.d/el-get, so it's
+;; pretty easy to uninstall, just remove that directory.
+;;
 ;; (unless (require 'el-get nil 'noerror)
 ;;   (with-current-buffer
 ;;       (url-retrieve-synchronously
