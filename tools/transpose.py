@@ -183,6 +183,8 @@ def getopts():
                       dest='columns',
                       action='append',
                       help='Which columns to show')
+    parser.add_option('--col_list',
+                      help='Which columns to show, as a comma-separated-list')
     parser.add_option('--noheader', '--no_header', '--no-header',
                       action='store_true',
                       help='do not print the header')
@@ -270,6 +272,11 @@ def getopts():
         OFS = opts.ofs
         if OFS == CLEAN_CHAR:
             CLEAN_CHAR = '~'
+
+    if opts.col_list is not None:
+        if opts.columns is None:
+            opts.columns = []
+        opts.columns.extend(opts.col_list.split(','))
 
     return (opts, args)
 
