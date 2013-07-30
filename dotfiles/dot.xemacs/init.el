@@ -936,8 +936,11 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;;     (set-face-foreground 'font-lock-variable-name-face "orangered")
 ;;     (if (facep 'font-lock-warning-face)
 ;;      (set-face-foreground 'font-lock-warning-face "red"))
-;;     (GNUEmacs (set-face-foreground 'modeline "white")
-;;            (set-face-background 'modeline "steel blue"))
+;;     (GNUEmacs
+;;      (if (< (emacs-number) 24)
+;;          (progn
+;;            (set-face-foreground 'modeline "white")
+;;            (set-face-background 'modeline "steel blue"))))
 ;;     (XEmacs (set-face-foreground 'modeline "red")
 ;;          (set-face-background 'modeline "Gray95"))
 ;;     (XEmacs (set-face-background 'default "gray85"))
