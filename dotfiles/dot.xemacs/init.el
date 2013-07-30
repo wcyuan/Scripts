@@ -99,8 +99,6 @@
 ;; M-q       -- re-justify block
 ;; C-M-\     -- re-tabify a block
 ;; M-;       -- comment or uncomment out a region
-;; C-c >     -- Python: increase indent of a region (python-shift-right)
-;; C-c <     -- Python: decrease indent of a region (python-shift-left)
 ;;
 ;; C-x n n   -- narrow to region.  This only shows this portion of the
 ;;              buffer and makes the rest inaccessible.
@@ -120,6 +118,14 @@
 ;; Dynamic Abbrev Expansion:
 ;; M-/       -- Search the buffer for possible completions
 ;; C-M-/     -- Show all possible completions
+;;
+;; Python-mode:
+;; C-c >     -- increase indent of a region (python-shift-right)
+;; C-c <     -- decrease indent of a region (python-shift-left)
+;; C-c C-f   -- get help on a python symbol
+;; C-c C-z   -- start a python shell
+;; C-c C-c   -- send the buffer to the interpreter
+;; C-c C-r   -- send the region to the interpreter
 ;;
 ;; http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html
 ;; http://www.emacswiki.org/emacs/EmacsWiki
