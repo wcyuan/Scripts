@@ -766,7 +766,8 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                 '''
                 Add the filename as the first column to each row
                 '''
-                yield [filename] + filetable.next()
+                for line in filetable:
+                    yield [filename] + line
             filetable = _newfiletable(filename, filetable)
 
         if table is None:
