@@ -1010,6 +1010,36 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; Jedi python auto-completion
 ;; https://github.com/tkf/emacs-jedi
 ;;
+;; jedi require virtualenv and el-get
+;;
+;; to install it:
+;;
+;; 1. Install el-get (see above)
+;; 2. Make sure you have virtualenv
+;; 3. You need the following el-get recipes
+;;    Put them in ~/.emacs.d/el-get/recipes/emacswiki/
+;;
+;; ctable.rcp
+;; (:name ctable
+;;        :description "Table Component for elisp"
+;;        :type github
+;;        :pkgname "kiwanami/emacs-ctable")
+;; epc.rcp
+;; (:name epc
+;;        :description "An RPC stack for Emacs Lisp"
+;;        :type github
+;;        :pkgname "kiwanami/emacs-epc"
+;;        :depends (deferred ctable)) ; concurrent is in deferred package
+;; jedi.rcp
+;; (:name jedi
+;;        :description "An awesome Python auto-completion for Emacs"
+;;        :type github
+;;        :pkgname "tkf/emacs-jedi"
+;;        :build (("make" "requirements"))
+;;        :depends (epc auto-complete))
+;;
+;; 4. run: M-x el-get-install jedi
+;;
 
 (if (require 'jedi nil 'noerror)
     (add-hook 'python-mode-hook 'jedi:setup))
