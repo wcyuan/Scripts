@@ -1007,3 +1007,11 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
       (el-get 'sync)))
 
 ;; ---------------------------------------------------------------- ;;
+;; Jedi python auto-completion
+;; https://github.com/tkf/emacs-jedi
+;;
+
+(if (require 'jedi nil 'noerror)
+    (add-hook 'python-mode-hook 'jedi:setup))
+
+;; ---------------------------------------------------------------- ;;
