@@ -984,14 +984,23 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 
 (add-to-list 'load-path "~/.emacs.d/el-get/el-get")
 
-(unless (require 'el-get nil 'noerror)
-  (with-current-buffer
-      (url-retrieve-synchronously
-       "https://raw.github.com/dimitri/el-get/master/el-get-install.el")
-    (goto-char (point-max))
-    (eval-print-last-sexp)))
+;;
+;; This block will automatically install el-get if it isn't already
+;; installed.  It requires an internet connection to install, and the
+;; installation will take some time to run.  Doesn't seem right to run
+;; this every time emacs starts, so I'm leaving this commented out.
+;;
+;; (unless (require 'el-get nil 'noerror)
+;;   (with-current-buffer
+;;       (url-retrieve-synchronously
+;;        "https://raw.github.com/dimitri/el-get/master/el-get-install.el")
+;;     (goto-char (point-max))
+;;     (eval-print-last-sexp)))
+;;
 
-(add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
-(el-get 'sync)
+(if (require 'el-get nil 'noerror)
+    (progn
+      (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
+      (el-get 'sync)))
 
 ;; ---------------------------------------------------------------- ;;
