@@ -51,7 +51,7 @@ import sqlite3
 
 DEFAULT_CONFIG_FILE = '~/.transrc'
 
-HEADERS = ('#@desc',)
+HEADERS = ['#@desc']
 
 # These delimiters should be in order from least likely to appear by
 # accident to most likely to appear by accident.
@@ -247,6 +247,9 @@ def getopts():
                       action='append',
                       help='Args to use for interpolating commands',
                       default=[])
+    parser.add_option('--magic_words',
+                      action='append',
+                      help='specify a magic word that marks the header')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -265,6 +268,9 @@ def getopts():
 
     if opts.raw:
         opts.nopretty = True
+
+    if opts.magic_words is not None:
+        HEADERS.extend(opts.magic_words)
 
     if opts.ofs is not None:
         global OFS
