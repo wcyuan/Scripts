@@ -119,13 +119,17 @@
 ;; M-/       -- Search the buffer for possible completions
 ;; C-M-/     -- Show all possible completions
 ;;
-;; Python-mode:
+;; python.el commands:
+;;
 ;; C-c >     -- increase indent of a region (python-shift-right)
 ;; C-c <     -- decrease indent of a region (python-shift-left)
 ;; C-c C-f   -- get help on a python symbol
 ;; C-c C-z   -- start a python shell
 ;; C-c C-c   -- send the buffer to the interpreter
 ;; C-c C-r   -- send the region to the interpreter
+;;
+;; (Note these commands are for the python.el that comes standard with emacs, not
+;;  python-mode.el which is maintained by the python community.)
 ;;
 ;; http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html
 ;; http://www.emacswiki.org/emacs/EmacsWiki
