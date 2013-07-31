@@ -1011,7 +1011,11 @@ class Database(object):
         Given a table name and file to read or a command to run,
         create a table with that name from the file or command.
         """
-        table = tuple(get_input([command]).next())
+        import glob
+        matches = glob.glob(command)
+        if len(matches) == 0:
+            matches = [command]
+        table = tuple(get_input(matches).next())
         self.make_table_from_data(table_name, table[0], table[1:])
 
     def make_table_by_name(self, table_name,
