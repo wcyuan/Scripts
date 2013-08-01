@@ -992,7 +992,8 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; https://github.com/dimitri/el-get
 ;;
 
-(add-to-list 'load-path "~/.emacs.d/el-get/el-get")
+(GNUEmacs
+ (add-to-list 'load-path "~/.emacs.d/el-get/el-get")
 
 ;;
 ;; This block will automatically install el-get if it isn't already
@@ -1011,10 +1012,10 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;;     (eval-print-last-sexp)))
 ;;
 
-(if (require 'el-get nil 'noerror)
-    (progn
-      (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
-      (el-get 'sync)))
+ (if (require 'el-get nil 'noerror)
+     (progn
+       (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
+       (el-get 'sync))))
 
 ;; ---------------------------------------------------------------- ;;
 ;; Jedi python auto-completion
@@ -1051,7 +1052,8 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; 4. run: M-x el-get-install jedi
 ;;
 
-(if (require 'jedi nil 'noerror)
-    (add-hook 'python-mode-hook 'jedi:setup))
+(GNUEmacs
+ (if (require 'jedi nil 'noerror)
+     (add-hook 'python-mode-hook 'jedi:setup)))
 
 ;; ---------------------------------------------------------------- ;;
