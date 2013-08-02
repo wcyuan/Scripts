@@ -103,7 +103,7 @@ def process_args(opts, args):
 
 # --------------------------------------------------------------------
 
-def getopts():
+def getopts(argv=None):
     """
     Parse the command line
     """
@@ -137,7 +137,7 @@ def getopts():
                       action='store_true',
                       help='rerun the last job, replacing the old record')
 
-    opts, args = parser.parse_args()
+    opts, args = parser.parse_args(argv)
 
     if opts.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -553,10 +553,13 @@ class Job(object):
         This appears as the subject of emails and this is the line we
         print when summarizing the JobTable.
         """
-        return ('{self.job_id:3} {self.status:10} '
-                '{self.start_time_str} '
-                '({self.duration:8}) {self.shorthost:8} {self.strcmd}'.
-                format(self=self))
+        return ('{self.job_id:3} {stat} '
+                '{start_time} '
+                '({self.duration:9}) {self.shorthost:10} {self.strcmd}'.
+                format(self=self,
+                       stat=self.status[:3],
+                       start_time=time.strftime('%m/%d %H:%M',
+                                                self.start_time)))
 
     def report(self):
         """
