@@ -1021,6 +1021,8 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;; Jedi python auto-completion
 ;; https://github.com/tkf/emacs-jedi
 ;;
+;; --------------------
+;;
 ;; jedi require virtualenv and el-get
 ;;
 ;; to install it:
@@ -1051,9 +1053,41 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 ;;
 ;; 4. run: M-x el-get-install jedi
 ;;
+;; --------------------
+;;
+;; Key bindings
+;;
+;; These are defined in jedi-mode in jedi.el.  You can see them in the
+;; jedi-mode docstring by running "M-x describe-function jedi-mode"
+;; which is the same as "C-h f jedi-mode"
+;;
+;; key             binding
+;; ---             -------
+;;
+;; C-c             Prefix Command
+;;
+;; C-c c           jedi:complete
+;;                 by default this is <C-tab>, but I've already bound
+;;                 C-tab to something for ion3, my window manager, so
+;;                 I use C-c c instead.
+;;
+;; C-c .           jedi:goto-definition
+;;
+;; C-c ,           jedi:goto-definition-pop-marker
+;;                 after you go to a definition, this will bring you back to where you were
+;;
+;; C-c ?           jedi:show-doc
+;;
+
+(defun jedi:setup_and_keys ()
+  "Setup jedi and set my preferred key-bindings"
+  (interactive)
+  (jedi:setup)
+  (global-set-key "\C-cc" 'jedi:complete)
+)
 
 (GNUEmacs
  (if (require 'jedi nil 'noerror)
-     (add-hook 'python-mode-hook 'jedi:setup)))
+     (add-hook 'python-mode-hook 'jedi:setup_and_keys)))
 
 ;; ---------------------------------------------------------------- ;;
