@@ -54,14 +54,7 @@ def process_args(opts, args):
     """
     Handle the different script arguments
     """
-    if os.path.exists(opts.config_dir):
-        logging.info("Using config dir {0} db {1}".
-                     format(opts.config_dir, DB_FILENAME))
-        table = JobTable(os.path.join(opts.config_dir, DB_FILENAME))
-    else:
-        logging.info("Config dir {0} does not exist".
-                     format(opts.config_dir))
-        table = None
+    table = JobTable.get_table(opts.config_dir)
 
     if opts.detail or opts.delete or opts.all:
         if table is None:
@@ -939,6 +932,18 @@ class JobTable(object):
                      ),
             key_col='job_id',
             obj_constructor=DbJob.make_job)
+
+    @classmethod
+    def get_table(cls, config_dir=DEFAULT_CONFIG_DIR):
+        if os.path.exists(config_dir):
+            logging.info("Using config dir {0} db {1}".
+                         format(config_dir, DB_FILENAME))
+            return cls(os.path.join(config_dir, DB_FILENAME))
+        else:
+            logging.info("Config dir {0} does not exist".
+                         format(config_dir))
+            return None
+
 
     def add_job(self, job, job_id=None):
         """
