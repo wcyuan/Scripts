@@ -130,6 +130,8 @@ def getopts(argv=None):
                       action='store_true',
                       help='rerun the last job, replacing the old record')
 
+    parser.disable_interspersed_args()
+
     opts, args = parser.parse_args(argv)
 
     if opts.verbose:
