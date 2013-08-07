@@ -47,6 +47,19 @@
 -- ** META + t            = Tag a window
 -- ** META + k, a         - Move all tagged windows to this frame
 -- **
+-- ** F1  - man page
+-- ** F2  - start a new xterm (defined below)
+-- ** F3  - run a command
+-- ** F4  - ssh to
+-- ** F5  - edit file
+-- ** F6  - view file
+-- ** F7  - undefined
+-- ** F8  - not sure, it's captured by vnc
+-- ** F9  - create a new workspace
+-- ** F10 - undefined
+-- ** F11 - undefined
+-- ** F12 - menu
+-- **
 -- ** ------------------------------------------------------------------- ** --
 
 -- Caution: these may break the default bindings.
