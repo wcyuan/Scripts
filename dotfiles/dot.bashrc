@@ -120,7 +120,10 @@ go() {
         file=`readlink $file`
     fi
 
-    if [[ -e $file ]]
+    if [[ -d $file ]]
+    then
+        cd $file
+    elif [[ -e $file ]]
     then
         dir=`dirname $file`
         cd $dir
