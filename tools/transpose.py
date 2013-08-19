@@ -144,7 +144,8 @@ def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--patt', '--pattern',
                       help="the pattern to look for")
-    parser.add_option('--delim', '-d', '--delimiter',
+    parser.add_option('--delimeter', '--ifs', '-d',
+                      dest='delim',
                       help="the delimiter to use")
     parser.add_option('--left',
                       action="store_true",
@@ -179,7 +180,7 @@ def getopts():
                       action='append',
                       help='Filter results.  If multiple filters given, '
                       'will only print lines that match them all.')
-    parser.add_option('--columns', '--select', '--column',
+    parser.add_option('--columns', '--select',
                       dest='columns',
                       action='append',
                       help='Which columns to show')
@@ -228,7 +229,7 @@ def getopts():
     parser.add_option('--ofs',
                       dest='ofs',
                       help='set the output field separator')
-    parser.add_option('--clean-output', '--clean',
+    parser.add_option('--clean-output',
                       action='store_true',
                       dest='clean_output',
                       help='remove the ofs from output fields')
