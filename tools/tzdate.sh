@@ -1,19 +1,14 @@
 #!/bin/sh
 #
-export TZ
-ECHO="echo -e"
+tz() {
+    printf "%-15s %-20s    " "$1" "$TZ"
+    date
+}
 
-TZ=EST5EDT
-$ECHO "New York\t$TZ\t\t\t\c"; date
-TZ=PST8PDT
-$ECHO "California\t$TZ\t\t\t\c"; date
-TZ=GB
-$ECHO "London\t\t$TZ\t\t\t\c"; date
-TZ=Asia/Calcutta
-$ECHO "Hyderabad\t$TZ\t\t\c"; date
-TZ=Japan
-$ECHO "Tokyo\t\t$TZ\t\t\t\c"; date
-TZ=Hongkong
-$ECHO "Hong Kong\t$TZ\t\t\c"; date
-TZ=Australia/Melbourne
-$ECHO "Melbourne\t$TZ\t\c"; date
+TZ=EST5EDT              tz "New York"
+TZ=PST8PDT              tz "California"
+TZ=GB                   tz "London"
+TZ=Asia/Calcutta        tz "Hyderabad"
+TZ=Japan                tz "Tokyo"
+TZ=Hongkong             tz "Hong Kong"
+TZ=Australia/Melbourne  tz "Melbourne"
