@@ -20,6 +20,7 @@
 #
 # ^A a            - send a control-a to the shell
 # ^A ?            - show all keybindings
+# ^A r            - turn on or off line wrapping
 #
 # ^A S            - Split the window horizontally into two regions
 # ^A <tab>        - Move to the other region
