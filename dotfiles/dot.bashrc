@@ -37,6 +37,8 @@ alias      sa='unalias -a; . ~/.bashrc'
 alias ipython='PYTHONUNBUFFERED=1 python c:/cygwin/home/Yuan/usr/pkgs/ipython-0.12/ipython.py'
 alias     irb='/cygdrive/c/Ruby193/bin/irb.bat --prompt default'
 
+alias    node='/cygdrive/c/Program\ Files/nodejs/node.exe'
+
 #
 # ps BSD-style options
 #
