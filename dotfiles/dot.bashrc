@@ -39,6 +39,7 @@ alias     irb='/cygdrive/c/Ruby193/bin/irb.bat --prompt default'
 
 alias    node='/cygdrive/c/Program\ Files/nodejs/node.exe'
 alias     npm="/cygdrive/c/Program\ Files/nodejs/node.exe 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js'"
+alias webserver="python -m SimpleHTTPServer"
 
 #
 # ps BSD-style options
