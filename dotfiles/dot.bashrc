@@ -38,6 +38,7 @@ alias ipython='PYTHONUNBUFFERED=1 python c:/cygwin/home/Yuan/usr/pkgs/ipython-0.
 alias     irb='/cygdrive/c/Ruby193/bin/irb.bat --prompt default'
 
 alias    node='/cygdrive/c/Program\ Files/nodejs/node.exe'
+alias     npm="/cygdrive/c/Program\ Files/nodejs/node.exe 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js'"
 
 #
 # ps BSD-style options
