@@ -132,7 +132,7 @@ foreach my $cmd (@ARGV) {
 }
 
 if (scalar(@files) > 0) {
-    my $cmd = "less " . join(" ", @files);
+    my $cmd = "less " . join(" ", map ("'$_'", @files));
     if ($less_in) {
 	$cmd = ("echo '" . $to_less . "' | " . $cmd);
     }
