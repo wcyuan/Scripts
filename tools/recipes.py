@@ -18,13 +18,55 @@ class PassThroughOptionParser(OptionParser):
 
     sys.exit(status) will still be called if a known argument is passed
     incorrectly (e.g. missing arguments or bad argument types, etc.)
+
+    >>> parser = PassThroughOptionParser()
+    >>> _ = parser.add_option('--test', action='store_true')
+    >>> parser.disable_interspersed_args()
+
+    # We don't recognize any options, so just pass them through
+    >>> (opts, args) = parser.parse_args(['a', 'b', 'c'])
+    >>> opts.test
+    >>> args
+    ['a', 'b', 'c']
+
+    # Pass through '--' unchanged
+    >>> (opts, args) = parser.parse_args(['a', 'b', '--', 'c'])
+    >>> args
+    ['a', 'b', '--', 'c']
+    >>> (opts, args) = parser.parse_args(['a', 'b', '--', 'c', '--'])
+    >>> args
+    ['a', 'b', '--', 'c', '--']
+
+    # We remove the leading '--' if it is the first argument
+    >>> (opts, args) = parser.parse_args(['--', 'a', 'b', '--', 'c', '--'])
+    >>> args
+    ['a', 'b', '--', 'c', '--']
+
+
+    # Consume the option we expected
+    >>> (opts, args) = parser.parse_args(['--test', 'a', 'b', '--', 'c', '--'])
+    >>> opts.test
+    True
+    >>> args
+    ['a', 'b', '--', 'c', '--']
+
+    >>> (opts, args) = parser.parse_args(['--test', '--', 'a', 'b', '--', 'c', '--'])
+    >>> opts.test
+    True
+    >>> args
+    ['a', 'b', '--', 'c', '--']
+
+    >>> (opts, args) = parser.parse_args(['--', '--test', 'a', 'b', '--', 'c', '--'])
+    >>> opts.test
+    >>> args
+    ['--test', 'a', 'b', '--', 'c', '--']
+
     """
     def _process_args(self, largs, rargs, values):
-        while rargs:
-            try:
-                OptionParser._process_args(self,largs,rargs,values)
-            except (BadOptionError,AmbiguousOptionError), e:
-                largs.append(e.opt_str)
+        try:
+            OptionParser._process_args(self,largs,rargs,values)
+        except (BadOptionError,AmbiguousOptionError), e:
+            largs.append(e.opt_str)
 
 def pass_through_example():
     preparser = PassThroughOptionParser()
