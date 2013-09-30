@@ -42,6 +42,7 @@
 # ^A : title <win>      - set the current window name to <win>
 # ^A : chdir [<dir>]    - set the working directory for new windows
 # ^A : screen <cmd>     - run <cmd> in a new window
+# ^A : number <num>     - swap this tab with tab number <num>
 #
 # -- From outside of screen:
 #
