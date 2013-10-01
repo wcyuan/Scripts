@@ -41,6 +41,26 @@ regexp cannot also be parsed as an integer)
  False 6
  True  2
 
+If your input has headers and no blank fields
+
+ Shape  Name Color
+ Circle -    Blue
+ Square abc  Blue
+ Circle -    Red
+ Circle -    Blue
+ Circle -    Brown
+ Rect   abc  Purple
+ Square -    Purple
+ Square -    Red
+
+You can bucket by column name
+ $ bucket.py --header Shape
+ Shape  N
+ Circle 4
+ Rect   1
+ Square 3
+
+
 """
 
 # --------------------------------------------------------------------
