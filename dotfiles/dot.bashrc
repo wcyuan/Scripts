@@ -79,6 +79,8 @@ gitall() {
 }
 
 aws() {
+    default_host='ec2-184-72-254-238.compute-1.amazonaws.com'
+
     if [ "$1" = "-v" ]
     then
         vncopt="-L *:9000:localhost:5901"
@@ -86,17 +88,25 @@ aws() {
     else
         vncopt=""
     fi
+
+    # e.g. ec2-23-22-197-139.compute-1.amazonaws.com
+    host=$1
+
     if [ "$#" -lt 1 ]
     then
-        echo "ERROR: Need host IP" > /dev/stderr
-        return 1
+        if [ "$default_host" != "" ]
+        then
+            host=$default_host
+            echo "Using default host $host"
+        else
+            echo "ERROR: No default host, need an IP" > /dev/stderr
+            return 1
+        fi
     elif [ "$#" -gt 1 ]
     then
         echo "Too many args: $*" > /dev/stderr
         return 1
     fi
-    # e.g. ec2-23-22-197-139.compute-1.amazonaws.com
-    host=$1
     ssh $vncopt -i ~/code/aws/startup.pem ubuntu@$host
 }
 
