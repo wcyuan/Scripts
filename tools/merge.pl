@@ -8,21 +8,13 @@ use strict;
 use Getopt::Std;
 use vars qw($opt_n $opt_f $opt_p);
 $ENV{USAGE} = "usage: $0 <filename>*\n";
-getopts("n:fp") || die $ENV{USAGE};
+getopts("n:f") || die $ENV{USAGE};
 
 my ($offset) = defined($opt_n) ? $opt_n : 0;
 my ($use_filenames) = defined($opt_f);
 my ($DELIM) = ":";
 my ($OUTFD) = *STDOUT;
-my ($pretty) = 0;
 my (@fhs, @fns);
-if (defined($opt_p)) {
-    $pretty = 1;
-    $DELIM = "@";
-    my ($pretty_cmd) = "pretty -f$DELIM -lALL";
-    open (*PRETTY, "| $pretty_cmd") or croak "Couldn't open pretty cmd: $! $?\n";
-    $OUTFD = *PRETTY;
-}
 
 my $stillgoing=1;
 
@@ -53,4 +45,3 @@ while ($stillgoing) {
 }
 
 foreach my $fh (@fhs) { close($fh); }
-close($OUTFD) if $pretty;
