@@ -805,11 +805,22 @@ def shorten_filenames(filenames):
     >>> shorten_filenames(['/foo/a/bar/x/', '/foo/b/bar/y', '/foo/c/bar/z'])
     ('a/x', 'b/y', 'c/z')
     >>> shorten_filenames(['/foo/a', '../foo/y', 'bar/z'])
-    ('/foo/a', '../foo/y', 'bar/z')
+    ('/foo/a', '../foo/y', 'bar/z/')
+    >>> shorten_filenames(['/foo/a'])
+    ['/foo/a']
+    >>> import sys
+    >>> shorten_filenames([sys.stdin])[0] == sys.stdin
+    True
     """
+    if len(filenames) == 1:
+        return filenames
+    try:
+        fileparts = [pathparts(f) for f in filenames]
+    except:
+        logging.warning("Can't parse filenames %s", filenames)
+        return filenames
     short = []
-    splits = tuple(itertools.izip_longest(*(pathparts(f) for f in filenames),
-                                           fillvalue=''))
+    splits = tuple(itertools.izip_longest(*fileparts, fillvalue=''))
     for parts in splits:
         if len(parts) > 0 and not all(p == parts[0] for p in parts):
             short.append(parts)
