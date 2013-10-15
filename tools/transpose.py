@@ -111,7 +111,7 @@ def main():
                    for v in ('patt', 'delim', 'reverse', 'kind', 'header_patt',
                              'head', 'filters', 'by_col_no', 'columns',
                              'add_filename', 'raw', 'width',
-                             'clean_output'))
+                             'clean_output', 'full_filenames'))
 
     def get_input(fns):
         """
@@ -251,6 +251,10 @@ def getopts():
     parser.add_option('--magic_words',
                       action='append',
                       help='specify a magic word that marks the header')
+    parser.add_option('--full_filenames',
+                      action='store_true',
+                      help='Show the full filename instead of just '
+                      'a shortened version')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -733,10 +737,90 @@ def pretty_print(intable, left=False, should_transpose=None, nopretty=False,
         intable = None
     print texttable(ttable, transposed=intable, left=left)
 
+def pathparts(path):
+    """
+    Split a path by the path separator (/)
+
+    >>> pathparts('/')
+    ('/',)
+    >>> pathparts('2011')
+    ('2011',)
+    >>> pathparts('2011/')
+    ('2011',)
+    >>> pathparts('/2011')
+    ('/', '2011')
+    >>> pathparts('a/b')
+    ('a', 'b')
+    >>> pathparts('a/b/')
+    ('a', 'b')
+    >>> pathparts('/a/b')
+    ('/', 'a', 'b')
+    >>> pathparts('/a/b/')
+    ('/', 'a', 'b')
+    >>> os.path.join(*(pathparts('/')))
+    '/'
+    >>> os.path.join(*(pathparts('2011')))
+    '2011'
+    >>> os.path.join(*(pathparts('2011/')))
+    '2011'
+    >>> os.path.join(*(pathparts('/2011')))
+    '/2011'
+    >>> os.path.join(*(pathparts('a/b')))
+    'a/b'
+    >>> os.path.join(*(pathparts('a/b/')))
+    'a/b'
+    >>> os.path.join(*(pathparts('/a/b')))
+    '/a/b'
+    >>> os.path.join(*(pathparts('/a/b/')))
+    '/a/b'
+    >>>
+
+    """
+    (direc, base) = os.path.split(path)
+    if direc == '':
+        return (base,)
+
+    if direc == path:
+        # If the whole path is returned as the directory, then we are
+        # at the root ('/')
+        direc = (direc,)
+    else:
+        direc = pathparts(direc)
+
+    if base == '':
+        return direc
+    else:
+        return direc + (base,)
+
+def shorten_filenames(filenames):
+    """
+    >>> shorten_filenames(['a', 'b', 'c'])
+    ('a', 'b', 'c')
+    >>> shorten_filenames(['/foo/a', '/foo/b', '/foo/c'])
+    ('a', 'b', 'c')
+    >>> shorten_filenames(['/foo/a/bar', '/foo/b/bar', '/foo/c/bar'])
+    ('a', 'b', 'c')
+    >>> shorten_filenames(['/foo/a/bar/x', '/foo/b/bar/y', '/foo/c/bar/z'])
+    ('a/x', 'b/y', 'c/z')
+    >>> shorten_filenames(['/foo/a/bar/x/', '/foo/b/bar/y', '/foo/c/bar/z'])
+    ('a/x', 'b/y', 'c/z')
+    >>> shorten_filenames(['/foo/a', '../foo/y', 'bar/z'])
+    ('/foo/a', '../foo/y', 'bar/z')
+    """
+    short = []
+    splits = tuple(itertools.izip_longest(*(pathparts(f) for f in filenames),
+                                           fillvalue=''))
+    for parts in splits:
+        if len(parts) > 0 and not all(p == parts[0] for p in parts):
+            short.append(parts)
+    return tuple(os.path.join(*p) for p in itertools.izip_longest(*short, fillvalue=""))
+
+
 def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None, header_patt=None,
                filters=None, by_col_no=False, columns=(),
-               add_filename=None, raw=False, width=None, clean_output=False):
+               add_filename=None, raw=False, width=None, clean_output=False,
+               full_filenames=False):
     """
     Reads multiple files and returns a generator of tables, where a
     table is a generator of rows.
@@ -744,7 +828,7 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
 
     table = None
     prev_header = None
-    for filename in fns:
+    for (shortname, filename) in zip(shorten_filenames(fns), fns):
         filetable = _read_input(filename, patt=patt, delim=delim,
                                 comment=comment, kind=kind,
                                 reverse=reverse, head=head,
@@ -769,7 +853,9 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                 '''
                 for line in filetable:
                     yield [filename] + line
-            filetable = _newfiletable(filename, filetable)
+            filetable = _newfiletable(filename if full_filenames
+                                      else shortname,
+                                      filetable)
 
         if table is None:
             table = itertools.chain([header], filetable)
