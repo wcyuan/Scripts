@@ -14,8 +14,15 @@ Run doctests with:
 #
 # todo:
 #
-# ability to easily rerun past jobs
-# easily remove old jobs from the table (in bulk)
+# when displaying a job summary for a job that was run from a
+#   template, just show the template name and the arguments (unless
+#   the user asks for the full command)
+# when displaying a job detail, show the template details too
+# list all runs of a particular template
+# job chains:
+#    after one job has finished running, run another (if succeeded)
+#    continue a job chain from the last failed link
+# templated job chains
 #
 
 from __future__ import absolute_import, division, with_statement
@@ -29,6 +36,7 @@ import os
 import os.path
 import select
 import socket
+import string
 import subprocess
 import sys
 import time
@@ -54,6 +62,43 @@ def process_args(opts, args):
     """
     Handle the different script arguments
     """
+
+    tpl_table = TemplateTable.get_table(opts.config_dir)
+    if opts.templates:
+        if tpl_table is None:
+            raise ValueError("No longjob database")
+        for tpl in tpl_table.get_all_templates():
+            print tpl.desc()
+        return
+
+    if opts.create_template is not None:
+        if tpl_table is None:
+            raise ValueError("No longjob database")
+        tpl_table.add_template(opts.create_template, ' '.join(args))
+        return
+
+    if opts.remove_template is not None:
+        if tpl_table is None:
+            raise ValueError("No longjob database")
+        tpl_table.delete_template(
+            tpl_table.get_template_by_id(opts.remove_template))
+        return
+
+    if opts.rename_template is not None:
+        if tpl_table is None:
+            raise ValueError("No longjob database")
+        tpl_table.rename(
+            tpl_table.get_template(opts.rename_template).template_id,
+            ' '.join(args))
+        return
+
+    if opts.template_runs is not None:
+        if tpl_table is None:
+            raise ValueError("No longjob database")
+        template = tpl_table.get_template(opts.template_runs)
+        raise NotImplementedError()
+        return
+
     table = JobTable.get_table(opts.config_dir)
 
     if opts.detail or opts.delete or opts.all:
@@ -84,13 +129,22 @@ def process_args(opts, args):
             new_job_id = job_id
             table.delete_job(job)
         Job.new_job(job.cmd, table=table, shell=job.shell,
-                    job_id=new_job_id).run()
+                    job_id=new_job_id,
+                    template_id=job.template_id).run()
         return
 
     if len(args) == 0:
         if table is not None:
             for job in table.get_recent_jobs(7):
                 print job.summary()
+    elif opts.from_template:
+        if tpl_table is None:
+            raise ValueError("No longjob database")
+        template = tpl_table.get_template(opts.from_template)
+        cmd = template.eval(args)
+        Job.new_job(cmd, table=table, shell=opts.shell,
+                    template_id=template.template_id,
+                    template_args=args).run()
     else:
         Job.new_job(args, table=table, shell=opts.shell).run()
 
@@ -129,6 +183,20 @@ def getopts(argv=None):
     parser.add_option('--redolast',
                       action='store_true',
                       help='rerun the last job, replacing the old record')
+    parser.add_option('--create_template',
+                      help='Create a new job template')
+    parser.add_option('--from_template',
+                      help='Run a templated job')
+    parser.add_option('--remove_template',
+                      help='Remove a job template')
+    parser.add_option('--rename_template',
+                      type=int,
+                      help='Rename a job template')
+    parser.add_option('--templates',
+                      action='store_true',
+                      help='List all job templates')
+    parser.add_option('--template_runs',
+                      help='List all runs of this template')
 
     parser.disable_interspersed_args()
 
@@ -244,18 +312,18 @@ class Mailer(object):
 
         if os.path.exists(self.SENDMAIL):
             if self.NO_WRITE:
-                logging.info('NO WRITE: Would send via {0}:\n{1}'.
-                             format(self.SENDMAIL, msg.as_string()))
+                logging.info('NO WRITE: Would send via %s:\n%s',
+                             self.SENDMAIL, msg.as_string())
                 return
-            logging.info("Sending mail via {0}".format(self.SENDMAIL))
+            logging.info("Sending mail via %s", self.SENDMAIL)
             logging.debug(msg.as_string())
             pipe = os.popen("%s -t" % self.SENDMAIL, "w")
             pipe.write(msg.as_string())
             pipe.close()
         else:
             if self.NO_WRITE:
-                logging.info('NO WRITE: Would send via smtplib:\n{0}'.
-                             format(msg.as_string()))
+                logging.info('NO WRITE: Would send via smtplib:\n%s',
+                             msg.as_string())
                 return
             logging.info("Sending mail via smtplib")
             logging.debug(msg.as_string())
@@ -295,30 +363,35 @@ class Job(object):
                  stdout          = '',
                  stderr          = '',
                  shell           = False,
-                 host            = None):
+                 host            = None,
+                 template_id     = None,
+                 template_args   = None):
         """
         This initialize could be for an existing job or a new job that
         has never been run.
         """
-        self.table      = table
-        self.job_id     = job_id
+        self.table         = table
+        self.job_id        = job_id
         if isinstance(cmd, basestring):
-            self.cmd    = cmd.split()
-            self.strcmd = cmd
+            self.cmd       = cmd.split()
+            self.strcmd    = cmd
         else:
-            self.cmd    = cmd
-            self.strcmd = ' '.join(cmd)
-        self.status     = status
-        self.start_time = start_time
-        self.end_time   = end_time
-        self.returncode = returncode
-        self.stdout     = stdout
-        self.stderr     = stderr
-        self.shell      = shell
-        self.host       = host
+            self.cmd       = cmd
+            self.strcmd    = ' '.join(cmd)
+        self.status        = status
+        self.start_time    = start_time
+        self.end_time      = end_time
+        self.returncode    = returncode
+        self.stdout        = stdout
+        self.stderr        = stderr
+        self.shell         = shell
+        self.host          = host
+        self.template_id   = template_id
+        self.template_args = template_args
 
     @classmethod
-    def new_job(cls, cmd, table=None, shell=False, job_id=None):
+    def new_job(cls, cmd, table=None, shell=False,
+                job_id=None, template_id=None, template_args=None):
         """
         This is a constructor for a new job that has never been run.
 
@@ -330,7 +403,8 @@ class Job(object):
         @param shell: will be passed into Popen to tell it whether or
         not to use the shell to parse the command before running it.
         """
-        obj = cls(cmd=cmd, table=table, shell=shell)
+        obj = cls(cmd=cmd, table=table, shell=shell, template_id=template_id,
+                  template_args=template_args)
         obj.addtodb(job_id=job_id)
         return obj
 
@@ -355,8 +429,8 @@ class Job(object):
             """
             Mark a job as a failure.  Should only be called on a SIGTERM
             """
-            logging.error("Received SIGTERM (signum = {0}), marking "
-                          "job as a failure".format(signum))
+            logging.error("Received SIGTERM (signum = %s), marking "
+                          "job as a failure", signum)
             self.status = self.FAILED
             self.stderr += 'Received SIGTERM'
             self._finish()
@@ -364,7 +438,7 @@ class Job(object):
 
         try:
             if self.NO_WRITE:
-                logging.info("NO WRITE: {0}".format(self.strcmd))
+                logging.info("NO WRITE: %s", self.strcmd)
                 # in NO_WRITE mode, pretend we succeeded
                 self.returncode = 0
             else:
@@ -403,13 +477,13 @@ class Job(object):
         calling this method.
         """
         if self.shell:
-            logging.info("Running (shell): {0}".format(self.strcmd))
+            logging.info("Running (shell): %s", self.strcmd)
             proc = subprocess.Popen(self.strcmd,
                                     shell=self.shell,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
         else:
-            logging.info("Running: {0}".format(self.strcmd))
+            logging.info("Running: %s", self.strcmd)
             proc = subprocess.Popen(self.cmd,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
@@ -538,7 +612,7 @@ class Job(object):
         """
         if self.table is not None:
             self.job_id = self.table.add_job(self, job_id=job_id)
-            logging.info("Got job id {0}".format(self.job_id))
+            logging.info("Got job id %s", self.job_id)
 
     # -----------------------
     # Text summaries
@@ -582,6 +656,15 @@ class SqlDb(object):
     """
     NO_WRITE = False
 
+    DATABASES = {}
+
+    @classmethod
+    def get_db(cls, filename):
+        abspath = os.path.abspath(filename)
+        if abspath not in cls.DATABASES:
+            cls.DATABASES[abspath] = cls(abspath)
+        return cls.DATABASES[abspath]
+
     def __init__(self, filename):
         import sqlite3
         self.filename = filename
@@ -606,7 +689,7 @@ class SqlDb(object):
         #
         # # And this is the named style:
         # cur.execute("select * from people where name_last=:who and age=:age", {"who": who, "age": age})
-        logging.info("SqlDb Executing: '{0}' '{1}'".format(args, kwargs))
+        logging.info("SqlDb Executing: '%s' '%s'", args, kwargs)
         return self.cursor.execute(*args, **kwargs)
 
     def execute(self, *args, **kwargs):
@@ -615,8 +698,8 @@ class SqlDb(object):
         commit the changes.
         """
         if self.NO_WRITE:
-            logging.info("SqlDb NO WRITE: would run '{0}' '{1}'".
-                         format(args, kwargs))
+            logging.info("SqlDb NO WRITE: would run '%s' '%s'",
+                         args, kwargs)
             logging.info("SqlDb NO_WRITE: would commit")
         else:
             self.execute_always(*args, **kwargs)
@@ -724,7 +807,7 @@ class SqlTable(object):
         column names as keyword arguments and produces the desired
         Python object.
         """
-        self.sdb       = SqlDb(filename)
+        self.sdb       = SqlDb.get_db(filename)
         self.table     = table
         self.columns   = columns
         self.key_col   = key_col
@@ -793,13 +876,24 @@ class SqlTable(object):
         """
         Update a row in the table to match the current state of the object
         """
+        return self.update_obj_fields(
+            getattr(obj, self.key_col),
+            [(ci[0], getattr(obj, ci[0])) for ci in self.columns])
+
+    def update_obj_fields(self, key, fld_val_pairs):
+        """
+        Update the specified fields for given a row in the table
+
+        @param fld_val_pairs: a list of (field, value) pairs.  Must be
+        traversable multiple times.
+        """
         self.sdb.execute("UPDATE {0} SET {1} WHERE {2} = ?;".
                          format(self.table,
-                                ', '.join('{0} = ?'.format(ci[0])
-                                          for ci in self.columns),
+                                ', '.join('{0} = ?'.format(fld)
+                                          for (fld, _) in fld_val_pairs),
                                 self.key_col),
-                         [getattr(obj, ci[0]) for ci in self.columns] +
-                         [getattr(obj, self.key_col)])
+                         [val for (_, val) in fld_val_pairs] +
+                         [key])
 
     def delete_obj(self, obj):
         """
@@ -867,35 +961,44 @@ class DbJob(object):
         fields of the JobTable sql table.  Handles the conversion of
         all fields from python types to the desired sql types.
         """
-        self.job_id     = job.job_id
-        self.command    = job.strcmd
-        self.status     = self.STATUS_IDS.index(job.status)
-        self.start_time = job.start_time_secs
-        self.end_time   = job.end_time_secs
-        self.returncode = job.returncode
-        self.stdout     = job.stdout
-        self.stderr     = job.stderr
-        self.shell      = bool(job.shell)
-        self.host       = job.host
+        self.job_id        = job.job_id
+        self.command       = job.strcmd
+        self.status        = self.STATUS_IDS.index(job.status)
+        self.start_time    = job.start_time_secs
+        self.end_time      = job.end_time_secs
+        self.returncode    = job.returncode
+        self.stdout        = job.stdout
+        self.stderr        = job.stderr
+        self.shell         = bool(job.shell)
+        self.host          = job.host
+        self.template_id   = job.template_id
+        self.template_args = (job.template_args
+                              if job.template_args is None
+                              else ' '.join(job.template_args))
 
     @classmethod
     def make_job(cls, job_id, command, status, start_time, end_time,
-                 returncode, stdout, stderr, shell, host):
+                 returncode, stdout, stderr, shell, host, template_id,
+                 template_args):
         """
         Given the fields of a row in the JobTable table, return a Job
         object.  Handles the conversion of all rows from sql types to
         the desired python types.
         """
-        return Job(job_id     = job_id,
-                   cmd        = command.split(),
-                   status     = cls.STATUS_IDS[status],
-                   start_time = time.localtime(start_time),
-                   end_time   = time.localtime(end_time),
-                   returncode = returncode,
-                   stdout     = stdout,
-                   stderr     = stderr,
-                   shell      = bool(shell),
-                   host       = host)
+        return Job(job_id        = job_id,
+                   cmd           = command.split(),
+                   status        = cls.STATUS_IDS[status],
+                   start_time    = time.localtime(start_time),
+                   end_time      = time.localtime(end_time),
+                   returncode    = returncode,
+                   stdout        = stdout,
+                   stderr        = stderr,
+                   shell         = bool(shell),
+                   host          = host,
+                   template_id   = template_id,
+                   template_args = (template_args
+                                    if template_args is None
+                                    else template_args.split()))
 
     @classmethod
     def status_name_to_id(cls, *statuses):
@@ -922,15 +1025,17 @@ class JobTable(object):
         self.table = SqlTable(
             filename,
             table='jobs',
-            columns=(('command',    'TEXT'),
-                     ('status',     'INTEGER'),
-                     ('start_time', 'INTEGER'),
-                     ('end_time',   'INTEGER'),
-                     ('returncode', 'INTEGER'),
-                     ('stdout',     'TEXT'),
-                     ('stderr',     'TEXT'),
-                     ('shell',      'INTEGER'),
-                     ('host',       'TEXT'),
+            columns=(('command',       'TEXT'),
+                     ('status',        'INTEGER'),
+                     ('start_time',    'INTEGER'),
+                     ('end_time',      'INTEGER'),
+                     ('returncode',    'INTEGER'),
+                     ('stdout',        'TEXT'),
+                     ('stderr',        'TEXT'),
+                     ('shell',         'INTEGER'),
+                     ('host',          'TEXT'),
+                     ('template_id',   'INTEGER'),
+                     ('template_args', 'TEXT'),
                      ),
             key_col='job_id',
             obj_constructor=DbJob.make_job)
@@ -938,12 +1043,11 @@ class JobTable(object):
     @classmethod
     def get_table(cls, config_dir=DEFAULT_CONFIG_DIR):
         if os.path.exists(config_dir):
-            logging.info("Using config dir {0} db {1}".
-                         format(config_dir, DB_FILENAME))
+            logging.info("Using config dir %s db %s",
+                         config_dir, DB_FILENAME)
             return cls(os.path.join(config_dir, DB_FILENAME))
         else:
-            logging.info("Config dir {0} does not exist".
-                         format(config_dir))
+            logging.info("Config dir %s does not exist", config_dir)
             return None
 
 
@@ -1041,7 +1145,7 @@ class JobTable(object):
             raise AssertionError("Can't delete job with no job id: {0}".
                                  format(job.summary()))
         print "Deleting job {0}".format(job.job_id)
-        logging.info("Job to delete: {0}".format(job.summary()))
+        logging.info("Job to delete: %s", job.summary())
         return self.table.delete_obj(job)
 
     def get_most_recent_job_id(self):
@@ -1050,6 +1154,132 @@ class JobTable(object):
         """
         return self.table.sdb.query_one_value_always(
             'SELECT MAX(job_id) FROM jobs')
+
+# --------------------------------------------------------------------
+
+class Template(object):
+    @classmethod
+    def get_formatter(cls):
+        """
+        Returns an instance of string.Formatter.  Just make it a
+        classmethod so that we don't construct more than necessary.
+        """
+        if not hasattr(cls, '_formatter'):
+            cls._formatter = string.Formatter()
+        return cls._formatter
+
+
+    def __init__(self, template_id, name, template_str):
+        self.template_id = template_id
+        self.name = name
+        self.template_str = template_str
+        self.keys = sorted(fld
+                           for (_, fld, _, __init__) in
+                           self.get_formatter().parse(template_str))
+
+    def eval(self, args):
+        position_params = []
+        named_params = {}
+        for arg in args:
+            if '=' in arg:
+                (name, value) = arg.split('=', 1)
+                named_params[name] = value
+            else:
+                position_params.append(arg)
+        return self.format(*position_params, **named_params)
+
+    def format(self, *args, **kwargs):
+        return self.template_str.format(*args, **kwargs)
+
+    def __repr__(self):
+        return ('{cn}(template_id={self.template_id!r}, '
+                'name={self.name!r}, '
+                'template_str={self.template_str!r}'.
+                format(type(self).__name__, self=self))
+
+    def desc(self):
+        return ('{self.tempalte_id:3} {self.name:10}, '
+                '{self.keys:20}, {self.template_str}'.
+                format(self=self))
+
+# --------------------------------------------------------------------
+
+class TemplateTable(object):
+    """
+    This is a wrapper around a SqlTable for a table whose rows
+    correspond specifically to Template objects (using DbJob as a wrapper)
+    """
+    def __init__(self, filename):
+        self.table = SqlTable(
+            filename,
+            table='templates',
+            columns=(('name',         'TEXT'),
+                     ('template_str', 'TEXT'),
+                     ),
+            key_col='template_id',
+            obj_constructor=Template)
+
+    @classmethod
+    def get_table(cls, config_dir=DEFAULT_CONFIG_DIR):
+        if os.path.exists(config_dir):
+            logging.info("Using config dir %s db %s",
+                         config_dir, DB_FILENAME)
+            return cls(os.path.join(config_dir, DB_FILENAME))
+        else:
+            logging.info("Config dir %s does not exist", config_dir)
+            return None
+
+    def add_template(self, name, template_str):
+        template = Template(None, name, template_str)
+        template.template_id = self.table.add_obj(template)
+        logging.info("Got template id %s", template.template_id)
+
+    def get_template_by_id(self, template_id):
+        try:
+            return self.table.get_obj(template_id)
+        except ValueError:
+            (errortype, value, trace) = sys.exc_info()
+            msg = "Could not find template with id {0}: {1}".format(
+                template_id, value)
+            raise errortype, msg, trace
+
+    def get_template_by_name(self, name):
+        """
+        Returns a list of matching templates
+        """
+        return self.table.get_objs('WHERE name = "{0}"'.format(name))
+
+    def get_template(self, id_or_name):
+        try:
+            return self.get_template_by_id(id_or_name)
+        except ValueError:
+            logging.info("Couldn't find template by id %s, trying by name",
+                         id_or_name)
+        existing = self.get_template_by_name
+        if len(existing) < 0:
+            raise ValueError("Could not find template {0}".format(id_or_name))
+        else:
+            if existing > 1:
+                logging.error("Multiple templates with name %s, "
+                              "returning the first.  %s",
+                              id_or_name, existing)
+            return existing[0]
+
+    def rename(self, template_id, newname):
+        existing = self.get_template_by_name(newname)
+        if len(existing) > 0:
+            raise ValueError(
+                "Can't rename {0} to {1}, a template "
+                "with that name already exists: {2}".format(
+                    template_id, newname, existing))
+        return self.table.update_obj_fields(template_id, [('name', newname)])
+
+    def get_all_templates(self):
+        return self.table.get_objs('ORDER BY name DESC')
+
+    def delete_template(self, template):
+        print "Deleting template {0}".format(template.desc())
+        return self.table.delete_obj(template)
 
 # --------------------------------------------------------------------
 
