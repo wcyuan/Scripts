@@ -17,7 +17,6 @@ Run doctests with:
 # when displaying a job summary for a job that was run from a
 #   template, just show the template name and the arguments (unless
 #   the user asks for the full command)
-# when displaying a job detail, show the template details too
 # list all runs of a particular template
 # job chains:
 #    after one job has finished running, run another (if succeeded)
@@ -130,7 +129,8 @@ def process_args(opts, args):
             table.delete_job(job)
         Job.new_job(job.cmd, table=table, shell=job.shell,
                     job_id=new_job_id,
-                    template_id=job.template_id).run()
+                    template_id=job.template_id,
+                    template_args=job.template_args).run()
         return
 
     if len(args) == 0:
@@ -638,6 +638,7 @@ class Job(object):
                 'Started:  {self.start_time_str}\n'
                 'End:      {self.end_time_str} ({self.duration})\n'
                 'Status:   {self.status} (rc = {self.returncode})\n'
+                'Template: id {self.template_id} args {self.template_args}\n'
                 '-----------------------------------------------\n'
                 'Stdout:\n\n'
                 '{self.stdout}\n'
