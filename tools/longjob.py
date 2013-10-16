@@ -1174,8 +1174,9 @@ class Template(object):
         self.name = name
         self.template_str = template_str
         self.keys = sorted(fld
-                           for (_, fld, _, __init__) in
-                           self.get_formatter().parse(template_str))
+                           for (_, fld, _, _) in
+                           self.get_formatter().parse(template_str)
+                           if fld is not None)
 
     def eval(self, args):
         position_params = []
@@ -1195,11 +1196,11 @@ class Template(object):
         return ('{cn}(template_id={self.template_id!r}, '
                 'name={self.name!r}, '
                 'template_str={self.template_str!r}'.
-                format(type(self).__name__, self=self))
+                format(cn=type(self).__name__, self=self))
 
     def desc(self):
-        return ('{self.tempalte_id:3} {self.name:10}, '
-                '{self.keys:20}, {self.template_str}'.
+        return ('{self.template_id:3} {self.name:10} '
+                '{self.keys:20} {self.template_str}'.
                 format(self=self))
 
 # --------------------------------------------------------------------
@@ -1236,6 +1237,7 @@ class TemplateTable(object):
 
     def get_template_by_id(self, template_id):
         try:
+            int(template_id)
             return self.table.get_obj(template_id)
         except ValueError:
             (errortype, value, trace) = sys.exc_info()
@@ -1255,7 +1257,7 @@ class TemplateTable(object):
         except ValueError:
             logging.info("Couldn't find template by id %s, trying by name",
                          id_or_name)
-        existing = self.get_template_by_name
+        existing = self.get_template_by_name(id_or_name)
         if len(existing) < 0:
             raise ValueError("Could not find template {0}".format(id_or_name))
         else:
