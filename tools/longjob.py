@@ -79,6 +79,11 @@ def process_args(opts, args):
     if opts.remove_template is not None:
         if tpl_table is None:
             raise ValueError("No longjob database")
+        # Should we only allow removing a template if there are no
+        # jobs with that template?  Otherwise, if we remove a
+        # template, and add a new template that happens to get the
+        # same id as the old one, a job that used to point to the old
+        # template will appear to point to the new one.
         tpl_table.delete_template(
             tpl_table.get_template_by_id(opts.remove_template))
         return
