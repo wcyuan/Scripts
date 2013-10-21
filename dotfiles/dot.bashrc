@@ -41,6 +41,8 @@ alias    node='/cygdrive/c/Program\ Files/nodejs/node.exe'
 alias     npm="/cygdrive/c/Program\ Files/nodejs/node.exe 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js'"
 alias webserver="python -m SimpleHTTPServer"
 
+alias tophonors='cd "/cygdrive/c/Users/Yuan/Dropbox/Top Honors Pairing"'
+
 #
 # ps BSD-style options
 #
