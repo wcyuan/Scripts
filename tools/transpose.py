@@ -111,7 +111,7 @@ def main():
                    for v in ('patt', 'delim', 'reverse', 'kind', 'header_patt',
                              'head', 'filters', 'by_col_no', 'columns',
                              'add_filename', 'raw', 'width',
-                             'clean_output', 'full_filenames'))
+                             'clean_output', 'full_filenames', 'headerless'))
 
     def get_input(fns):
         """
@@ -189,6 +189,12 @@ def getopts():
     parser.add_option('--noheader', '--no_header', '--no-header',
                       action='store_true',
                       help='do not print the header')
+    # The only effect headerless has right now is that when you add a
+    # filename to the output, you always add the filename, never the
+    # word FILE, which is what you would normally add to the header.
+    parser.add_option('--headerless',
+                      action='store_true',
+                      help='the input has no header')
     parser.add_option('--transpose',
                       dest='should_transpose',
                       action='store_true',
@@ -831,7 +837,7 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None, header_patt=None,
                filters=None, by_col_no=False, columns=(),
                add_filename=None, raw=False, width=None, clean_output=False,
-               full_filenames=False):
+               full_filenames=False, headerless=False):
     """
     Reads multiple files and returns a generator of tables, where a
     table is a generator of rows.
@@ -857,16 +863,18 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
         # If there are multiple files, add a column of filenames
         # to the table.
         if (add_filename is None and len(fns) > 1) or add_filename:
-            header = ['FILE'] + header
-            def _newfiletable(filename, filetable):
+            fn_to_add = filename if full_filenames else shortname
+            if headerless:
+                header = [fn_to_add] + header
+            else:
+                header = ['FILE'] + header
+            def _newfiletable(filetable):
                 '''
                 Add the filename as the first column to each row
                 '''
                 for line in filetable:
-                    yield [filename] + line
-            filetable = _newfiletable(filename if full_filenames
-                                      else shortname,
-                                      filetable)
+                    yield [fn_to_add] + line
+            filetable = _newfiletable(filetable)
 
         if table is None:
             table = itertools.chain([header], filetable)
