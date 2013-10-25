@@ -868,13 +868,13 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                 header = [fn_to_add] + header
             else:
                 header = ['FILE'] + header
-            def _newfiletable(filetable):
+            def _newfiletable(filetable, filename):
                 '''
                 Add the filename as the first column to each row
                 '''
                 for line in filetable:
-                    yield [fn_to_add] + line
-            filetable = _newfiletable(filetable)
+                    yield [filename] + line
+            filetable = _newfiletable(filetable, fn_to_add)
 
         if table is None:
             table = itertools.chain([header], filetable)
