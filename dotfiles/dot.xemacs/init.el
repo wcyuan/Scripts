@@ -76,7 +76,10 @@
 ;; M-l       -- make the next word all lowercase
 ;; M-c       -- make the next word title (first letter capital, rest lower)
 ;;
-;; M-space   -- collapse whitespace into a single space
+;; M-space   -- collapse whitespace around the cursor into a single space
+;; M-\       -- remove all whitespace around the cursor
+;; M-^       -- join this line to the previous line, replacing any
+;;              intervening whitespace with a single space
 ;;
 ;; -- Advanced --
 ;;
