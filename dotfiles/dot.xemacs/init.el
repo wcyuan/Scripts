@@ -195,6 +195,15 @@
 (setq display-time-string-forms '((format "%s:%s%s" 12-hours minutes am-pm)))
 (display-time)                          ;; Show current time
 
+;; Emacs 24 stopped having yank pull from the X primary selection by default
+;; http://www.gnu.org/software/emacs/manual/html_node/emacs/Clipboard.html
+(GNUEmacs
+ (if (>= emacs-major-version 24)
+     (setq
+      x-select-enable-clipboard nil
+      x-select-enable-primary t
+      mouse-drag-copy-region t)))
+
 ;; ---------------------------------------------------------------- ;;
 ;; Turn off the toolbar
 ;;
