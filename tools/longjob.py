@@ -512,6 +512,14 @@ class Job(object):
             if proc.poll() != None:
                 break
         self.returncode = proc.returncode
+        # read stdout and stderr one more time to make sure we didn't
+        # miss anything
+        for read in proc.stdout:
+            sys.stdout.write(read)
+            self.stdout += read
+        for read in proc.stderr:
+            sys.stderr.write(read)
+            self.stderr += read
 
     # -----------------------
     # Time formatting
