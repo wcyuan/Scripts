@@ -23,6 +23,55 @@ Run doctests with:
 #    continue a job chain from the last failed link
 # templated job chains
 #
+# - templates and dependencies
+#   - make -f a standard part of longjob
+#     - http://stackoverflow.com/questions/566746/how-to-get-console-window-width-in-python
+#   - turn longjob into a command w/ subcommands
+#     - run <cmd>
+#     - list
+#     - rm <jobs>
+#     - show <job>
+#     - template
+#       - templates should automatically discover which jobs fit the template
+#         - every template has a format string + regexp
+#           - auto-generate a regexp from the format string?
+#           - Can named regexps handle the fact that options can come in any
+#             order?
+#         - show a pandas dataframe of template results (key is the set of args)
+#         - for each set of args, show all past runs (in order of when it
+#           finished?)  the template should know whether the last run
+#           finished successfully
+#         - a command to "rerun a template + args" should do nothing if
+#           the template succeeded
+#           - templates should be backed by python classes so they
+#             are easy to extend in code
+#           - create <alias> <cmd>
+#       - list
+#       - config <template> [<var> <val>]
+#         - vars:
+#           - re -- a regexp to automatically find matching jobs
+#             - the regexp must have named groups that match the args
+#               http://docs.python.org/2.7/library/re.html
+#               (?P<name>...)
+#           - dependencies -- other jobs or [templates + args] that we depend on
+#             - need a language for how to calculate the other job's
+#               args from our args.
+#             - need a language for how to calculate our args
+#               (including optional ones) from the other job's args
+#             - handle other kinds of dependencies?
+#           - key_args -- some args are optional.  only the key args
+#             are used to determine whether a template's run has
+#             succeeded
+#           - arg defaults
+#           - python class -- the python Template class to use.  that
+#             way you can code up complex custom behavior in a derived class
+#           - auto-run -- once dependencies have been filled
+#       - need to be able to customize how you determine success or failure
+#       - run <template> <args>  -- only runs if it needs to be run
+#       - cmd <template> <args>
+#       - status <template> [<args>]
+#       - set_status <status> <template> <args>
+#
 
 from __future__ import absolute_import, division, with_statement
 
@@ -141,7 +190,10 @@ def process_args(opts, args):
     if len(args) == 0:
         if table is not None:
             for job in table.get_recent_jobs(7):
-                print job.summary()
+                if opts.full:
+                    print job.summary()
+                else:
+                    print shorten(job.summary())
     elif opts.from_template:
         if tpl_table is None:
             raise ValueError("No longjob database")
@@ -181,6 +233,9 @@ def getopts(argv=None):
     parser.add_option('--all', '-a',
                       action='store_true',
                       help='show all jobs in the database')
+    parser.add_option('--full', '-f',
+                      action='store_true',
+                      help='show the full line')
     parser.add_option('--rerun',
                       help='rerun a particular job')
     parser.add_option('--redo',
@@ -271,6 +326,97 @@ def to_sequence(obj):
     tuple with that element.
     """
     return obj if is_non_string_sequence(obj) else (obj,)
+
+def shorten(line):
+    width = getTerminalSize()[0]
+    return line[:width]
+
+# --------------------------------------------------------------------
+# Get terminal width
+# from http://stackoverflow.com/questions/566746/how-to-get-console-window-width-in-python
+
+def getTerminalSize():
+    """ getTerminalSize()
+    - get width and height of console
+    - works on linux,os x,windows,cygwin(windows)
+    """
+
+    import platform
+    current_os = platform.system()
+    tuple_xy=None
+    if current_os == 'Windows':
+        tuple_xy = _getTerminalSize_windows()
+        if tuple_xy is None:
+            tuple_xy = _getTerminalSize_tput()
+            # needed for window's python in cygwin's xterm!
+    if current_os == 'Linux' or current_os == 'Darwin' or  current_os.startswith('CYGWIN'):
+        tuple_xy = _getTerminalSize_linux()
+    if tuple_xy is None:
+        print "default"
+        tuple_xy = (80, 25)      # default value
+    return tuple_xy
+
+def _getTerminalSize_windows():
+    res=None
+    try:
+        from ctypes import windll, create_string_buffer
+
+        # stdin handle is -10
+        # stdout handle is -11
+        # stderr handle is -12
+
+        h = windll.kernel32.GetStdHandle(-12)
+        csbi = create_string_buffer(22)
+        res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
+    except:
+        return None
+    if res:
+        import struct
+        (bufx, bufy, curx, cury, wattr,
+         left, top, right, bottom, maxx, maxy) = struct.unpack("hhhhHhhhhhh", csbi.raw)
+        sizex = right - left + 1
+        sizey = bottom - top + 1
+        return sizex, sizey
+    else:
+        return None
+
+def _getTerminalSize_tput():
+    # get terminal width
+    # src: http://stackoverflow.com/questions/263890/how-do-i-find-the-width-height-of-a-terminal-window
+    try:
+        import subprocess
+        proc=subprocess.Popen(["tput", "cols"],stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+        output=proc.communicate(input=None)
+        cols=int(output[0])
+        proc=subprocess.Popen(["tput", "lines"],stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+        output=proc.communicate(input=None)
+        rows=int(output[0])
+        return (cols,rows)
+    except:
+        return None
+
+def _getTerminalSize_linux():
+    def ioctl_GWINSZ(fd):
+        try:
+            import fcntl, termios, struct, os
+            cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,'1234'))
+        except:
+            return None
+        return cr
+    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+    if not cr:
+        try:
+            fd = os.open(os.ctermid(), os.O_RDONLY)
+            cr = ioctl_GWINSZ(fd)
+            os.close(fd)
+        except:
+            pass
+    if not cr:
+        try:
+            cr = (os.environ['LINES'], os.environ['COLUMNS'])
+        except:
+            return None
+    return int(cr[1]), int(cr[0])
 
 # --------------------------------------------------------------------
 
