@@ -110,6 +110,13 @@ GetOptions( "col=s"    => \my %col,
             "leave!"   => \my $leave_files,
             "verbose|v" => sub { $logger->level($DEBUG) },
             "cmd!"     => \my $is_cmd,
+
+            # Why would you want nosort mode?  This script is also
+            # useful for comparing the output of two functions without
+            # having to save the output to files first, and in that
+            # case you might not want to sort the output before
+            # comparing it.
+            "nosort!"  => \my $nosort,
           )
     or pod2usage();
 
@@ -177,7 +184,11 @@ foreach my $fileno (keys %file) {
     my $outfd;
     open($outfd, ">" . $file{$fileno}{temp})
         or $logger->logconfess("Can't overwrite $file{$fileno}{temp}: $! $@ ?");
-    print $outfd sort(@lines);
+    if ($nosort) {
+        print $outfd @lines;
+    } else {
+        print $outfd sort(@lines);
+    }
     close($outfd)
         or $logger->logconfess("Can't close $file{$fileno}{temp}: $? $! $@");
 }
