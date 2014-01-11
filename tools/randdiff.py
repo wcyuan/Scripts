@@ -15,13 +15,17 @@ from subprocess import check_call
 from random     import randrange
 from os.path    import join as pathjoin, isdir, exists, split as pathsplit
 from os         import listdir
-import re
 from optparse   import OptionParser
 
 # ------------------------------------------------------------------
 
 def main():
     (opts, root1, root2, files) = getopt()
+
+    if root2 is None:
+        for _ in range(opts.num):
+            print pathjoin(root1, randfile(root1))
+        return
 
     if len(files) == 0:
         files = [randfile(root1)
@@ -42,13 +46,14 @@ def getopt():
                       default=1,
                       help='number of files to try')
     opts, args = parser.parse_args()
-    if len(args) < 2:
-        raise ValueError("Need at least two args")
+    if len(args) < 1:
+        raise ValueError("Need at least one arg")
 
     root1 = args[0]
-    root2 = args[1]
+    root2 = args[1] if len(args) > 1 else None
+    files = args[2:] if len(args) > 2 else ()
 
-    return (opts, root1, root2, args[2:])
+    return (opts, root1, root2, files)
 
 # ------------------------------------------------------------------
 
