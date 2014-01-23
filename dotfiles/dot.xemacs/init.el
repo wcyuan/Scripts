@@ -208,6 +208,29 @@
       mouse-drag-copy-region t)))
 
 ;; ---------------------------------------------------------------- ;;
+;; This causes python docstrings to start on the next line like
+;;
+;; def foo():
+;;     """
+;;     My docstring
+;;
+;;     More text
+;;     """
+;;
+;; insetad of
+;;
+;; def foo():
+;;     """My docstring
+;;
+;;     More text
+;;     """
+;;
+;; This may violate http://www.python.org/dev/peps/pep-0257/, but I
+;; like it better
+;;
+(setq python-fill-docstring-style 'onetwo)
+
+;; ---------------------------------------------------------------- ;;
 ;; Turn off the toolbar
 ;;
 (if (featurep 'toolbar)                 ;; XEmacs
