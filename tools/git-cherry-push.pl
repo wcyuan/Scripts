@@ -87,10 +87,11 @@ my $DEBUG = 0;
 my $SHARED_RELEASE = '/testbed/github/release';
 
 sub main() {
-    my ($rev, $master, $release, $release_tree) = parse_command_line();
+    my ($rev, $master, $release, $release_tree, $upstream) =
+        parse_command_line();
 
     if ($master) {
-        push_to_master($rev);
+        push_to_master($rev, $upstream);
     }
 
     if ($release) {
@@ -112,6 +113,7 @@ sub parse_command_line() {
     GetOptions('master!'          => \my $master,
                'release!'         => \my $release,
                'both!'            => \my $both,
+               'upstream=s'       => \my $upstream,
                'debug|no_write!'  => \$DEBUG)
         or die("Bad arguments");
 
@@ -143,9 +145,12 @@ sub parse_command_line() {
         $rev = run('git log --pretty=format:%H -n 1',
                    {always => 1, return_output => 1});
     }
-    print "Pushing rev $rev\n";
 
-    return ($rev, $master, $release, $release_tree);
+    my $msg = run("git log -n 1 $rev",
+                  {always => 1, return_output => 1});
+    print "Pushing rev $msg\n";
+
+    return ($rev, $master, $release, $release_tree, $upstream);
 }
 
 sub run($;$) {
@@ -174,10 +179,9 @@ sub run($;$) {
 }
 
 sub current_branch() {
-    my $orig = run('git branch | grep ^*',
+    my $orig = run('git symbolic-ref --short HEAD',
                    {always => 1, no_die_on_error => 1, return_output => 1});
     chomp($orig);
-    $orig =~ s/^\* //;
     if (!defined($orig) || $orig eq '') {
         confess("Can't get current branch");
     }
@@ -188,16 +192,24 @@ sub needs_stash() {
     return !run('git diff --quiet HEAD', {always => 1, no_die_on_error => 1});
 }
 
-sub push_to_master($) {
-    my ($rev) = @_;
+sub upstream() {
+    return run('git rev-parse --abbrev-ref @{upstream}',
+               {always => 1, return_output => 1});
+}
+
+sub push_to_master($;$) {
+    my ($rev, $upstream) = @_;
 
     my $orig = current_branch();
+    if (!defined($upstream)) {
+        $upstream = upstream();
+    }
     my $stashed = 0;
     if (needs_stash()) {
         run('git stash');
         $stashed = 1;
     }
-    run('git branch --track temp origin/master');
+    run("git branch --track temp $upstream");
     run('git checkout temp');
     run("git cherry-pick $rev");
     run('git pull');
