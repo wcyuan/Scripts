@@ -87,11 +87,11 @@ my $DEBUG = 0;
 my $SHARED_RELEASE = '/testbed/github/release';
 
 sub main() {
-    my ($rev, $master, $release, $release_tree, $upstream) =
+    my ($rev, $master, $release, $release_tree, $upstream, $leave) =
         parse_command_line();
 
     if ($master) {
-        push_to_master($rev, $upstream);
+        push_to_master($rev, $upstream, $leave);
     }
 
     if ($release) {
@@ -114,6 +114,7 @@ sub parse_command_line() {
                'release!'         => \my $release,
                'both!'            => \my $both,
                'upstream=s'       => \my $upstream,
+               'leave!'           => \my $leave,
                'debug|no_write!'  => \$DEBUG)
         or die("Bad arguments");
 
@@ -150,7 +151,7 @@ sub parse_command_line() {
                   {always => 1, return_output => 1});
     print "Pushing rev $msg\n";
 
-    return ($rev, $master, $release, $release_tree, $upstream);
+    return ($rev, $master, $release, $release_tree, $upstream, $leave);
 }
 
 sub run($;$) {
@@ -197,8 +198,8 @@ sub upstream() {
                {always => 1, return_output => 1});
 }
 
-sub push_to_master($;$) {
-    my ($rev, $upstream) = @_;
+sub push_to_master($;$$) {
+    my ($rev, $upstream, $leave) = @_;
 
     my $orig = current_branch();
     if (!defined($upstream)) {
@@ -211,15 +212,26 @@ sub push_to_master($;$) {
     }
     run("git branch --track temp $upstream");
     run('git checkout temp');
-    run("git cherry-pick $rev");
-    run('git pull');
-    run('git push');
+    my $rc = run("git cherry-pick $rev", {no_die_on_error => !$leave});
+    if (!$DEBUG && !$rc) {
+        print("\nError running cherry-pick, aborting.  To be left in the " .
+              "middle of the conflict, use the --leave option.\n");
+        run('git reset --merge');
+    } else {
+        run('git pull');
+        my $rc = run("git push", {no_die_on_error => !$leave});
+        if (!$DEBUG && !$rc) {
+            print("\nError running push, aborting.  To be left in the " .
+                  "middle of the conflict, use the --leave option.\n");
+            run('git reset --merge');
+        }
+    }
     run("git checkout $orig");
     run('git pull');
     if ($stashed) {
         run('git stash pop');
     }
-    run('git branch -d temp');
+    run('git branch -D temp');
 }
 
 sub cd($) {
