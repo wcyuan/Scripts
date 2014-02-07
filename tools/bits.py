@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, with_statement
 
 import math
 import optparse
+import logging
 
 REPRESENTATIONS = ('hex', 'bin', 'signed', 'unsigned')
 
@@ -28,7 +29,11 @@ def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--bits', type=int)
     parser.add_option('--fr')
-    return parser.parse_args()
+    parser.add_option('--verbose', action='store_true')
+    (opts, args) = parser.parse_args()
+    if opts.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    return (opts, args)
 
 # --------------------------------------------------------------------------- #
 
@@ -86,7 +91,7 @@ def signed(num, bits=None, rev=False):
         # Number of bits in the number, rounded up to the nearest
         # multiple of 8 (assuming the number is in bytes)
         bits = 8 * int(math.ceil((len(bin(abs(num))) - 2) / 8.0))
-        #print bits
+        logging.debug("Bits for %s: %s", num, bits)
 
     if rev:
         if num >= 0:
@@ -95,7 +100,7 @@ def signed(num, bits=None, rev=False):
             return int(math.pow(2, bits)) - abs(num)
 
     mask = 1 << (bits-1)
-    #print bin(mask)
+    logging.debug("Mask for %s: %s", num, mask)
 
     if (num & mask):
         # You can think of 2s complement as being just like
@@ -120,10 +125,14 @@ def guess_rep(num):
     'hex'
     >>> guess_rep('111')
     'bin'
+    >>> guess_rep(-1)
+    'signed'
+    >>> guess_rep('-1')
+    'signed'
     """
     try:
-        int(num, 2)
-        return 'bin'
+        if int(num, 2) > 0:
+            return 'bin'
     except TypeError:
         pass
     except ValueError:
@@ -209,6 +218,7 @@ def conv(num, fr=None, to='all', bits=None):
     """
     if fr is None:
         fr = guess_rep(num)
+        logging.debug("Rep for %s: %s", num, fr)
     fr = fr.lower()
     to = to.lower()
     if fr.lower() not in REPRESENTATIONS:
@@ -219,12 +229,13 @@ def conv(num, fr=None, to='all', bits=None):
         raise ValueError("Unrecognized to representation {0}, "
                          "should be one of {1}".format(
                              to, REPRESENTATIONS))
-    num = to_unsigned(num, fr, bits=bits)
+    uns = to_unsigned(num, fr, bits=bits)
+    logging.debug("Unsigned for %s: %s", num, uns)
     if to == 'all':
-        return tuple((r, from_unsigned(num, r, bits=bits))
+        return tuple((r, from_unsigned(uns, r, bits=bits))
                      for r in REPRESENTATIONS)
     else:
-        return from_unsigned(num, to, bits=bits)
+        return from_unsigned(uns, to, bits=bits)
 
 # --------------------------------------------------------------------------- #
 
