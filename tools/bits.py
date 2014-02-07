@@ -12,7 +12,7 @@ import math
 import optparse
 import logging
 
-REPRESENTATIONS = ('hex', 'bin', 'signed', 'unsigned')
+REPRESENTATIONS = ('hex', 'bin', 'signed', 'unsigned', 'ascii')
 
 # --------------------------------------------------------------------------- #
 
@@ -29,10 +29,15 @@ def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--bits', type=int)
     parser.add_option('--fr')
-    parser.add_option('--verbose', action='store_true')
+    for rep in REPRESENTATIONS:
+        parser.add_option('--'+rep, action='store_true')
+    parser.add_option('--verbose',  action='store_true')
     (opts, args) = parser.parse_args()
     if opts.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+    for rep in REPRESENTATIONS:
+        if getattr(opts, rep):
+            opts.fr = rep
     return (opts, args)
 
 # --------------------------------------------------------------------------- #
@@ -146,7 +151,7 @@ def guess_rep(num):
         return 'hex'
     except ValueError:
         pass
-    raise ValueError("Can't guess representation of {0}".format(num))
+    return 'ascii'
 
 def to_unsigned(num, rep, bits=None):
     """
@@ -171,6 +176,8 @@ def to_unsigned(num, rep, bits=None):
         return signed(int(num), bits=bits, rev=True)
     elif rep == 'unsigned':
         return int(num)
+    elif rep == 'ascii':
+        return ord(num)
     raise ValueError("Unknown representation {0}".format(rep))
 
 def from_unsigned(num, rep, bits=None):
@@ -192,6 +199,8 @@ def from_unsigned(num, rep, bits=None):
         return signed(num, bits=bits)
     elif rep == 'unsigned':
         return num
+    elif rep == 'ascii':
+        return chr(num)
     raise ValueError("Unknown representation {0}".format(rep))
 
 def conv(num, fr=None, to='all', bits=None):
@@ -202,19 +211,19 @@ def conv(num, fr=None, to='all', bits=None):
      o signed   = an int, reading the bits as twos complement
 
     >>> conv(124)
-    (('hex', '0x7c'), ('bin', '0b1111100'), ('signed', 124), ('unsigned', 124))
+    (('hex', '0x7c'), ('bin', '0b1111100'), ('signed', 124), ('unsigned', 124), ('ascii', '|'))
 
     >>> conv('124')
-    (('hex', '0x7c'), ('bin', '0b1111100'), ('signed', 124), ('unsigned', 124))
+    (('hex', '0x7c'), ('bin', '0b1111100'), ('signed', 124), ('unsigned', 124), ('ascii', '|'))
 
     >>> conv(-5)
-    (('hex', '0xfb'), ('bin', '0b11111011'), ('signed', -5), ('unsigned', 251))
+    (('hex', '0xfb'), ('bin', '0b11111011'), ('signed', -5), ('unsigned', 251), ('ascii', '\\xfb'))
 
     >>> conv('-5')
-    (('hex', '0xfb'), ('bin', '0b11111011'), ('signed', -5), ('unsigned', 251))
+    (('hex', '0xfb'), ('bin', '0b11111011'), ('signed', -5), ('unsigned', 251), ('ascii', '\\xfb'))
 
     >>> conv('ff')
-    (('hex', '0xff'), ('bin', '0b11111111'), ('signed', -1), ('unsigned', 255))
+    (('hex', '0xff'), ('bin', '0b11111111'), ('signed', -1), ('unsigned', 255), ('ascii', '\\xff'))
     """
     if fr is None:
         fr = guess_rep(num)
