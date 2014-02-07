@@ -56,6 +56,8 @@ def signed(num, bits=None, rev=False):
     -128
     >>> signed(int('ff', 16))
     -1
+    >>> signed(int('ff', 16), bits=32)
+    255
     >>> signed(int('ffff', 16))
     -1
     >>> signed(4, rev=True)
@@ -137,7 +139,7 @@ def guess_rep(num):
         pass
     raise ValueError("Can't guess representation of {0}".format(num))
 
-def to_unsigned(num, rep):
+def to_unsigned(num, rep, bits=None):
     """
     >>> to_unsigned(255, 'unsigned')
     255
@@ -157,7 +159,7 @@ def to_unsigned(num, rep):
     elif rep == 'hex':
         return int(num, 16)
     elif rep == 'signed':
-        return signed(int(num), rev=True)
+        return signed(int(num), bits=bits, rev=True)
     elif rep == 'unsigned':
         return int(num)
     raise ValueError("Unknown representation {0}".format(rep))
@@ -217,9 +219,10 @@ def conv(num, fr=None, to='all', bits=None):
         raise ValueError("Unrecognized to representation {0}, "
                          "should be one of {1}".format(
                              to, REPRESENTATIONS))
-    num = to_unsigned(num, fr)
+    num = to_unsigned(num, fr, bits=bits)
     if to == 'all':
-        return tuple((r, from_unsigned(num, r)) for r in REPRESENTATIONS)
+        return tuple((r, from_unsigned(num, r, bits=bits))
+                     for r in REPRESENTATIONS)
     else:
         return from_unsigned(num, to, bits=bits)
 
