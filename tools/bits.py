@@ -177,7 +177,10 @@ def to_unsigned(num, rep, bits=None):
     elif rep == 'unsigned':
         return int(num)
     elif rep == 'ascii':
-        return ord(num)
+        retval = 0
+        for char in reversed(num):
+            retval = retval * 256 + ord(char)
+        return retval
     raise ValueError("Unknown representation {0}".format(rep))
 
 def from_unsigned(num, rep, bits=None):
@@ -200,7 +203,11 @@ def from_unsigned(num, rep, bits=None):
     elif rep == 'unsigned':
         return num
     elif rep == 'ascii':
-        return chr(num)
+        string = ''
+        while num > 1:
+            string = chr(int(num % 256)) + string
+            num = int(num / 256)
+        return ''.join(reversed(string))
     raise ValueError("Unknown representation {0}".format(rep))
 
 def conv(num, fr=None, to='all', bits=None):
