@@ -75,6 +75,13 @@ def slow_write(filenames, s=1):
     """
     This is just a function that occasionally appends to some files,
     to help test multitail
+
+    For example try, in one window
+    $ multitail.py --write --sleep 0.4 one two three
+
+    And in another window:
+    $ multitail.py one two three
+
     """
     ii = 0
     while True:
