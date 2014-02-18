@@ -62,6 +62,7 @@ class FieldMixin(object):
     that case, if you put the names of those attributes in _flds, then
     this Mixin will provide repr, cmp, and hash functions.
     """
+    @property
     def _flds(self):
         raise NotImplementedError
 
@@ -128,8 +129,9 @@ class Board(FieldMixin):
         self.reset_board()
 
     def __str__(self):
-        return '--\n' + '\n'.join(' '.join(self._get((r, c)) for c in xrange(self.cols))
-                                  for r in xrange(self.rows))
+        return ('--\n' +
+                '\n'.join(' '.join(self._get((r, c)) for c in xrange(self.cols))
+                          for r in xrange(self.rows)))
 
     @property
     def _flds(self):
@@ -198,8 +200,10 @@ class Board(FieldMixin):
     def attacks(self, loc):
         """
         >>> b = Board(8, 8)
-        >>> tuple(b.attacks((0, 0)))
-        ((1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0), (0, 1), (0, 2), (0, 3), (0, 4), (0, 5), (0, 6), (0, 7), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7))
+        >>> tuple(b.attacks((0, 0))) # doctest: +NORMALIZE_WHITESPACE
+        ((1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0),
+         (0, 1), (0, 2), (0, 3), (0, 4), (0, 5), (0, 6), (0, 7),
+         (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7))
         """
         (row, col) = loc
         rd_st = min(row, col)
