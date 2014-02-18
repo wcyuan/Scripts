@@ -96,7 +96,7 @@ class FieldMixin(object):
 
 class Board(FieldMixin):
     """
-    >>> b = Board().add_queen((3, 5))
+    >>> b = Board(rows=8, cols=8).add_queen((3, 5))
     >>> b == eval(repr(b))
     True
     >>> b
@@ -121,12 +121,21 @@ class Board(FieldMixin):
     QUEEN = 'Q'
 
     def __init__(self, rows=DEFAULT_SIZE, cols=DEFAULT_SIZE, queens=None):
+        """
+        A board is represented as a list of rows x cols values.  Each
+        value can either be empty, or it can contain a queen, or it
+        can be attacked by a queen.
+
+        A spot on the board is usually referred to by a "location" or
+        "loc", which is a (row, col) tuple.
+
+        """
         super(Board, self).__init__()
         self.rows = rows
         self.cols = cols
         self.board = []
         self.queens = [] if queens is None else queens
-        self.reset_board()
+        self._reset_board()
 
     def __str__(self):
         return ('--\n' +
@@ -138,6 +147,11 @@ class Board(FieldMixin):
         return ('rows', 'cols', 'queens')
 
     def _loc_to_idx(self, loc):
+        """
+        Translates from a location (a (row, col) tuple) to an index into
+        the board, which is just a list of values.
+
+        """
         (row, col) = loc
         return row * self.cols + col
 
@@ -160,47 +174,56 @@ class Board(FieldMixin):
             raise tp, value, traceback
         return self
 
-    def reset_board(self):
+    def _reset_board(self):
+        """
+        Call this after changing self.queens to recompute which locations
+        are being attacked.
+        """
         self.board = [self.EMPTY] * (self.rows * self.cols)
         for queen in self.queens:
             self.add_queen(queen)
         return self
 
-    def set_empty(self, loc):
-        self.board[self._loc_to_idx(loc)] = self.EMPTY
-        return self
-
     def add_queen(self, loc):
+        """
+        Add a queen to the board at the given location, then recomputes
+        which locations are being attacked
+        """
         if loc not in self.queens:
             self.queens.append(loc)
         self._set(loc, self.QUEEN)
-        for attack in self.attacks(loc):
+        for attack in self._attacks(loc):
             self._set(attack, self.ATTACKED)
         return self
 
     def remove_queen(self, loc):
+        """
+        Remove a queen from the board, then recoputes which locations are
+        being attacked.
+
+        """
         if loc in self.queens:
             queens = [q for q in self.queens if q != loc]
             self.queens = queens
-            self.reset_board()
+            self._reset_board()
         return self
 
-    def is_empty(self, loc):
+    def _is_empty(self, loc):
         return self._get(loc) == self.EMPTY
 
-    def all_locs(self):
+    def _all_locs(self):
         return ((row, col)
                 for row in xrange(self.rows)
                 for col in xrange(self.cols))
 
     def empty_locs(self):
-        return (loc for loc in self.all_locs()
-                if self.is_empty(loc))
+        return (loc for loc in self._all_locs()
+                if self._is_empty(loc))
 
-    def attacks(self, loc):
+    def _attacks(self, loc):
         """
-        >>> b = Board(8, 8)
-        >>> tuple(b.attacks((0, 0))) # doctest: +NORMALIZE_WHITESPACE
+        >>> b = Board(rows=8, cols=8)
+        >>> tuple(b._attacks((0, 0))) # doctest: +NORMALIZE_WHITESPACE
         ((1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0),
          (0, 1), (0, 2), (0, 3), (0, 4), (0, 5), (0, 6), (0, 7),
          (1, 1), (2, 2), (3, 3), (4, 4), (5, 5), (6, 6), (7, 7))
@@ -219,7 +242,7 @@ class Board(FieldMixin):
              if ii != ld_st)
             )
 
-def do_search(board, nqueens=8):
+def do_search(board, nqueens=DEFAULT_SIZE):
     if len(board.queens) == nqueens:
         return True
     empties = tuple(board.empty_locs())
