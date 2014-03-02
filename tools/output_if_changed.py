@@ -33,7 +33,7 @@ def main():
     new_data = sys.stdin.read()
     if old_data != new_data:
         sys.stdout.write(new_data)
-    write_data(statefile, new_data)
+        write_data(statefile, new_data)
 
 def getopts():
     """
