@@ -6,8 +6,8 @@
 
 from __future__ import absolute_import, division, with_statement
 
-import optparse
 import logging
+import optparse
 
 logging.basicConfig(format='[%(asctime)s '
                     '%(funcName)s:%(lineno)s %(levelname)-5s] '
