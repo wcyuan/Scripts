@@ -111,3 +111,45 @@ def save_stdout_example():
 
 # --------------------------------------------------------------------------- #
 
+class FieldMixin(object):
+    """
+    This Mixin applies to classes that have a few key attributes that
+    determine all the other behavior.  Those attributes have to be
+    settable as keyword arguments in the __init__ function.  In that
+    case, if you put the names of those attributes in _flds, then this
+    Mixin will provide repr, cmp, and hash functions.
+
+    """
+    @property
+    def _flds(self):
+        raise NotImplementedError
+
+    @staticmethod
+    def _vals(obj):
+        return tuple(getattr(obj, fld) for fld in obj._flds)
+
+    def __repr__(self):
+        """
+        Must satisfy:
+          obj == eval(repr(obj))
+        for any obj
+        """
+        cn = self.__class__.__name__
+        fmt = ('{cn}(' +
+               ',\n{pd} '.join('{0} = {{self.{0}!r}}'.format(fld)
+                               for fld in (self._flds)) +
+               ')')
+        return fmt.format(self=self, cn=cn, pd=' '*len(cn))
+
+    def __cmp__(self, other):
+        tcmp = cmp(type(self), type(other))
+        if tcmp == 0:
+            return cmp(self._vals(self), self._vals(other))
+        else:
+            return tcmp
+
+    def __hash__(self):
+        return hash(self._vals(self))
+
+# --------------------------------------------------------------------------- #
+
