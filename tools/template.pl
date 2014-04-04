@@ -17,7 +17,7 @@ template.pl - description
 
 =over
 
-=item I<--arg1>
+=item I<arg1>
 
 description
 
