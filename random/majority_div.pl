@@ -1,4 +1,9 @@
 #!/usr/bin/perl
+#
+# example:
+#
+# echo 1 2 4 4 2 2 2 23 3 2 2 2 | tr ' ' '\n' | ./majority_div.pl
+#
 use strict;
 if (my $result = &majority(<STDIN>)) {
 	print $result;
