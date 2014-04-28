@@ -51,19 +51,36 @@ logging.basicConfig(format='[%(asctime)s '
 # --------------------------------------------------------------------------- #
 
 def main():
-    getopts()
+    (opts, args) = getopts()
 
-    boxes = read_input()
-    tower = best_tower(boxes)
-    print sum(boxes[b].height for b in tower)
-    print ' '.join(tower)
+    if opts.test:
+        import doctest
+        doctest.testmod(verbose=opts.verbose)
+        return
+
+    if args:
+        boxes = Tower.from_tuples(grouper((int(a) for a in args), 3))
+    elif opts.example:
+        boxes = Tower.from_tuples(((4, 3, 8), (5, 2, 9), (7, 1, 4), (3, 2, 5),
+                                   (4, 1, 3), (9, 4, 6), (1, 1, 5), (1, 3, 7),
+                                   (2, 2, 4), (3, 2, 6)))
+    else:
+        boxes = read_input()
+    tower = best_tower_prune(boxes)
+    print sum(boxes[b].height for b in tower.path)
+    print ' '.join(str(p) for p in tower.path)
 
 def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--verbose',  action='store_true')
+    parser.add_option('--info',  action='store_true')
+    parser.add_option('--example',  action='store_true')
+    parser.add_option('--test',  action='store_true')
     (opts, args) = parser.parse_args()
     if opts.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+    elif opts.info:
+        logging.getLogger().setLevel(logging.INFO)
     return (opts, args)
 
 # --------------------------------------------------------------------------- #
@@ -137,6 +154,8 @@ class Tower(object):
     def from_boxlist(cls, boxes, seq):
         return reduce(lambda a, b: a.stack(boxes[b]), seq[1:], boxes[seq[0]])
 
+# --------------------------------------------------------------------------- #
+
 def input_to_tuples():
     """
     Create towers for each box given
@@ -152,6 +171,16 @@ def input_to_tuples():
 def read_input():
     return Tower.from_tuples(input_to_tuples())
 
+# From the recipes section of the itertools documentation
+def grouper(iterable, n, fillvalue=None):
+    import itertools
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx
+    args = [iter(iterable)] * n
+    return itertools.izip_longest(fillvalue=fillvalue, *args)
+
+# --------------------------------------------------------------------------- #
+
 def best_tower_tuples(*tuples):
     """
     >>> best_tower_tuples()
@@ -164,17 +193,17 @@ def best_tower_tuples(*tuples):
     (0, 1)
     >>> best_tower_tuples((1, 1, 1), (2, 3, 4))
     (1, 0)
-    >>> best_tower_tuples((4, 3, 8), (5, 2, 9), (7, 1, 4), (3, 2, 5), (4, 1, 3), (9, 4, 6), (1, 1, 5), (1, 3, 7), (2, 2, 4), (3, 2, 6))
-    (0, 5, 4, 2, 1)
-    >>> boxes = Tower.from_tuples((4, 3, 8), (5, 2, 9), (7, 1, 4), (3, 2, 5), (4, 1, 3), (9, 4, 6), (1, 1, 5), (1, 3, 7), (2, 2, 4), (3, 2, 6))
+    >>> boxes = Tower.from_tuples(((4, 3, 8), (5, 2, 9), (7, 1, 4), (3, 2, 5), (4, 1, 3), (9, 4, 6), (1, 1, 5), (1, 3, 7), (2, 2, 4), (3, 2, 6)))
     >>> best_tower(boxes).path
     (0, 5, 4, 2, 1)
     >>> best_tower_prune(boxes).path
-    (1, 5, 3, 6, 2, 4)
+    (1, 5, 2, 4, 0)
 
-    best_tower's search order actually finds (0, 5, 4, 2, 1) instead
-    of the suggested (1, 5, 3, 6, 2, 4), but both are towers of height
-    29.
+
+    My algorithms find (0, 5, 4, 2, 1) and (1, 5, 2, 4, 0) instead of
+    the suggested (1, 5, 3, 6, 2, 4), but all seem to be valid towers
+    of height 29.
+
     """
     return best_tower_prune(Tower.from_tuples(tuples)).path
 
@@ -217,14 +246,16 @@ def best_tower_prune(boxes):
     if not boxes:
         return Tower((), 0, 0, 0)
     next_towers = boxes
-    best = None
+    best = []
     while next_towers:
         towers = next_towers
         next_towers = []
         all_next_towers = []
         for tower in towers:
-            if best is None or tower.height > best.height:
-                best = tower
+            if not best or tower.height > best[0].height:
+                best = [tower]
+            elif best[0].height == tower.height:
+                best.append(tower)
             for box in boxes:
                 if tower.can_hold(box):
                     all_next_towers.append(tower.stack(box))
@@ -243,7 +274,13 @@ def best_tower_prune(boxes):
             else:
                 next_towers.append(tower1)
         logging.debug("next towers: %s", next_towers)
-    return best
+    # This doesn't really find all best towers, it only finds the ones
+    # that use different boxes.  For example, if (0, 5, 4, 2, 1) and
+    # (1, 5, 2, 4, 0) are both valid and have the same height, one
+    # will be cut out as "always better than" the other, so we won't
+    # try to remember it.
+    logging.info("All best towers: %s", best)
+    return best[0]
 
 # --------------------------------------------------------------------------- #
 
