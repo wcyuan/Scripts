@@ -242,6 +242,11 @@ def best_tower_prune(boxes):
     enough to bound the worst-case asymptotic running time to
     something less than n!.
 
+    In fact, the correct solution is to realize that in the best
+    tower, the strength+weight of the boxes will be decreasing as you
+    go up the tower.  This allows a polynomial time dynamic
+    programming solution.
+
     """
     if not boxes:
         return Tower((), 0, 0, 0)
