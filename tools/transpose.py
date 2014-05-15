@@ -768,7 +768,7 @@ def pretty_print(intable, left=False, should_transpose=None, nopretty=False,
         #  max(width of value, width of header) + PADDING
         #
         formats = []
-        header = intable.next()
+        header = next(intable)
         header_printed = False
         for row in intable:
             if len(formats) == 0:
@@ -911,7 +911,7 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
 
         try:
             # Save the header from before we add filenames
-            header = filetable.next()
+            header = next(filetable)
         except StopIteration:
             continue
 
@@ -952,7 +952,7 @@ def file_to_table(filename, *args, **kwargs):
     and want a table instead of a generator.  This isn't used from
     main, but could be useful for someone loading this as a module.
     """
-    return read_files([filename], *args, **kwargs).next().next()
+    return next(next(read_files([filename], *args, **kwargs)))
 
 # --------------------------------------------------------------------
 
@@ -1176,7 +1176,7 @@ class Database(object):
         matches = glob.glob(command)
         if len(matches) == 0:
             matches = [command]
-        table = tuple(get_input(matches).next())
+        table = tuple(next(get_input(matches)))
         self.make_table_from_data(table_name, table[0], table[1:])
 
     def make_table_by_name(self, table_name,
