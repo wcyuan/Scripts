@@ -952,7 +952,7 @@ def file_to_table(filename, *args, **kwargs):
     and want a table instead of a generator.  This isn't used from
     main, but could be useful for someone loading this as a module.
     """
-    return next(next(read_files([filename], *args, **kwargs)))
+    return list(next(read_files([filename], *args, **kwargs)))
 
 # --------------------------------------------------------------------
 
