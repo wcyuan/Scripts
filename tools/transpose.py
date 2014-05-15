@@ -34,6 +34,61 @@ Takes an optional pattern.  If given a pattern, then grep the file for
 that pattern and only show matching lines.  Also output the header so
 you can see what the fields mean.
 
+
+EXAMPLES
+
+Extract the column named 'aa' from the data in filename.txt:
+
+  transpose.py --columns aa filename.txt
+
+Extract columns named 'aa' and 'bbb' from the data in filename.txt:
+
+  transpose.py --col_list aa,bbb filename.txt
+
+Extract all lines that match a pattern:
+
+  transpose.py --patt xyz filename.txt
+
+Extract all lines where a particular column has a particular value
+
+  transpose.py --filter <col>=<val> filename.txt
+
+The filter understands a number of operations
+
+  transpose.py --filter 'price > 5' --filter 'size < 30' filename.txt
+
+The --raw option is useful if you want to chain transpose.py commands
+
+  transpose.py --raw --patt xyz filename.txt | transpose.py --filter 'price > 5' --filter 'size < 30'
+
+Run a sql query on data from some files which all share the same
+structure.  The filename should be changed to "<table>=<filename>",
+then you refer to it as <table> in the query.
+
+  transpose.py --var DATE='2014/*/*' --sql "select Name, count(*), avg(Price) FROM orders WHERE OrderType='All' GROUP BY Trader" orders='/data/{DATE}/data.txt'
+
+Instead of a filename, you can give it a command
+
+  transpose.py --var DATE='2014/*/*' --sql "select Name, count(*), avg(Price) FROM orders WHERE OrderType='All' GROUP BY Trader" orders='cat /data/{DATE}/data.txt'
+
+When there are multiple files, the column FILE is added automatically,
+or you can force it with the --add_filename option:
+
+  transpose.py --var DATE='2014/*/*' --sql "select FILE, Name, count(*), avg(Price) FROM orders WHERE OrderType='All' GROUP BY Trader" orders='/data/{DATE}/data.txt'
+
+
+You can put the definition of the file into the config file .transrc
+(which is in JSON):
+
+  $ cat .transrc
+  {
+    "orders": "/data/{DATE}/data.txt"
+  }
+
+  transpose.py --var DATE='2014/*/*' --sql "select Name, count(*), avg(Price) FROM orders WHERE OrderType='All' GROUP BY Trader"
+
+  transpose.py --config .transrc --var DATE='2014/*/*' --sql "select Name, count(*), avg(Price) FROM orders WHERE OrderType='All' GROUP BY Trader"
+
 """
 
 # --------------------------------------------------------------------
