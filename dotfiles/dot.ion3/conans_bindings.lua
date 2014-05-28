@@ -83,6 +83,11 @@ defbindings("WScreen", {
     kpress("Tab+Control", "ioncore.goto_next(_chld, 'next')"),
 })
 
+defbindings("WMPlex.toplevel", {
+    bdoc("Free up the f9 key so I can try to remap it to insert"),
+    kpress(ALTMETA.."F9", nil),
+})
+
 -- WCY:
 --
 -- I don't understand the bdoc below.  As far as I can tell, this
