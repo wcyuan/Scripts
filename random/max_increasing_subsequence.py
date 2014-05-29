@@ -32,14 +32,16 @@ def getopts():
 
 def max_increasing_subsequence(lst):
     """
-    This is an O(L*N) algorithm where L is the length of the max subsequence.
-    In the worst case, it is O(N^2):
+    This is an O(N*log(N)) algorithm where N is the size of the input list
+
+    In the worst case, consider:
       [1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, ...]
+
     In this list, the max increasing subsequence has a length of n/2,
     and each time you hit a 1, you have to go back through the
-    existing lengths.
+    existing lengths, to confirm that there is no subsequence of that
+    length whose max value is less than 1
 
-    This is not optimal, there is an O(N*log(N)) solution
 
     >>> max_increasing_subsequence([])
     []
@@ -63,33 +65,45 @@ def max_increasing_subsequence(lst):
     [1, 2, 4]
     >>> max_increasing_subsequence([10, 1, 9, 0, 4])
     [0, 4]
+
     """
-    if not lst:
-        return []
     # The length of the maximum increasing subsequence seen so far
-    max_len = 1
+    max_len = 0
     # For each length, the index of the minimum max-value of all
     # subsequences of that length.  Note that because the list is
     # zero-indexed, the index for length L is stored in the array at
     # spot L-1
-    min_val_idx = [0]
+    min_val_idx = []
     # Map from each index I to the index J of the previous element in
     # the max increasing subsequence that ends at I.  At the end,
     # we'll use this map to walk backwards and find the max
     # subsequence.
-    prev = [-1]
+    prev = []
 
-    for ii in xrange(1, len(lst)):
+    for ii in xrange(len(lst)):
         # Find the length of the maximum increasing subsequence that
         # ends at ii.
-        length = max_len
-        while length > 0:
-            if lst[ii] > lst[min_val_idx[length-1]]:
-                # this value can add to the increasing subsequence of
-                # this length!
-                break
-            length -= 1
-        length += 1
+        if False:
+            # this is a linear search
+            length = max_len
+            while length > 0:
+                if lst[ii] > lst[min_val_idx[length-1]]:
+                    # this value can add to the increasing subsequence of
+                    # this length!
+                    break
+                length -= 1
+            length += 1
+        else:
+            # We can do it as a binary search, so it's O(log(max_len))
+            # time instead of O(max_len) time.
+            length = 1
+            hi = max_len
+            while length <= hi:
+                mid = int((length + hi) / 2)
+                if lst[min_val_idx[mid-1]] < lst[ii]:
+                    length = mid+1
+                else:
+                    hi = mid-1
 
         # Now update our state variables
         if max_len < length:
@@ -107,10 +121,13 @@ def max_increasing_subsequence(lst):
         prev.append(min_val_idx[length-2] if length > 1 else -1)
 
     subseq = []
-    idx = min_val_idx[max_len-1]
-    while idx >= 0:
-        subseq.append(lst[idx])
-        idx = prev[idx]
+    if max_len > 0:
+        idx = min_val_idx[max_len-1]
+        while idx >= 0:
+            subseq.append(lst[idx])
+            idx = prev[idx]
+    logging.debug("min_val_idx %s", min_val_idx)
+    logging.debug("prev %s", prev)
     return list(reversed(subseq))
 
 # --------------------------------------------------------------------------- #
