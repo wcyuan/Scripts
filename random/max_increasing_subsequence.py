@@ -57,8 +57,6 @@ def max_increasing_subsequence(lst):
     [1, 2, 5, 24, 254]
     >>> max_increasing_subsequence([1, 5, 2, 5, 100, 24, 254, 1, 2, 3, 5, 8, 10])
     [1, 2, 3, 5, 8, 10]
-    >>> max_increasing_subsequence([1, 5, 2, 5, 100, 24, 254, 1, 2, 3, 5, 8, 10])
-    [1, 2, 3, 5, 8, 10]
     >>> max_increasing_subsequence([10, 1, 9, 2])
     [1, 2]
     >>> max_increasing_subsequence([10, 1, 9, 5, 4, 3, 2, 1, 0, 4])
