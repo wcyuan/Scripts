@@ -41,7 +41,7 @@ use strict;
 use warnings 'all';
 
 use Carp;
-use Date::Calc qw(Day_of_Week Delta_Days Add_Delta_Days);
+use Date::Calc qw(Day_of_Week Delta_Days Add_Delta_Days check_date);
 use Getopt::Long;
 use Log::Log4perl qw(:levels);
 use Pod::Usage;
@@ -130,6 +130,18 @@ sub add_days($$) {
     return to_yyyymmdd($from_year, $from_month, $from_day);
 }
 
+sub valid_date($) {
+    my ($date) = @_;
+    if (length($date) < 8) {
+        return 0;
+    }
+    if ($date !~ m/^\d+$/) {
+        return 0;
+    }
+    my ($year, $month, $day) = from_yyyymmdd($date);
+    return check_date($year, $month, $day);
+}
+
 ###
 # Functions which run Date::Calc functions and accept a filter
 # function
@@ -207,7 +219,26 @@ sub add_weekdays($$) {
 }
 
 ###
-# Functions for getting the current date
+# Functions for interpreting localtime
+###
+
+sub adjlocaltime {
+    my @data = scalar(@_) > 0 ? localtime($_[0]) : localtime();
+    my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = @data;
+    $year += 1900;
+    $mon++;
+    return ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);
+}
+
+sub localtime_to_yyyymmdd {
+    my @data = scalar(@_) > 0 ? adjlocaltime($_[0]) : adjlocaltime();
+    my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = @data;
+    return to_yyyymmdd($year, $mon, $mday);
+}
+
+###
+# Functions for getting the current date.  Cache the results so if we
+# are called multiple times, we always return the same answer
 ###
 {
     my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);
@@ -216,9 +247,7 @@ sub add_weekdays($$) {
     sub _init_current_date() {
         return if $_initialized;
         ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) =
-            localtime();
-        $year += 1900;
-        $mon++;
+            adjlocaltime();
         $_initialized = 1;
     }
 
@@ -261,7 +290,7 @@ sub run_tests() {
     $SIG{__DIE__} = \&Carp::confess;
 
     BEGIN {
-        plan tests => 12;
+        plan tests => 17;
     }
 
     is(days_between(20130101, 20130102), 1);
@@ -276,6 +305,11 @@ sub run_tests() {
     is(add_weekdays(20130101, 5), 20130108);
     is(add_weekdays(20130101, -4), 20121226);
     is(add_weekdays(20120228, 2), 20120301);
+    is(valid_date(20120229), 1);
+    is(valid_date(20130229), 0);
+    is(valid_date('asdf'), 0);
+    is(valid_date(100150228), 1);
+    is(valid_date(100150232), 0);
 }
 
 # -------------------------------------------------------------------
