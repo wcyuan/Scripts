@@ -108,7 +108,7 @@ sub get_year_end($) {
 ###
 # Functions using Date::Calc dates, or converting to/from yyyymmdd and
 # Date::Calc dates
-##
+###
 sub to_yyyymmdd($$$) {
     my ($year, $month, $day) = @_;
     return sprintf('%d%02d%02d', $year, $month, $day);
