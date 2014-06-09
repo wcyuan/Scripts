@@ -165,7 +165,7 @@ def main():
     rf_args = dict((v, getattr(opts, v))
                    for v in ('patt', 'delim', 'reverse', 'kind', 'header_patt',
                              'head', 'filters', 'by_col_no', 'columns',
-                             'add_filename', 'raw', 'width',
+                             'add_filename', 'raw', 'width', 'anypatt',
                              'clean_output', 'full_filenames', 'headerless'))
 
     def get_input(fns):
@@ -198,7 +198,11 @@ def getopts():
     """
     parser = optparse.OptionParser()
     parser.add_option('--patt', '--pattern',
-                      help="the pattern to look for")
+                      help="the pattern to look for",
+                      action='append')
+    parser.add_option('--anypatt',
+                      help="show lines that match any of the patterns",
+                      action="store_true")
     parser.add_option('--delimeter', '--ifs', '-d',
                       dest='delim',
                       help="the delimiter to use")
@@ -214,8 +218,9 @@ def getopts():
                       action="store_true",
                       help="reverse the pattern matching")
     parser.add_option('--kind',
-                      default='delimited',
-                      help="the kind of table")
+                      help="the kind of table (fixed or delimited)")
+    parser.add_option('--fixed',
+                      action="store_true")
     parser.add_option('--header_patt',
                       help="a pattern that distinguishes the header")
     parser.add_option('--head',
@@ -349,6 +354,12 @@ def getopts():
         if opts.columns is None:
             opts.columns = []
         opts.columns.extend(opts.col_list.split(','))
+
+    if opts.kind is None:
+        if opts.fixed:
+            opts.kind = 'fixed'
+        else:
+            opts.kind = 'delimited'
 
     return (opts, args)
 
@@ -621,7 +632,7 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
                 kind='delimited', reverse=False, head=None,
                 header_patt=None, filters=None, by_col_no=False,
                 columns=(), raw=False, width=None,
-                clean_output=False):
+                clean_output=False, anypatt=False):
     """
     Reads a file with tabular data.  Returns a generator of rows, where a
     row is a list of fields.  The first row is the header.
@@ -673,10 +684,17 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
             if _is_comment(line, comment):
                 continue
 
-            # If there is a pattern to match, skip until we find that pattern
-            if (patt is not None and
-                not _is_match(line, patt, reverse=reverse)):
-                continue
+            # If there are patterns to match, skip until we find that
+            # pattern.  If there are multiple patterns, we only take
+            # lines that match all the patterns.
+            if (patt is not None and len(patt) > 0):
+                matches = (_is_match(line, pattern, reverse=reverse)
+                           for pattern in patt)
+                if anypatt:
+                    if not any(matches):
+                        continue
+                elif not all(matches):
+                    continue
 
             # Found a valid line!  Parse it into separate fields.
             (row, _) = _separate(line, kind, delim, raw=raw)
@@ -892,7 +910,7 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None, header_patt=None,
                filters=None, by_col_no=False, columns=(),
                add_filename=None, raw=False, width=None, clean_output=False,
-               full_filenames=False, headerless=False):
+               full_filenames=False, headerless=False, anypatt=False):
     """
     Reads multiple files and returns a generator of tables, where a
     table is a generator of rows.
@@ -907,7 +925,7 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                                 header_patt=header_patt,
                                 filters=filters, by_col_no=by_col_no,
                                 columns=columns, raw=raw, width=width,
-                                clean_output=clean_output)
+                                clean_output=clean_output, anypatt=anypatt)
 
         try:
             # Save the header from before we add filenames
