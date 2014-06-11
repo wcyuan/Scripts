@@ -166,7 +166,8 @@ def main():
                    for v in ('patt', 'delim', 'reverse', 'kind', 'header_patt',
                              'head', 'filters', 'by_col_no', 'columns',
                              'add_filename', 'raw', 'width', 'anypatt',
-                             'clean_output', 'full_filenames', 'headerless'))
+                             'clean_output', 'full_filenames', 'headerless',
+                             'linenos'))
 
     def get_input(fns):
         """
@@ -226,6 +227,9 @@ def getopts():
     parser.add_option('--head',
                       type=int,
                       help="Only show the first <head> lines")
+    parser.add_option('--linenos',
+                      action="append",
+                      help="Show these lines only. (e.g. 1-3,5-7)")
     parser.add_option('--by_col_no', '--by_column_number',
                       action="store_true",
                       help="Just number the columns instead of "
@@ -240,11 +244,12 @@ def getopts():
                       action='append',
                       help='Filter results.  If multiple filters given, '
                       'will only print lines that match them all.')
-    parser.add_option('--columns', '--select',
+    parser.add_option('--columns',
                       dest='columns',
                       action='append',
-                      help='Which columns to show')
-    parser.add_option('--col_list',
+                      help='Which columns to show, if the column names could '
+                      'have commas in them')
+    parser.add_option('--col_list', '--col', '--cols', '--select',
                       help='Which columns to show, as a comma-separated-list')
     parser.add_option('--noheader', '--no_header', '--no-header',
                       action='store_true',
@@ -343,6 +348,9 @@ def getopts():
     if opts.magic_words is not None:
         HEADERS.extend(opts.magic_words)
 
+    if opts.linenos:
+        opts.linenos = _parse_int_ranges(opts.linenos)
+
     if opts.ofs is not None:
         global OFS
         global CLEAN_CHAR
@@ -412,6 +420,26 @@ def _parse_filter(filter_string):
 
     raise ValueError("Can't parse filter '%s', can't find an operator" %
                      filter_string)
+
+def _parse_int_ranges(linenos):
+    """
+    Transform a list of strings like ["1-3,5,7-9", "11-13"] into a
+    list of tuples like [(1, 3), (5, 5), (7, 9), (11, 13)]
+
+    >>> _parse_int_ranges([])
+    []
+    >>> _parse_int_ranges(["3"])
+    [(3, 3)]
+    >>> _parse_int_ranges(["1-3,5,7-9", "11-13"])
+    [(1, 3), (5, 5), (7, 9), (11, 13)]
+    """
+    return [
+        tuple(int(x) for x in lineno.split('-', 1))
+        if '-' in lineno else
+        (int(lineno), int(lineno))
+        for lineno_strs in linenos
+        for lineno in lineno_strs.split(',')]
+
 
 # --------------------------------------------------------------------
 
@@ -631,7 +659,7 @@ def _sanitize(row):
 def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
                 kind='delimited', reverse=False, head=None,
                 header_patt=None, filters=None, by_col_no=False,
-                columns=(), raw=False, width=None,
+                columns=(), raw=False, width=None, linenos=None,
                 clean_output=False, anypatt=False):
     """
     Reads a file with tabular data.  Returns a generator of rows, where a
@@ -713,6 +741,11 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
                 row = _sanitize(row)
 
             nrows += 1
+            if linenos is not None and linenos:
+                if not any((nrows >= first and nrows <= last)
+                           for (first, last) in linenos):
+                    continue
+
             yield row
 
             # If we were given a number of lines to look for, stop after
@@ -720,6 +753,11 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
             if head is not None:
                 if nrows >= head:
                     return
+
+            if linenos is not None and linenos:
+                if nrows >= max(last for (first, last) in linenos):
+                    return
+
 
 def transpose(intable):
     """
@@ -908,7 +946,7 @@ def shorten_filenames(filenames):
 
 def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None, header_patt=None,
-               filters=None, by_col_no=False, columns=(),
+               filters=None, by_col_no=False, columns=(), linenos=None,
                add_filename=None, raw=False, width=None, clean_output=False,
                full_filenames=False, headerless=False, anypatt=False):
     """
@@ -922,7 +960,7 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
         filetable = _read_input(filename, patt=patt, delim=delim,
                                 comment=comment, kind=kind,
                                 reverse=reverse, head=head,
-                                header_patt=header_patt,
+                                header_patt=header_patt, linenos=linenos,
                                 filters=filters, by_col_no=by_col_no,
                                 columns=columns, raw=raw, width=width,
                                 clean_output=clean_output, anypatt=anypatt)
