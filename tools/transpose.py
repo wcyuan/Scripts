@@ -682,7 +682,7 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
      - Guesses at how the line is formatted (if the user didn't tell us)
      - Parses each row into separate fields
      - Applies filters
-     - Stops after <head> rows
+     - Stops after <head> rows, or selects the appropriate lines
 
     """
     nrows = 0
