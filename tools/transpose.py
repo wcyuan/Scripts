@@ -89,6 +89,58 @@ You can put the definition of the file into the config file .transrc
 
   transpose.py --config .transrc --var DATE='2014/*/*' --sql "select Name, count(*), avg(Price) FROM orders WHERE OrderType='All' GROUP BY Trader"
 
+Doctests:
+
+>>> lines = ('#@desc date id name', \
+             '20140102 3 Bob',      \
+             '20140103 5 Alice',    \
+             '20140104 23 Megan',   \
+             '20140105 15 Frank')
+
+>>> tuple(next(read_files([lines]))) # doctest: +NORMALIZE_WHITESPACE
+(['date', 'id', 'name'],
+ ['20140102', '3', 'Bob'],
+ ['20140103', '5', 'Alice'],
+ ['20140104', '23', 'Megan'],
+ ['20140105', '15', 'Frank'])
+
+>>> tuple(next(read_files([lines], raw=True))) # doctest: +NORMALIZE_WHITESPACE
+(['#@desc date', 'id', 'name'],
+ ['20140102', '3', 'Bob'],
+ ['20140103', '5', 'Alice'],
+ ['20140104', '23', 'Megan'],
+ ['20140105', '15', 'Frank'])
+
+>>> tuple(next(read_files([lines], patt="Bo"))) # doctest: +NORMALIZE_WHITESPACE
+(['date', 'id', 'name'],
+ ['20140102', '3', 'Bob'])
+
+>>> tuple(next(read_files([lines], patt="Bo", \
+          reverse=True))) # doctest: +NORMALIZE_WHITESPACE
+(['date', 'id', 'name'],
+ ['20140103', '5', 'Alice'],
+ ['20140104', '23', 'Megan'],
+ ['20140105', '15', 'Frank'])
+
+>>> tuple(next(read_files([lines], add_linenos=True))) \
+    # doctest: +NORMALIZE_WHITESPACE
+(['Line', 'date', 'id', 'name'],
+ ['2', '20140102', '3', 'Bob'],
+ ['3', '20140103', '5', 'Alice'],
+ ['4', '20140104', '23', 'Megan'],
+ ['5', '20140105', '15', 'Frank'])
+
+>>> tuple(next(read_files([lines], add_linenos=True, patt='Ali'))) \
+    # doctest: +NORMALIZE_WHITESPACE
+(['Line', 'date', 'id', 'name'],
+ ['3', '20140103', '5', 'Alice'])
+
+>>> tuple(next(read_files([lines], add_linenos=True, add_colnos=True, \
+          patt='Ali'))) # doctest: +NORMALIZE_WHITESPACE
+(['', '1', '2', '3'],
+ ['Line', 'date', 'id', 'name'],
+ ['3', '20140103', '5', 'Alice'])
+
 """
 
 # --------------------------------------------------------------------
