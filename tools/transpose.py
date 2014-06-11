@@ -167,7 +167,8 @@ def main():
                              'head', 'filters', 'by_col_no', 'columns',
                              'add_filename', 'raw', 'width', 'anypatt',
                              'clean_output', 'full_filenames', 'headerless',
-                             'linenos'))
+                             'linenos', 'add_linenos', 'add_colnos',
+                             'noheader'))
 
     def get_input(fns):
         """
@@ -229,7 +230,10 @@ def getopts():
                       help="Only show the first <head> lines")
     parser.add_option('--linenos',
                       action="append",
-                      help="Show these lines only. (e.g. 1-3,5-7)")
+                      help="Show these lines only. (e.g. 1-3,5-7).  "
+                      "Lines are counted *after* filters -- so linenos=3 "
+                      'means "show the third matching line", not '
+                      '"show the third line, if it matches"')
     parser.add_option('--by_col_no', '--by_column_number',
                       action="store_true",
                       help="Just number the columns instead of "
@@ -254,6 +258,12 @@ def getopts():
     parser.add_option('--noheader', '--no_header', '--no-header',
                       action='store_true',
                       help='do not print the header')
+    parser.add_option('--add_linenos',
+                      action='store_true',
+                      help='add the line number as a column')
+    parser.add_option('--add_colnos', '--add_column_numbers',
+                      action='store_true',
+                      help='show column numbers')
     # The only effect headerless has right now is that when you add a
     # filename to the output, you always add the filename, never the
     # word FILE, which is what you would normally add to the header.
@@ -660,7 +670,8 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
                 kind='delimited', reverse=False, head=None,
                 header_patt=None, filters=None, by_col_no=False,
                 columns=(), raw=False, width=None, linenos=None,
-                clean_output=False, anypatt=False):
+                clean_output=False, anypatt=False, add_linenos=False,
+                add_colnos=False):
     """
     Reads a file with tabular data.  Returns a generator of rows, where a
     row is a list of fields.  The first row is the header.
@@ -678,7 +689,7 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
     header = None
     keep_idx = None
     with zopen(filename) as filedesc:
-        for line in filedesc:
+        for (lineno, line) in enumerate(filedesc):
             line = line.strip(IRS)
 
             # First step is to look for the header.  If we haven't found
@@ -690,20 +701,29 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
                 if delim is None:
                     (kind, delim) = _guess_delim(line, kind)
                 (header, magic_word) = _separate(line, kind, delim, raw=raw)
-                if by_col_no:
+                if by_col_no or add_colnos:
                     col_nos = [str(r) for r in range(1, len(header)+1)]
+                if by_col_no:
                     header = col_nos
                 if columns is not None and len(columns) > 0:
                     keep_idx = [header.index(c) for c in columns]
                     print_header = [header[i] for i in keep_idx]
+                    if add_colnos:
+                        col_nos = [str(i + 1) for i in keep_idx]
                 else:
                     print_header = header
+                if add_linenos:
+                    print_header.insert(0, 'Line')
+                    if add_colnos:
+                        col_nos.insert(0, '')
                 if raw and magic_word is not None:
                     print_header[0] = magic_word + ' ' + print_header[0]
 
                 if clean_output:
                     print_header = _sanitize(print_header)
 
+                if add_colnos:
+                    yield col_nos
                 yield print_header
                 if not by_col_no:
                     continue
@@ -733,6 +753,9 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
 
             if keep_idx is not None:
                 row = [row[i] for i in keep_idx]
+
+            if add_linenos:
+                row.insert(0, str(lineno + 1))
 
             if width is not None:
                 row = [r if len(r) < width else (r[:width]+"...") for r in row]
@@ -948,7 +971,8 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                kind='delimited', reverse=False, head=None, header_patt=None,
                filters=None, by_col_no=False, columns=(), linenos=None,
                add_filename=None, raw=False, width=None, clean_output=False,
-               full_filenames=False, headerless=False, anypatt=False):
+               full_filenames=False, headerless=False, anypatt=False,
+               add_colnos=False, add_linenos=False, noheader=False):
     """
     Reads multiple files and returns a generator of tables, where a
     table is a generator of rows.
@@ -963,7 +987,8 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                                 header_patt=header_patt, linenos=linenos,
                                 filters=filters, by_col_no=by_col_no,
                                 columns=columns, raw=raw, width=width,
-                                clean_output=clean_output, anypatt=anypatt)
+                                clean_output=clean_output, anypatt=anypatt,
+                                add_colnos=add_colnos, add_linenos=add_linenos)
 
         try:
             # Save the header from before we add filenames
@@ -988,14 +1013,20 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
             filetable = _newfiletable(filetable, fn_to_add)
 
         if table is None:
-            table = itertools.chain([header], filetable)
+            if noheader:
+                table = filetable
+            else:
+                table = itertools.chain([header], filetable)
         elif prev_header == header:
             # the header matches the previous file, so just stick
             # the data onto the existing table.
             table = itertools.chain(table, filetable)
         else:
             yield(table)
-            table = itertools.chain([header], filetable)
+            if noheader:
+                table = filetable
+            else:
+                table = itertools.chain([header], filetable)
         prev_header = header
 
     if table is not None:
