@@ -67,10 +67,17 @@ UP="Up" ; DOWN="Down" ; LEFT="Left" ; RIGHT="Right"
 -- UP="K" ; DOWN="J" ; LEFT="H" ; RIGHT="L"
 -- UP="W" ; DOWN="S" ; LEFT="A" ; RIGHT="D"
 
+-- comma and period seem to have stopped working in some cases
+-- so add shift-left and shift-right as well
 defbindings("WFrame", {
     bdoc("Switch to the window to the left/right."),
     kpress(META.."comma",  "WFrame.switch_prev(_)", "_sub:non-nil"),
     kpress(META.."period", "WFrame.switch_next(_)", "_sub:non-nil"),
+})
+defbindings("WFrame", {
+    bdoc("Switch to the window to the left/right."),
+    kpress(META.."Shift+"..LEFT,  "WFrame.switch_prev(_)", "_sub:non-nil"),
+    kpress(META.."Shift+"..RIGHT, "WFrame.switch_next(_)", "_sub:non-nil"),
 })
 
 defbindings("WScreen", {
