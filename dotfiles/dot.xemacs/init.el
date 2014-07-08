@@ -723,7 +723,7 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
     temp-name))
 
 (when (load "flymake" t)
-  (defun flymake-pylint-init ()
+  (defun flymake-python-init ()
     (let* ((temp-file (flymake-init-create-temp-buffer-copy
 
                        'flymake-create-temp-local-temp-dir
@@ -740,13 +740,11 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
                         temp-file
                         (file-name-directory buffer-file-name))))
 
-      ;; pyflakes is an alternative to epylint which is less strict
-      (list "epylint" (list temp-file))))
+      ;; pyflakes is an alternative to epylint which is faster, but less powerful
+      ;(list "pyflakes" (list temp-file))
+      (list "epylint" (list temp-file))
+      ))
 
-  (add-to-list 'flymake-allowed-file-name-masks
-               '("\\.py\\'" flymake-pylint-init))
-  (add-to-list 'flymake-allowed-file-name-masks
-               '("\\.pl\\'" flymake-perl-init))
   ;; remove a bunch of flymake hooks since those don't seem to work for
   ;; me
   ;;
@@ -760,6 +758,12 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
   ;;("[0-9]+\\.tex\\'" flymake-master-tex-init flymake-master-cleanup)
   ;;("\\.tex\\'" flymake-simple-tex-init)
   ;;("\\.idl\\'" flymake-simple-make-init)
+  (setq flymake-allowed-file-name-masks ())
+
+  (add-to-list 'flymake-allowed-file-name-masks
+               '("\\.py\\'" flymake-python-init))
+  (add-to-list 'flymake-allowed-file-name-masks
+               '("\\.pl\\'" flymake-perl-init))
 )
 
 (GNUEmacs
