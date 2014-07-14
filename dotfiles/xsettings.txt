@@ -1,0 +1,19 @@
+Some notes on x settings.
+
+------------------------------------------------------------------------
+
+Auto Repeat
+
+If you want to turn off key auto-repeat, put this line into .xsession:
+
+  xset r off
+
+This will make it so that no matter how long you hold down a key, it
+will only fire once.  You might want to turn auto-repeat off if you
+have a slow vnc connection.
+
+If you just want to see some x settings without changing them, run
+
+  xset q
+
+------------------------------------------------------------------------
