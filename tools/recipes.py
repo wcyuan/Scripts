@@ -155,11 +155,24 @@ class FieldMixin(object):
 
 class SpellChecker(object):
     """
-    Given an attribute name, look for names with edit distance two or
-    less.  If there are none of those, look for names that start with
-    that attribute name (strike -> strike_price).
+    Initialize with a dictionary.  After that, given a word, look for
+    words in the dictionary with edit distance two or less.  If there
+    are none of those, look for names that start with the given word,
+    or which contain the given word.
 
     Based on http://norvig.com/spell-correct.html
+
+    The default alphabet is all lowercase letters plus underscore (no
+    numbers, no upper case, no other punctuation)
+
+    >>> sc = SpellChecker(('apple', 'honey', 'pooh'))
+    >>> sc.correct('appl')
+    'apple'
+    >>> sc.correct('a')
+    'apple'
+    >>> sc.correct('n')
+    'honey'
+
     """
 
     @classmethod
@@ -170,11 +183,17 @@ class SpellChecker(object):
             model[f] += 1
         return model
 
-    def __init__(self, wordlist, alphabet=None):
+    def __init__(self, wordlist, alphabet=None,
+                 include_starts=False,
+                 include_contains=True,
+                 return_all=False):
         self.nwords = self.train(wordlist)
         if alphabet is None:
             alphabet = 'abcdefghijklmnopqrstuvwxyz_'
         self.alphabet = alphabet
+        self.include_starts = include_starts
+        self.include_contains = include_contains
+        self.return_all = return_all
 
     def edits1(self, word):
         splits     = [(word[:i], word[i:]) for i in range(len(word) + 1)]
@@ -193,15 +212,27 @@ class SpellChecker(object):
         return set(w for w in words if w in self.nwords)
 
     def starts(self, words):
+        if not self.include_contains:
+            return set()
         return set(w for given in words for w in self.nwords
                    if w.startswith(given))
+
+    def contains(self, words):
+        if not self.include_contains:
+            return set()
+        return set(w for given in words for w in self.nwords
+                   if given in w)
 
     def correct(self, word):
         candidates = (self.known([word]) or
                       self.known(self.edits1(word)) or
                       self.known_edits2(word) or
                       self.starts([word]) or
+                      self.contains([word]) or
                       [word])
-        return max(candidates, key=self.nwords.get)
+        if self.return_all:
+            return sorted(candidates, key=self.nwords.get)
+        else:
+            return max(candidates, key=self.nwords.get)
 
 # --------------------------------------------------------------------------- #
