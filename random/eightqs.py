@@ -198,7 +198,7 @@ class Board(FieldMixin):
 
     def remove_queen(self, loc):
         """
-        Remove a queen from the board, then recoputes which locations are
+        Remove a queen from the board, then recomputes which locations are
         being attacked.
 
         """
