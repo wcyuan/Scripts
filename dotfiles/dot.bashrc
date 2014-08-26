@@ -434,8 +434,18 @@ then
 
         # This version also shows the username:
         #title='\[\033]0;\u@\h:\w\007\]'
-        title='\[\033]0;\h:\w\007\]'
+        : ${EXTRA_TITLE:=""}
+        title='\[\033]0;${EXTRA_TITLE}\h:\w\007\]'
         PS1="${title}${line_color}\\! ${time_color}[$etime][\\t]${path_color}[\\h:${PWD}]${reset_color}\n$ "
+    }
+
+    function settitle
+    {
+        if [ "$#" -ne 0 ]; then
+            EXTRA_TITLE="($*) "
+        else
+            EXTRA_TITLE=$*
+        fi
     }
 
     PROMPT_COMMAND='format_prompt'
