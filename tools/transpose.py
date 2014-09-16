@@ -744,6 +744,10 @@ def _read_input(filename, patt=None, delim=None, comment=COMMENT_CHAR,
         for (lineno, line) in enumerate(filedesc):
             line = line.strip(IRS)
 
+            # skip blank lines
+            if len(line) == 0:
+                continue
+
             # First step is to look for the header.  If we haven't found
             # it yet, we'll skip all lines until we find it.  We use the
             # header to figure out the format for the rest of the file.
