@@ -10,7 +10,7 @@
         log-pretty2 = log --graph --all --format=format:'%C(bold blue)%h%C(reset) - %C(bold red)%cD%C(reset) %C(bold blue)(%cr)%C(reset)%C(bold red)%d%C(reset)%n''          %C(black)%s%C(reset) %C(bold magenta) %cn%C(reset)' --abbrev-commit
         log-pretty = !"git log-pretty1"
         logn = log --name-status
-        logu = !"git logn @{u}.."
+        logu = !sh -c 'git log --name-status $1@{upstream}..$1 "$@"' -
 [core]
 	pager = less -FRSX
         # this is useful on NFS:
