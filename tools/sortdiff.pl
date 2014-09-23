@@ -22,6 +22,7 @@ sortdiff.pl - diff two files unordered (sort them first).
     --debug           create temporary files, but don't run the diff command
     --uniq            remove duplicate lines
     --leave           leave the temporary files that were created
+    --join            run join on the sorted files instead of diff
     --help, -?        shows brief help message
     --perldoc         shows full documentation
     other options     passed onto diff
@@ -62,6 +63,10 @@ remove duplicate lines
 =item I<--leave>
 
 leave the temporary files that were created
+
+=item I<--join>
+
+run join on the sorted files instead of running diff
 
 =item I<--debug>
 
@@ -108,6 +113,7 @@ GetOptions( "col=s"    => \my %col,
             "uniq!"    => \my $uniq,
             "debug!"   => \my $debug,
             "leave!"   => \my $leave_files,
+            "join!"    => \my $do_join,
             "verbose|v" => sub { $logger->level($DEBUG) },
             "cmd!"     => \my $is_cmd,
 
@@ -122,6 +128,17 @@ GetOptions( "col=s"    => \my %col,
 
 # parse script arguments
 pod2usage("Wrong number of arguments") unless @ARGV >= $nfiles;
+
+# Suppose we want to pass the option -v to the subcommand (diff or
+# join).  We don't want -v to be consumed by the GetOptions above.  So
+# we add '--' before the '-v' to tell GetOptions to stop reading
+# options, e.g.
+#
+#   sortdiff --join -- -v 2  file1.txt file2.txt
+#
+# That works, but it leaves the '--' in ARGV.  So we have to
+# consume it here.
+shift(@ARGV) if $ARGV[0] eq '--';
 
 # ---------------------------------------------------------------
 # Create temporary filenames
@@ -198,6 +215,9 @@ foreach my $fileno (keys %file) {
 #
 
 my $cmd = join(" ", "diff", @ARGV, $file{1}{temp},  $file{2}{temp});
+if ($do_join) {
+    $cmd = join(" ", "join", @ARGV, $file{1}{temp},  $file{2}{temp});
+}
 if ($debug) {
     $logger->debug("Not running '$cmd'");
 } else {
