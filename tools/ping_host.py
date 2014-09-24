@@ -11,8 +11,8 @@ import logging
 import optparse
 import subprocess
 
-DEFAULT_COUNT=1
-DEFAULT_TIMEOUT=10
+DEFAULT_COUNT = 1
+DEFAULT_TIMEOUT = 10
 
 # --------------------------------------------------------------------------- #
 
