@@ -1320,6 +1320,11 @@ class Database(object):
         if len(matches) == 0:
             matches = [command]
         table = tuple(next(get_input(matches)))
+        if len(table) < 1:
+            raise ValueError("No output from {0}".format(command))
+        if len(table) < 2:
+            raise ValueError(
+                'Only got a header from "{0}": "{1}"'.format(command, table))
         self.make_table_from_data(table_name, table[0], table[1:])
 
     def make_table_by_name(self, table_name,
