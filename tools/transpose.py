@@ -91,11 +91,11 @@ You can put the definition of the file into the config file .transrc
 
 Doctests:
 
->>> lines = ('#@desc date id name', \
-             '20140102 3 Bob',      \
-             '20140103 5 Alice',    \
-             '20140104 23 Megan',   \
-             '20140105 15 Frank')
+>>> lines = ('#@desc date id name',
+...          '20140102 3 Bob',
+...          '20140103 5 Alice',
+...          '20140104 23 Megan',
+...          '20140105 15 Frank')
 
 >>> tuple(next(read_files([lines]))) # doctest: +NORMALIZE_WHITESPACE
 (['date', 'id', 'name'],
@@ -115,28 +115,29 @@ Doctests:
 (['date', 'id', 'name'],
  ['20140102', '3', 'Bob'])
 
->>> tuple(next(read_files([lines], patt="Bo", \
-          reverse=True))) # doctest: +NORMALIZE_WHITESPACE
+>>> tuple(    # doctest: +NORMALIZE_WHITESPACE
+...       next(read_files([lines], patt="Bo",
+...       reverse=True)))
 (['date', 'id', 'name'],
  ['20140103', '5', 'Alice'],
  ['20140104', '23', 'Megan'],
  ['20140105', '15', 'Frank'])
 
->>> tuple(next(read_files([lines], add_linenos=True))) \
-    # doctest: +NORMALIZE_WHITESPACE
+>>> tuple(    # doctest: +NORMALIZE_WHITESPACE
+...       next(read_files([lines], add_linenos=True)))
 (['Line', 'date', 'id', 'name'],
  ['2', '20140102', '3', 'Bob'],
  ['3', '20140103', '5', 'Alice'],
  ['4', '20140104', '23', 'Megan'],
  ['5', '20140105', '15', 'Frank'])
 
->>> tuple(next(read_files([lines], add_linenos=True, patt='Ali'))) \
-    # doctest: +NORMALIZE_WHITESPACE
+>>> tuple(    # doctest: +NORMALIZE_WHITESPACE
+...       next(read_files([lines], add_linenos=True, patt='Ali')))
 (['Line', 'date', 'id', 'name'],
  ['3', '20140103', '5', 'Alice'])
 
->>> tuple(next(read_files([lines], add_linenos=True, add_colnos=True, \
-          patt='Ali'))) # doctest: +NORMALIZE_WHITESPACE
+>>> tuple(next(read_files([lines], add_linenos=True, add_colnos=True,
+...       patt='Ali'))) # doctest: +NORMALIZE_WHITESPACE
 (['', '1', '2', '3'],
  ['Line', 'date', 'id', 'name'],
  ['3', '20140103', '5', 'Alice'])
