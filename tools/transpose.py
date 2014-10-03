@@ -61,6 +61,15 @@ The --raw option is useful if you want to chain transpose.py commands
 
   transpose.py --raw --patt xyz filename.txt | transpose.py --filter 'price > 5' --filter 'size < 30'
 
+Note, the --raw option doesn't work well with --sql because --raw adds
+the magic word to the header, and the magic word confuses sql.  The
+way raw works is it tries to keep the original formatting (delimiters,
+escaping, etc).  But you want to process the line before you put it in
+sql.  So I guess what would work better with sql would be a function
+that could add the appropriate delimiters and escaping to any output.
+It wouldn't be guaranteed to be like the original, but it could still
+be pushed back into trans for recursive processesing.
+
 Run a sql query on data from some files which all share the same
 structure.  The filename should be changed to "<table>=<filename>",
 then you refer to it as <table> in the query.
