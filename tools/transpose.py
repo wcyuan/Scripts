@@ -1314,6 +1314,8 @@ class Database(object):
                    format(name,
                           ', '.join('?' for v in header)))
         pad = [None]*len(header)
+        logging.debug(command)
+        logging.debug("Header: %s", header)
         self.cursor.executemany(command, ((row+pad)[:len(header)]
                                           for row in data))
         self.database.commit()
