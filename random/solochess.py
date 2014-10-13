@@ -492,6 +492,10 @@ class Board(FieldMixin):
                     yield (piece, loc, end)
 
 def do_search(board):
+    """
+    Solve a solitaire chess game.  Just does a depth first search on
+    all possible moves.
+    """
     if len(board.pieces) <= 1:
         return (True, [])
     for (piece, loc, end) in board.possible_moves():
@@ -507,6 +511,13 @@ def do_search(board):
     return (False, None)
 
 def generate_random_puzzle(board, npieces):
+    """
+    To generate a random puzzle, start with an empty board, then place
+    a random piece, then imagine that piece got there by capturing
+    another piece -- randomly move the piece to a different place and
+    generate a new random place in the original place.  Repeat until
+    you've got enough pieces.
+    """
     import random
     valid = board.valid_pieces()
     # Exclude Queens, they make things too easy.
@@ -540,6 +551,11 @@ def generate_random_puzzle(board, npieces):
                     board = Board(rows=board.rows, cols=board.cols)
                     started_with_pieces = False
                 else:
+                    # This could happen randomly.  For example, if the
+                    # first piece you place is a pawn in the first
+                    # row, well that can't have come from anywhere, so
+                    # that will kill your board and you should just
+                    # start again.
                     raise ValueError("Unable to place {0} pieces on board".
                                      format(npieces))
 
