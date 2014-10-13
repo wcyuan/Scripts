@@ -7,6 +7,23 @@ On each move, you can move any of the pieces, but it must capture
 another piece.  Continue until there are no more capturing moves left.
 If there is only one piece on the board, you win, otherwise you lose.
 
+>>> b = Board(rows=4, cols=4, pieces_str="B,1,0+P,0,0+B,0,1+N,1,1+N,2,2+P,3,3+R,2,1+R,3,2")
+>>> print b
+--
+. . R P
+. R N .
+B N . .
+P B . .
+>>> (moves) = do_search(b)
+>>> print b
+--
+. . . R
+. . . .
+. . . .
+. . . .
+>>> print moves
+(True, [(Rook(), (3, 2), (3, 3)), (Rook(), (2, 2), (3, 2)), (Bishop(), (1, 0), (3, 2)), (Bishop(), (0, 1), (1, 0)), (Rook(), (2, 1), (2, 2)), (Pawn(), (1, 1), (2, 2)), (Pawn(), (0, 0), (1, 1))])
+
 """
 
 # ------------------------------------------------------------- #
@@ -24,7 +41,7 @@ PIECE_SEP = ','
 
 def main():
     opts = getopts()
-    board = Board(rows=opts.rows, cols=opts.cols, pieces=opts.pieces)
+    board = Board(rows=opts.rows, cols=opts.cols, pieces_str=opts.pieces)
     print board
     moves = do_search(board)
     print board
@@ -46,11 +63,6 @@ def getopts():
         opts.rows = opts.n
         opts.cols = opts.n
         opts.nqueens = opts.n
-    if opts.pieces is not None:
-        pieces = [val.split(PIECE_SEP) for val in opts.pieces.split(LIST_SEP)]
-        opts.pieces = [
-            (Board.char_to_piece(char), (int(row), int(col)))
-            for (char, row, col) in pieces]
 
     return opts
 
@@ -216,30 +228,9 @@ class Queen(Piece):
             cls.attack_to(board, loc, (-1, 0)))
 
 class Board(FieldMixin):
-    """
-    >>> b = Board(rows=8, cols=8).add_queen((3, 5))
-    >>> b == eval(repr(b))
-    True
-    >>> b
-    Board(rows = 8,
-          cols = 8,
-          queens = [(3, 5)])
-
-    >>> print b
-    --
-    . . x . . x . .
-    . . . x . x . x
-    . . . . x x x .
-    x x x x x Q x x
-    . . . . x x x .
-    . . . x . x . x
-    . . x . . x . .
-    . x . . . x . .
-
-    """
     EMPTY = '.'
 
-    def __init__(self, rows=DEFAULT_SIZE, cols=DEFAULT_SIZE, pieces=None):
+    def __init__(self, rows=DEFAULT_SIZE, cols=DEFAULT_SIZE, pieces=None, pieces_str=None):
         """
         A board is represented as a list of rows x cols values.  Each
         value can either be empty, or it can contain a queen, or it
@@ -253,7 +244,15 @@ class Board(FieldMixin):
         self.rows = rows
         self.cols = cols
         self.board = []
-        self.pieces = [] if pieces is None else sorted(pieces)
+        if pieces is not None:
+            self.pieces = sorted(pieces)
+        elif pieces_str is not None:
+            pieces = [val.split(PIECE_SEP) for val in pieces_str.split(LIST_SEP)]
+            self.pieces = [
+                (self.char_to_piece(char), (int(row), int(col)))
+                for (char, row, col) in pieces]
+        else:
+            self.pieces = []
         self._reset_board()
 
     def __str__(self):
@@ -358,13 +357,14 @@ class Board(FieldMixin):
         self.pieces = sorted(self.pieces + [(piece, loc)])
         self._set(loc, piece)
 
-    def move(self, piece, start, end):
-        assert(self.get(start) == piece)
-        assert((piece, start) in self.pieces)
-        if self.is_empty(end):
-            assert(end in piece.moves(self, start))
-        else:
-            assert(end in piece.attacks(self, start))
+    def move(self, piece, start, end, force=False):
+        if not force:
+            assert(self.get(start) == piece)
+            assert((piece, start) in self.pieces)
+            if self.is_empty(end):
+                assert(end in piece.moves(self, start))
+            else:
+                assert(end in piece.attacks(self, start))
         self._set(start, self.EMPTY)
         self._set(end, piece)
         self.pieces = sorted(
@@ -392,7 +392,7 @@ def do_search(board):
         if res:
             moves.append((piece, loc, end))
             return (True, moves)
-        board.move(piece, end, loc)
+        board.move(piece, end, loc, force=True)
         board.add_piece(captured, end)
     return (False, None)
 
