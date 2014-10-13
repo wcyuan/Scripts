@@ -7,7 +7,8 @@ On each move, you can move any of the pieces, but it must capture
 another piece.  Continue until there are no more capturing moves left.
 If there is only one piece on the board, you win, otherwise you lose.
 
->>> b = Board(rows=4, cols=4, pieces_str="B,1,0+P,0,0+B,0,1+N,1,1+N,2,2+P,3,3+R,2,1+R,3,2")
+>>> b = Board(rows=4, cols=4,
+...           pieces_str="B,1,0+P,0,0+B,0,1+N,1,1+N,2,2+P,3,3+R,2,1+R,3,2")
 >>> print b
 --
 . . R P
@@ -21,8 +22,11 @@ P B . .
 . . . .
 . . . .
 . . . .
->>> print moves
-(True, [(Rook(), (3, 2), (3, 3)), (Rook(), (2, 2), (3, 2)), (Bishop(), (1, 0), (3, 2)), (Bishop(), (0, 1), (1, 0)), (Rook(), (2, 1), (2, 2)), (Pawn(), (1, 1), (2, 2)), (Pawn(), (0, 0), (1, 1))])
+>>> print moves  # doctest: +NORMALIZE_WHITESPACE
+(True, [(Rook(), (3, 2), (3, 3)), (Rook(), (2, 2), (3, 2)),
+        (Bishop(), (1, 0), (3, 2)), (Bishop(), (0, 1), (1, 0)),
+        (Rook(), (2, 1), (2, 2)), (Pawn(), (1, 1), (2, 2)),
+        (Pawn(), (0, 0), (1, 1))])
 
 """
 
@@ -36,16 +40,29 @@ import sys
 # ------------------------------------------------------------- #
 
 DEFAULT_SIZE = 4
+DEFAULT_N_PIECES = 6
 LIST_SEP = '+'
 PIECE_SEP = ','
 
 def main():
     opts = getopts()
     board = Board(rows=opts.rows, cols=opts.cols, pieces_str=opts.pieces)
+
+    if opts.generate:
+        board = generate_random_puzzle(board, npieces=opts.npieces)
+
     print board
+
+    if opts.generate:
+        raw_input()
+
+    boardcopy = board.copy()
     moves = do_search(board)
     print board
     print moves
+    for (piece, loc, end) in reversed(moves[1]):
+        boardcopy.capture(piece, loc, end)
+        print boardcopy
 
 def getopts():
     parser = optparse.OptionParser()
@@ -54,6 +71,8 @@ def getopts():
     parser.add_option('--cols', type=int, default=DEFAULT_SIZE)
     parser.add_option('-n', type=int)
     parser.add_option('--verbose', action='store_true')
+    parser.add_option('--generate', action='store_true')
+    parser.add_option('--npieces', type=int, default=DEFAULT_N_PIECES)
     opts, args = parser.parse_args()
     if len(args) != 0:
         raise ValueError("Too many arguments: {0}".format(args))
@@ -63,7 +82,6 @@ def getopts():
         opts.rows = opts.n
         opts.cols = opts.n
         opts.nqueens = opts.n
-
     return opts
 
 # ------------------------------------------------------------- #
@@ -126,19 +144,62 @@ class Piece(object):
 
     @classmethod
     def moves(cls, board, loc, white=True):
+        """
+        Returns a list of all the locations that this piece is allowed to
+        move.  This is the same as attacks, except for pawns which
+        move differently when capturing.
+        """
         return cls.attacks(board, loc, white=white)
 
     @classmethod
     def attacks(cls, board, loc, white=True):
+        """
+        Returns a list of all the locations that this piece is allowed to
+        move, including capturing.  This is the same as moves, except
+        for pawns which move differently when capturing.
+        """
         return [loc for loc in cls.raw_attacks(board, loc, white=white)
                 if board.is_on_board(loc)]
 
+
+    @classmethod
+    def moved_from(cls, board, loc, white=True):
+        """
+        Returns a list of all the locations that this piece may have moved from.
+
+        Defaults to just the list of moves, since for most pieces,
+        moves are symmetric.
+        """
+        return cls.moves(board, loc, white=white)
+
+    @classmethod
+    def attacked_from(cls, board, loc, white=True):
+        """
+        Returns a list of all the locations that this piece may have
+        attacked from
+
+        Defaults to just the list of attacks, since for most pieces,
+        attacks are symmetric.
+        """
+        return cls.attacks(board, loc, white=white)
+
     @classmethod
     def raw_attacks(cls, board, loc, white=True):
+        """
+        This is a list of all the locations that the piece is attacking,
+        but the locations might be off the board.  It will be filtered
+        before being returned by the attacks method.
+        """
         raise NotImplementedError
 
     @classmethod
     def attack_to(cls, board, loc, direction):
+        """
+        This is a helper function for creating the list of locations that
+        the piece is attacking.  It will keep moving in a given
+        direction and include all the locations that it passes until
+        it reaches another piece or the edge of the board.
+        """
         (row, col) = loc
         (add_r, add_c) = direction
         while True:
@@ -152,16 +213,60 @@ class Piece(object):
 
 class Pawn(Piece):
     CHAR = 'P'
+
+    @classmethod
+    def valid(cls, board, locs):
+        return [loc for loc in locs if board.is_on_board(loc)]
+
     @classmethod
     def moves(cls, board, loc, white=True):
+        """
+        This isn't quite right.  This returns the places where the piece
+        is allowed to move without capturing.  We should probably
+        include the places it is allowed to move including capturing.
+        """
         (row, col) = loc
         new_row = row + (1 if white else -1)
-        return [(new_row, col)]
+        return cls.valid(board, [(new_row, col)])
+
+    @classmethod
+    def moved_from(cls, board, loc, white=True):
+        """
+        This isn't quite right.  This returns the places where the piece
+        is allowed to move without capturing.  We should probably
+        include the places it is allowed to move including capturing.
+        """
+        (row, col) = loc
+        new_row = row + (-1 if white else 1)
+        return cls.valid(board, [(new_row, col)])
+
     @classmethod
     def raw_attacks(cls, board, loc, white=True):
+        """
+        Returns the places where the piece can move with capturing.
+        However, we can only move there if we are capturing, and this
+        doesn't check to make sure that the move would actually be a
+        capture.  And if we did do that, I don't think we have a way
+        to check capturing "en passant"
+
+        """
         (row, col) = loc
         new_row = row + (1 if white else -1)
-        return [(new_row, col+i) for i in (1, -1)]
+        return cls.valid(board, [(new_row, col+i) for i in (1, -1)])
+
+    @classmethod
+    def attacked_from(cls, board, loc, white=True):
+        """
+        Returns the places where the piece can move with capturing.
+        However, we can only move there if we are capturing, and this
+        doesn't check to make sure that the move would actually be a
+        capture.  And if we did do that, I don't think we have a way
+        to check capturing "en passant"
+
+        """
+        (row, col) = loc
+        new_row = row + (-1 if white else 1)
+        return cls.valid(board, [(new_row, col+i) for i in (1, -1)])
 
 class King(Piece):
     CHAR = 'K'
@@ -230,7 +335,8 @@ class Queen(Piece):
 class Board(FieldMixin):
     EMPTY = '.'
 
-    def __init__(self, rows=DEFAULT_SIZE, cols=DEFAULT_SIZE, pieces=None, pieces_str=None):
+    def __init__(self, rows=DEFAULT_SIZE, cols=DEFAULT_SIZE,
+                 pieces=None, pieces_str=None):
         """
         A board is represented as a list of rows x cols values.  Each
         value can either be empty, or it can contain a queen, or it
@@ -247,7 +353,8 @@ class Board(FieldMixin):
         if pieces is not None:
             self.pieces = sorted(pieces)
         elif pieces_str is not None:
-            pieces = [val.split(PIECE_SEP) for val in pieces_str.split(LIST_SEP)]
+            pieces = [val.split(PIECE_SEP)
+                      for val in pieces_str.split(LIST_SEP)]
             self.pieces = [
                 (self.char_to_piece(char), (int(row), int(col)))
                 for (char, row, col) in pieces]
@@ -291,6 +398,9 @@ class Board(FieldMixin):
             raise IndexError("Invalid col {0}, should be 0 <= x < {1}".
                              format(col, self.cols))
         return row * self.cols + col
+
+    def copy(self):
+        return eval(repr(self))
 
     def get(self, loc):
         idx = self._loc_to_idx(loc)
@@ -395,6 +505,45 @@ def do_search(board):
         board.move(piece, end, loc, force=True)
         board.add_piece(captured, end)
     return (False, None)
+
+def generate_random_puzzle(board, npieces):
+    import random
+    valid = board.valid_pieces()
+    # Exclude Queens, they make things too easy.
+    valid = [v for v in valid if v != Queen()]
+    started_with_pieces = len(board.pieces) > 0
+    while len(board.pieces) < npieces:
+        if len(board.pieces) < 1:
+            row = random.randrange(board.rows)
+            col = random.randrange(board.cols)
+            piece = random.sample(valid, 1)[0]
+            logging.debug("Adding new {0} to {1}".format(piece, (row, col)))
+            logging.debug(board)
+            board.add_piece(piece, (row, col))
+        else:
+            for (piece, loc) in random.sample(board.pieces, len(board.pieces)):
+                locs = piece.attacked_from(board, loc)
+                if len(locs) <= 0:
+                    continue
+                orig_loc = random.sample(locs, 1)[0]
+                new_piece = random.sample(valid, 1)[0]
+                logging.debug("Moving {0} from {1} to {2}".
+                              format(piece, loc, orig_loc))
+                board.move(piece, loc, orig_loc, force=True)
+                board.add_piece(new_piece, loc)
+                break
+            else:
+                if started_with_pieces:
+                    # no valid moves for any pieces, start over with an
+                    # empty board
+                    logging.debug("No valid moves, starting over")
+                    board = Board(rows=board.rows, cols=board.cols)
+                    started_with_pieces = False
+                else:
+                    raise ValueError("Unable to place {0} pieces on board".
+                                     format(npieces))
+
+    return board
 
 # ------------------------------------------------------------- #
 
