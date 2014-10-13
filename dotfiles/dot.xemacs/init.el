@@ -24,10 +24,16 @@
 ;;
 ;; M-f       -- move forward a word
 ;; M-<right> -- move forward a word
-;; M-b       -- move backwards a word
-;; M-<left>  -- move backwards a word
+;; M-b       -- move backward a word
+;; M-<left>  -- move backward a word
+;; M-e       -- move forward a block
 ;; M-<up>    -- move forward a block
-;; M-<down>  -- move backwards a block
+;; M-}       -- move forward a block
+;; M-a       -- move backward a block
+;; M-<down>  -- move backward a block
+;; M-{       -- move backward a block
+;; M-v       -- move backward a screen
+;; C-v       -- move forward a screen
 ;; C-a       -- go to beginning of line
 ;; C-e       -- go to end of line
 ;; M-g g     -- goto line number (emacs)
