@@ -12,7 +12,7 @@ use Log::Log4perl qw(:levels);
 
 # -----------------------------------------------------------
 
-my $PAGE = 'http://desco.csubs.com';
+my $PAGE = 'https://desco.csubs.com';
 my $USER = 'yuanc@deshaw.com';
 my $PASS = 'rl4djun3';
 
@@ -43,7 +43,9 @@ sub main() {
 
     # --- Login --------------------------- #
 
+    $LOGGER->debug("getting $PAGE");
     $mech->get($PAGE);
+    $LOGGER->debug("logging in");
     $mech->submit_form(form_name => 'form1',
                        fields => {
                                   login_username => $USER,
@@ -52,9 +54,11 @@ sub main() {
     if (!$mech->success()) {
         die("Couldn't login.");
     }
+    $LOGGER->debug("logged in");
 
     # --- View Publication List ----------- #
 
+    # The site has changed, nothing after this works anymore...
     $mech->submit_form();
 
     # --- Start printing the magazines ---- #
