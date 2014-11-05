@@ -23,6 +23,8 @@
 # ^A r            - turn on or off line wrapping
 #
 # ^A S            - Split the window horizontally into two regions
+# ^A |            - Split the window vertically into two regions
+#                   (only available in newer versions)
 # ^A <tab>        - Move to the other region
 # ^A X            - Kill this region
 # ^A Q            - Kill all but this region
