@@ -388,8 +388,8 @@ AddToMenu MyUtilities   "MyUtilities"   Title
 # gives Raise-Lower. Used to use control here, but that interferes with xterm
 #Mouse 1         W       M       Function "Move-or-RaiseLower"
 #Mouse 1         TS      M       Function "Resize-or-Raise"
-Mouse 3         W       M       Function "Resize-or-Raise"
-Mouse 2         W       M       Menu Window-Ops
+Mouse 2         W       M       Function "Resize-or-Raise"
+Mouse 3         W       M       Menu Window-Ops
 
 ############################################################################
 # Now some keyboard shortcuts.
@@ -501,3 +501,76 @@ Key Tab A CM WindowList "Prev Raise-and-FlipFocus"
 *FvwmWinListFocusFore white
 *FvwmWinListDontDepressFocus
 *FvwmWinListButtonFrameWidth 1
+
+AddToMenu Window-Ops    "Window Ops"    Title
++                       "Move"          Move-or-Raise2
++                       "Resize"        Resize-or-Raise2
++                       "Raise"         Raise
++                       "Lower"         Lower
++                       "(De)Iconify"   Iconify
++                       "(Un)Stick"     Stick
++                       "(Un)Maximize"  maximize_func
++                       ""              Nop
++                       "Close"         Close
++                       "Destroy"       Destroy
++                       ""              Nop
++                       "Refresh Screen" Refresh
+
+AddToMenu Window-Ops2   "Move"          Move-or-Raise
++                       "Resize"        Resize-or-Raise
++                       "(Un)Maximize"  Maximize
++                       "Raise"         Raise
++                       "Lower"         Lower
++                       "Iconify"       Iconify
++                       "(Un)Stick"     Stick
++                       ""              Nop
++                       "Close"         Close
++                       ""              Nop
++                       "Print"         PrintFunction
+
+AddToMenu Window-Ops3   "Move"          Move-or-Raise2
++                       "Resize"        Resize-or-Raise2
++                       "(Un)Maximize"  maximize_func
++                       "Raise"         Raise
++                       "Lower"         Lower
++                       "Iconify"       Iconify
++                       "(Un)Stick"     Stick
++                       ""              Nop
++                       "Close"         Iconify
++                       ""              Nop
++                       "Print"         PrintFunction
+
+AddToMenu Utilities     "Menu"          Title
++                       "Xterm"         Exec xterm -geometry 80x25 &
++                       "Rev Xterm"     Exec xterm -rv -geometry 80x25 &
++                       "Emacs"         Exec emacs &
++                       "Other"         Popup OtherStrategy
++                       "Accessories"   Popup Apps
++                       ""              Nop
++                       "Save Desktop"  Function SaveDesktop
++                       "Restart WM"    Restart /usr/local/X11/bin/fvwm
++                       "Logout"        Popup Quit-Verify
+
+AddToMenu Apps          "Clock"         Exec  xclock -digital -geometry -0-0 &
++                       "Calculator"    Exec  xcalc &
++                       "XEmacs"        Exec  xemacs &
++                       "XMan"          Exec  xman &
++                       "Webster"       Exec  xwebster &
++                       "Netscape"      Exec  netscape &
++                       "Inout"         Exec  xinout &
++                       "Screen Print"  Exec  xdpr -device ps &
++                       "Modules"       Popup Modules
+
+AddToMenu Modules "Modules" Title
++       "FvwmButtons"   Module FvwmButtons
++       "Identify"      Module FvwmIdent
++       "SaveDesktop"   Module FvwmSave
++       "Debug"         Module FvwmDebug
++       "Pager"         Module FvwmPager 0 0
++       "FvwmWinList"   Module FvwmWinList
++       "FvwmTalk"      Module FvwmTalk
+
+AddToMenu Quit-Verify   "Are you sure?" Title
++                       "Okay"          Quit
++                       ""              Nop
++                       "Cancel"        Nop
