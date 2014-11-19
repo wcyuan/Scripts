@@ -236,3 +236,30 @@ class SpellChecker(object):
             return max(candidates, key=self.nwords.get)
 
 # --------------------------------------------------------------------------- #
+
+# Floating point comparison
+
+class FP(object):
+    EPSILON = 1e-6
+
+    @classmethod
+    def EQ(cls, a, b):
+        return abs(a - b) < cls.EPSILON
+
+    @classmethod
+    def LT(cls, a, b):
+        return b - a > cls.EPSILON
+
+    @classmethod
+    def GT(cls, a, b):
+        return a - b > cls.EPSILON
+
+    @classmethod
+    def LTE(cls, a, b):
+        return cls.LT(a, b) or cls.EQ(a, b)
+
+    @classmethod
+    def GTE(cls, a, b):
+        return cls.GT(a, b) or cls.EQ(a, b)
+
+# --------------------------------------------------------------------------- #
