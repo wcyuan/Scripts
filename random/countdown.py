@@ -253,18 +253,106 @@ class Operators(object):
     def all(cls):
         return (cls.ADD, cls.SUB, cls.MUL, cls.DIV)
 
-def all_expressions(vals):
+def get_subsets(lst, max_size=None):
+    """
+    >>> [s for s in get_subsets([])]
+    [[]]
+    >>> [s for s in get_subsets([1])]
+    [[], [1]]
+    >>> [s for s in get_subsets([1, 2])]
+    [[], [1], [2], [1, 2]]
+    >>> [s for s in get_subsets([1, 2, 3])]
+    [[], [1], [2], [1, 2], [3], [1, 3], [2, 3], [1, 2, 3]]
+    >>> [s for s in get_subsets([1, 2, 3], max_size=2)]
+    [[], [1], [2], [1, 2], [3], [1, 3], [2, 3]]
+    """
+    if len(lst) <= 0:
+        yield lst
+        return
+    for subset in get_subsets(lst[1:], max_size=max_size):
+        yield subset
+        if max_size is None or len(subset) + 1 <= max_size:
+            yield [lst[0]] + subset
+
+def get_partitions(lst):
+    """
+    >>> [p for p in get_partitions([])]
+    []
+    >>> [p for p in get_partitions([1])]
+    []
+    >>> [p for p in get_partitions(range(2))]
+    [([0], [1])]
+    >>> [p for p in get_partitions(range(3))]
+    [([0], [1, 2]), ([0, 1], [2])]
+    >>> [p for p in get_partitions(range(4))]
+    [([0], [1, 2, 3]), ([0, 1], [2, 3]), ([0, 1, 2], [3])]
+    """
+    for ii in xrange(1, len(lst)):
+        yield lst[:ii], lst[ii:]
+
+def permutations(lst):
+    """
+    >>> [p for p in permutations([])]
+    [[]]
+    >>> [p for p in permutations([1])]
+    [[1]]
+    >>> [p for p in permutations([1, 2])]
+    [[1, 2], [2, 1]]
+    >>> [p for p in permutations([1, 2, 3])]
+    [[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]]
+    """
+    if len(lst) == 0:
+        yield lst
+        return
+    for (ii, elt) in enumerate(lst):
+        for perm in permutations(lst[:ii] + lst[ii+1:]):
+            yield [elt] + perm
+
+def get_splits(vals, all_orders=False, all_subsets=False):
+    """
+    >>> [s for s in get_splits([], all_orders=True, all_subsets=True)]
+    []
+    >>> [s for s in get_splits(range(1), all_orders=True, all_subsets=True)]
+    []
+    >>> [s for s in get_splits(range(2), all_orders=True, all_subsets=True)]
+    [([0], [1]), ([1], [0])]
+    >>> [s for s in get_splits(range(3), all_orders=True, all_subsets=True)]
+    [([0], [1]), ([1], [0]), ([0], [2]), ([2], [0]), ([1], [2]), ([2], [1]), ([0], [1, 2]), ([0, 1], [2]), ([0], [2, 1]), ([0, 2], [1]), ([1], [0, 2]), ([1, 0], [2]), ([1], [2, 0]), ([1, 2], [0]), ([2], [0, 1]), ([2, 0], [1]), ([2], [1, 0]), ([2, 1], [0])]
+    """
+    import itertools
+
+    if all_subsets:
+        subsets = list(s for s in get_subsets(vals)
+                   if len(s) > 0)
+    else:
+        subsets = [vals]
+
+    if all_orders:
+        perms = list(p
+                 for s in subsets
+                 for p in permutations(s))
+    else:
+        perms = subsets
+
+    return itertools.chain.from_iterable(
+        get_partitions(p) for p in perms)
+
+def all_expressions(vals, all_orders=False, all_subsets=False):
     """
     @param vals: a list of Value or Expr objects.
     """
     if len(vals) == 1:
         yield vals[0]
         return
-    for ii in xrange(len(vals)-1):
-        for left in all_expressions(vals[:ii+1]):
+
+    splits = get_splits(
+        vals, all_orders=all_orders, all_subsets=all_subsets)
+
+    for (lpart, rpart) in splits:
+        for left in all_expressions(lpart):
             if left.exception:
                 continue
-            for right in all_expressions(vals[ii+1:]):
+            for right in all_expressions(rpart):
                 if right.exception:
                     continue
                 for op in Operators.all():
@@ -272,17 +360,21 @@ def all_expressions(vals):
                     if not expr.exception:
                         yield expr
 
-                    if not op.commutative:
-                        expr = BiExpr(op, right, left)
-                        if not expr.exception:
-                            yield expr
+                    # if not op.commutative:
+                    #     expr = BiExpr(op, right, left)
+                    #     if not expr.exception:
+                    #         yield expr
 
 def countdown(vals, target):
     vals = [Value(v) for v in vals]
     closest = []
     best = None
     tries = 0
-    for expr in all_expressions(vals):
+    tried = set()
+    for expr in all_expressions(vals, all_orders=True, all_subsets=True):
+        if str(expr) in tried:
+            logging.error("Tried the same expression twice: {0}".format(expr))
+        tried.add(str(expr))
         tries += 1
         value = try_round(expr.value)
         distance = abs(target - value)
