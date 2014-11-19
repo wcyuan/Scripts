@@ -63,23 +63,48 @@ def main():
         large_numbers=opts.large_numbers)
     logging.info("Target: {0}, Vals: {1}".format(target, vals))
     for expr in countdown(vals, target):
-        print expr
+        print "{0} = {1}".format(expr, expr.value)
 
 def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--verbose',       action='store_true')
+    parser.add_option('--log_level')
     parser.add_option('--generate',      action='store_true')
-    parser.add_option('--num_vals',      type=int, default=6)
-    parser.add_option('--target',        type=int)
-    parser.add_option('--min_target',    type=int, default=100)
-    parser.add_option('--max_target',    type=int, default=999)
+    parser.add_option('--num_vals',      type=int)
+    parser.add_option('--target', '-t',  type=int)
+    parser.add_option('--min_target',    type=int, default=DEFAULT_MIN_TARGET)
+    parser.add_option('--max_target',    type=int, default=DEFAULT_MAX_TARGET)
     parser.add_option('--num_large',     type=int, default=DEFAULT_NUM_LARGE)
     parser.add_option('--large_numbers', default=DEFAULT_LARGE_NUMBERS)
+    parser.add_option('--integer',       action='store_true',
+                      help='Requires that every intermediate step '
+                      'in the calculation produces an integer')
+    parser.add_option('--positive',      action='store_true',
+                      help='Requires that every intermediate step in '
+                      'the calculation produces a positive number')
+
     (opts, args) = parser.parse_args()
+
     if opts.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    if opts.log_level is not None:
+        level = getattr(logging, opts.log_level.upper())
+        logging.getLogger().setLevel(level)
+        logging.info("Setting log level to %s", level)
+
+    if opts.num_vals is None:
+        opts.num_vals = len(args)
+        if opts.num_vals == 0:
+            opts.num_vals = DEFAULT_NUM_VALS
+
     opts.large_numbers = opts.large_numbers.split(',')
+
+    if opts.integer:
+        Operators.DIV = Operators.SDIV
+
+    if opts.positive:
+        Expression.POSITIVE_ONLY = True
 
     return (opts, args)
 
@@ -113,6 +138,7 @@ def generate(num_vals=DEFAULT_NUM_VALS,
     # choose the values
     if given is None:
         given = []
+    given = [int(g) for g in given]
     if len(given) > num_vals:
         vals = given[:num_vals]
     else:
@@ -130,41 +156,102 @@ def generate(num_vals=DEFAULT_NUM_VALS,
 
 # --------------------------------------------------------------------------- #
 
-class Value(object):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return str(self.value)
+class ExpressionError(Exception):
+    pass
 
-class Expr(object):
-    def __init__(self, operator, left, right):
-        self.operator = operator
-        self.left  = left
-        self.right = right
-        self._value = None
+class Expression(object):
+    POSITIVE_ONLY = False
+
+    def __init__(self, value):
+        self._value = value
 
     @property
     def value(self):
         if self._value is None:
-            self._value = self.operator(self.left.value, self.right.value)
+            value = self.compute_value()
+            if self.POSITIVE_ONLY and value < 0:
+                raise ExpressionError("Negative value")
+            self._value = value
         return self._value
+
+    def compute_value(self):
+        raise NotImplementedError
+
+    def __str__(self):
+        return str(self.value)
+
+    @property
+    def exception(self):
+        try:
+            self.value
+            return False
+        except ZeroDivisionError:
+            return True
+        except ExpressionError:
+            return True
+
+    @property
+    def integer(self):
+        return int(self.value) == self.value
+
+    @property
+    def negative(self):
+        return self.value < 0
+
+class Value(Expression):
+    def __init__(self, value):
+        super(Value, self).__init__(value)
+
+class BiExpr(Expression):
+    def __init__(self, operator, left, right):
+        super(BiExpr, self).__init__(None)
+        self.operator = operator
+        self.left  = left
+        self.right = right
+
+    def compute_value(self):
+        return self.operator(self.left.value, self.right.value)
 
     def __str__(self):
         return '({0} {1} {2})'.format(self.left, self.operator, self.right)
 
 class Operator(object):
-    def __init__(self, func, string):
+    def __init__(self, func, string, commutative=False):
         self.func = func
         self.string = string
+        self.commutative = commutative
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
     def __str__(self):
         return self.string
 
-opadd = Operator(operator.add, '+')
-opsub = Operator(operator.sub, '-')
-opmul = Operator(operator.mul, '*')
-opdiv = Operator(operator.div, '/')
+def fpeq(a, b, epsilon=1e-6):
+    """
+    Floating point equality
+    """
+    return abs(a - b) < epsilon
+
+def intdiv(a, b):
+    v = a / b
+    if fpeq(v, round(v)):
+        return round(v)
+    raise ExpressionError("{0} is not a multiple of {1}".format(a, b))
+
+def try_round(v):
+    return round(v) if fpeq(v, round(v)) else v
+
+class Operators(object):
+    ADD  = Operator(operator.add, '+', commutative=True)
+    SUB  = Operator(operator.sub, '-')
+    MUL  = Operator(operator.mul, '*', commutative=True)
+    DIV  = Operator(operator.truediv, '/')
+
+    # Throws an error if the value isn't an integer
+    SDIV = Operator(intdiv, '/')
+
+    @classmethod
+    def all(cls):
+        return (cls.ADD, cls.SUB, cls.MUL, cls.DIV)
 
 def all_expressions(vals):
     """
@@ -175,36 +262,47 @@ def all_expressions(vals):
         return
     for ii in xrange(len(vals)-1):
         for left in all_expressions(vals[:ii+1]):
-            try:
-                if int(left.value) != left.value:
-                    continue
-            except ZeroDivisionError:
+            if left.exception:
                 continue
             for right in all_expressions(vals[ii+1:]):
-                try:
-                    if int(right.value) != right.value:
-                        continue
-                except ZeroDivisionError:
+                if right.exception:
                     continue
-                yield Expr(opadd, left, right)
-                yield Expr(opsub, left, right)
-                yield Expr(opsub, right, left)
-                yield Expr(opmul, left, right)
-                if right.value != 0:
-                    yield Expr(opdiv, left, right)
-                if left.value != 0:
-                    yield Expr(opdiv, right, left)
+                for op in Operators.all():
+                    expr = BiExpr(op, left, right)
+                    if not expr.exception:
+                        yield expr
+
+                    if not op.commutative:
+                        expr = BiExpr(op, right, left)
+                        if not expr.exception:
+                            yield expr
 
 def countdown(vals, target):
     vals = [Value(v) for v in vals]
     closest = []
+    best = None
+    tries = 0
     for expr in all_expressions(vals):
+        tries += 1
+        value = try_round(expr.value)
+        distance = abs(target - value)
+        logging.debug("Trying {0} = {1}, abs({2} - {1}) = {3}".format(
+            expr, value, target, distance))
         if len(closest) == 0:
             closest.append(expr)
-        elif abs(target - expr.value) < abs(target - closest[0].value):
+            best = distance
+        elif distance < best:
+            logging.info(
+                "Found {0} = {1}, distance = abs({2} - {1}) = {3} < {4}".format(
+                    expr, value, target, distance, best))
             closest = [expr]
-        elif abs(target - expr.value) == abs(target - closest[0].value):
+            best = distance
+        elif distance == best:
+            logging.info(
+                "Found {0} = {1}, distance = abs({2} - {1}) = {3} = {4}".format(
+                    expr, value, target, distance, best))
             closest.append(expr)
+    logging.info("Tried {0} expressions".format(tries))
     return closest
 
 
