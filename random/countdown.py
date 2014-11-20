@@ -203,6 +203,8 @@ class Value(Expression):
         super(Value, self).__init__(value)
 
 class BiExpr(Expression):
+    CACHE = {}
+
     def __init__(self, operator, left, right):
         super(BiExpr, self).__init__(None)
         self.operator = operator
@@ -215,6 +217,20 @@ class BiExpr(Expression):
     def __str__(self):
         return '({0} {1} {2})'.format(self.left, self.operator, self.right)
 
+    def __eq__(self, other):
+        return (self.operator, self.left, self.right) == (other.operator, other.left, other.right)
+
+    def __hash__(self):
+        return hash((self.operator, self.left, self.right))
+
+    @classmethod
+    def get_expr(cls, operator, left, right):
+        key = (operator, left, right)
+        if key not in cls.CACHE:
+            cls.CACHE[key] = BiExpr(operator, left, right)
+        return cls.CACHE[key]
+
+
 class Operator(object):
     def __init__(self, func, string, commutative=False):
         self.func = func
@@ -224,6 +240,10 @@ class Operator(object):
         return self.func(*args, **kwargs)
     def __str__(self):
         return self.string
+    def __eq__(self, other):
+        return self.string == other.string
+    def __hash__(self):
+        return hash(self.string)
 
 def fpeq(a, b, epsilon=1e-6):
     """
@@ -255,24 +275,34 @@ class Operators(object):
 
 def get_subsets(lst, max_size=None):
     """
-    >>> [s for s in get_subsets([])]
-    [[]]
-    >>> [s for s in get_subsets([1])]
-    [[], [1]]
-    >>> [s for s in get_subsets([1, 2])]
-    [[], [1], [2], [1, 2]]
-    >>> [s for s in get_subsets([1, 2, 3])]
-    [[], [1], [2], [1, 2], [3], [1, 3], [2, 3], [1, 2, 3]]
-    >>> [s for s in get_subsets([1, 2, 3], max_size=2)]
-    [[], [1], [2], [1, 2], [3], [1, 3], [2, 3]]
+    >>> [s for s in get_subsets(())]
+    [()]
+    >>> [s for s in get_subsets((1,))]
+    [(), (1,)]
+    >>> [s for s in get_subsets((1, 2))]
+    [(), (1,), (2,), (1, 2)]
+    >>> [s for s in get_subsets((1, 2, 3))]
+    [(), (1,), (2,), (1, 2), (3,), (1, 3), (2, 3), (1, 2, 3)]
+    >>> [s for s in get_subsets((1, 2, 3), max_size=2)]
+    [(), (1,), (2,), (1, 2), (3,), (1, 3), (2, 3)]
+    >>> [s for s in get_subsets((1, 1))]
+    [(), (1,), (1, 1)]
+    >>> [s for s in get_subsets((1, 1, 2))]
+    [(), (1,), (1, 1), (2,), (1, 2), (1, 1, 2)]
     """
     if len(lst) <= 0:
         yield lst
         return
+    seen = set()
     for subset in get_subsets(lst[1:], max_size=max_size):
-        yield subset
+        if subset not in seen:
+            yield subset
+            seen.add(subset)
         if max_size is None or len(subset) + 1 <= max_size:
-            yield [lst[0]] + subset
+            new = (lst[0],) + subset
+            if new not in seen:
+                yield new
+                seen.add(new)
 
 def get_partitions(lst):
     """
@@ -292,43 +322,59 @@ def get_partitions(lst):
 
 def permutations(lst):
     """
-    >>> [p for p in permutations([])]
-    [[]]
-    >>> [p for p in permutations([1])]
-    [[1]]
-    >>> [p for p in permutations([1, 2])]
-    [[1, 2], [2, 1]]
-    >>> [p for p in permutations([1, 2, 3])]
-    [[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]]
+    >>> import itertools
+    >>> [p for p in permutations(())]
+    [()]
+    >>> [p for p in permutations((1,))]
+    [(1,)]
+    >>> [p for p in permutations((1, 2))]
+    [(1, 2), (2, 1)]
+    >>> [p for p in permutations((1, 2, 3))]
+    [(1, 2, 3), (1, 3, 2), (2, 1, 3), (2, 3, 1), (3, 1, 2), (3, 2, 1)]
+    >>> [p for p in permutations((1, 1))]
+    [(1, 1)]
+    >>> [p for p in permutations((1, 1, 2))]
+    [(1, 1, 2), (1, 2, 1), (2, 1, 1)]
+    >>> comp = lambda lst: set(p for p in permutations(lst)) == set(p for p in itertools.permutations(lst))
+    >>> comp(tuple(range(3)))
+    True
+    >>> comp(tuple(range(4)))
+    True
+    >>> comp(tuple(range(5)))
+    True
     """
     if len(lst) == 0:
         yield lst
         return
+    seen = set()
     for (ii, elt) in enumerate(lst):
+        if elt in seen:
+            continue
+        seen.add(elt)
         for perm in permutations(lst[:ii] + lst[ii+1:]):
-            yield [elt] + perm
+            yield (elt,) + perm
 
 def get_splits(vals, all_orders=False, all_subsets=False):
     """
-    >>> [s for s in get_splits([], all_orders=True, all_subsets=True)]
+    >>> [s for s in get_splits((), all_orders=True, all_subsets=True)]
     []
-    >>> [s for s in get_splits(range(1), all_orders=True, all_subsets=True)]
+    >>> [s for s in get_splits(tuple(range(1)), all_orders=True, all_subsets=True)]
     []
-    >>> [s for s in get_splits(range(2), all_orders=True, all_subsets=True)]
-    [([0], [1]), ([1], [0])]
-    >>> [s for s in get_splits(range(3), all_orders=True, all_subsets=True)]
-    [([0], [1]), ([1], [0]), ([0], [2]), ([2], [0]), ([1], [2]), ([2], [1]), ([0], [1, 2]), ([0, 1], [2]), ([0], [2, 1]), ([0, 2], [1]), ([1], [0, 2]), ([1, 0], [2]), ([1], [2, 0]), ([1, 2], [0]), ([2], [0, 1]), ([2, 0], [1]), ([2], [1, 0]), ([2, 1], [0])]
+    >>> [s for s in get_splits(tuple(range(2)), all_orders=True, all_subsets=True)]
+    [((0,), (1,)), ((1,), (0,))]
+    >>> [s for s in get_splits(tuple(range(3)), all_orders=True, all_subsets=True)]
+    [((0,), (1,)), ((1,), (0,)), ((0,), (2,)), ((2,), (0,)), ((1,), (2,)), ((2,), (1,)), ((0,), (1, 2)), ((0, 1), (2,)), ((0,), (2, 1)), ((0, 2), (1,)), ((1,), (0, 2)), ((1, 0), (2,)), ((1,), (2, 0)), ((1, 2), (0,)), ((2,), (0, 1)), ((2, 0), (1,)), ((2,), (1, 0)), ((2, 1), (0,))]
     """
     import itertools
 
     if all_subsets:
-        subsets = list(s for s in get_subsets(vals)
+        subsets = (s for s in get_subsets(vals)
                    if len(s) > 0)
     else:
-        subsets = [vals]
+        subsets = (vals,)
 
     if all_orders:
-        perms = list(p
+        perms = (p
                  for s in subsets
                  for p in permutations(s))
     else:
@@ -356,17 +402,17 @@ def all_expressions(vals, all_orders=False, all_subsets=False):
                 if right.exception:
                     continue
                 for op in Operators.all():
-                    expr = BiExpr(op, left, right)
+                    expr = BiExpr.get_expr(op, left, right)
                     if not expr.exception:
                         yield expr
 
                     # if not op.commutative:
-                    #     expr = BiExpr(op, right, left)
+                    #     expr = BiExpr.get_expr(op, right, left)
                     #     if not expr.exception:
                     #         yield expr
 
 def countdown(vals, target):
-    vals = [Value(v) for v in vals]
+    vals = tuple(Value(v) for v in vals)
     closest = []
     best = None
     tries = 0
@@ -374,6 +420,7 @@ def countdown(vals, target):
     for expr in all_expressions(vals, all_orders=True, all_subsets=True):
         if str(expr) in tried:
             logging.error("Tried the same expression twice: {0}".format(expr))
+            continue
         tried.add(str(expr))
         tries += 1
         value = try_round(expr.value)
