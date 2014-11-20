@@ -27,6 +27,12 @@ One example, using 3, 6, 25, 50, 75, 100, get to 952
 
 ((100 + 6) * 3 * 75 - 50) / 25 =  106 * 9 - 2 = 952
 
+Other examples:
+
+Use 1, 3, 7, 10, 25, 50 to get 765
+
+http://www.4nums.com/game/difficulties/
+
 """
 
 # --------------------------------------------------------------------------- #
@@ -82,6 +88,8 @@ def getopts():
     parser.add_option('--positive',      action='store_true',
                       help='Requires that every intermediate step in '
                       'the calculation produces a positive number')
+    parser.add_option('--prune',      action='store_true',
+                      help='prunes out some solutions if shorter solutions exist')
 
     (opts, args) = parser.parse_args()
 
@@ -101,15 +109,23 @@ def getopts():
     opts.large_numbers = opts.large_numbers.split(',')
 
     if opts.integer:
-        Operators.DIV = Operators.SDIV
+        Operators.DIV = Operators.IDIV
 
     if opts.positive:
         Expression.POSITIVE_ONLY = True
 
     # This reduces the number of expressions we try, so we don't try
     # both a + b and b + a
-    Operators.ADD = Operators.SADD
-    Operators.MUL = Operators.SMUL
+    Operators.ADD = Operators.ASADD
+    Operators.MUL = Operators.ASMUL
+
+    if opts.prune:
+        # This avoids any solution where we multiply or divide by an
+        # expression that is 1
+        Operators.MUL = Operators.SMUL
+        Operators.ADD = Operators.SADD
+        if opts.integer:
+            Operators.DIV = Operators.SIDIV
 
     return (opts, args)
 
@@ -271,10 +287,14 @@ def fpeq(a, b, epsilon=1e-6):
     return abs(a - b) < epsilon
 
 def intdiv(a, b):
-    v = a / b
-    if fpeq(v, round(v)):
-        return round(v)
-    raise ExpressionError("{0} is not a multiple of {1}".format(a, b))
+    if a % b != 0:
+        raise ExpressionError("{0} is not a multiple of {1}".format(a, b))
+    operator.div(a, b)
+
+def strictdiv(a, b):
+    if a % b != 0 or b == 1:
+        raise ExpressionError("{0} is not a multiple of {1}".format(a, b))
+    operator.div(a, b)
 
 def asymadd(a, b):
     if a < b:
@@ -286,6 +306,16 @@ def asymmul(a, b):
         raise ExpressionError("Optimization: only multiply bigger to smaller")
     return a * b
 
+def strictmul(a, b):
+    if a < b or a == 1 or b == 1:
+        raise ExpressionError("Optimization: only multiply bigger to smaller")
+    return a * b
+
+def strictadd(a, b):
+    if a < b or a == 0 or b == 0:
+        raise ExpressionError("Optimization: only add bigger to smaller")
+    return a + b
+
 def try_round(v):
     return round(v) if fpeq(v, round(v)) else v
 
@@ -296,11 +326,16 @@ class Operators(object):
     DIV  = Operator(operator.truediv, '/')
 
     # Throws an error if the value isn't an integer
-    SDIV = Operator(intdiv, '/')
+    IDIV = Operator(intdiv, '/')
 
     # Throws an error if the second number is bigger
-    SADD = Operator(asymadd, '+')
-    SMUL = Operator(asymmul, '*')
+    ASADD = Operator(asymadd, '+')
+    ASMUL = Operator(asymmul, '*')
+
+    # Throws an error if one of the arguments is the identity
+    SADD  = Operator(strictadd, '+')
+    SMUL  = Operator(strictmul, '*')
+    SIDIV = Operator(strictdiv, '/')
 
     @classmethod
     def all(cls):
