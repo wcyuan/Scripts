@@ -106,6 +106,11 @@ def getopts():
     if opts.positive:
         Expression.POSITIVE_ONLY = True
 
+    # This reduces the number of expressions we try, so we don't try
+    # both a + b and b + a
+    Operators.ADD = Operators.SADD
+    Operators.MUL = Operators.SMUL
+
     return (opts, args)
 
 # --------------------------------------------------------------------------- #
@@ -271,6 +276,16 @@ def intdiv(a, b):
         return round(v)
     raise ExpressionError("{0} is not a multiple of {1}".format(a, b))
 
+def asymadd(a, b):
+    if a < b:
+        raise ExpressionError("Optimization: only add bigger to smaller")
+    return a + b
+
+def asymmul(a, b):
+    if a < b:
+        raise ExpressionError("Optimization: only multiply bigger to smaller")
+    return a * b
+
 def try_round(v):
     return round(v) if fpeq(v, round(v)) else v
 
@@ -282,6 +297,10 @@ class Operators(object):
 
     # Throws an error if the value isn't an integer
     SDIV = Operator(intdiv, '/')
+
+    # Throws an error if the second number is bigger
+    SADD = Operator(asymadd, '+')
+    SMUL = Operator(asymmul, '*')
 
     @classmethod
     def all(cls):
