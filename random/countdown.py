@@ -460,8 +460,12 @@ def countdown(vals, target):
                 "Found {0} = {1}, distance = abs({2} - {1}) = {3} = {4}".format(
                     expr, value, target, distance, best))
             closest.append(expr)
+        if distance == 0:
+            yield expr
     logging.info("Tried {0} expressions".format(tries))
-    return closest
+    if best != 0:
+        for c in closest:
+            yield expr
 
 
 # --------------------------------------------------------------------------- #
