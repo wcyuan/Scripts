@@ -212,6 +212,7 @@ class Value(Expression):
         return hash(self.value)
 
 class BiExpr(Expression):
+    USE_CACHE = False
     CACHE = {}
 
     def __init__(self, operator, left, right):
@@ -235,10 +236,13 @@ class BiExpr(Expression):
 
     @classmethod
     def get_expr(cls, operator, left, right):
-        key = (operator, left, right)
-        if key not in cls.CACHE:
-            cls.CACHE[key] = BiExpr(operator, left, right)
-        return cls.CACHE[key]
+        if cls.USE_CACHE:
+            key = (operator, left, right)
+            if key not in cls.CACHE:
+                cls.CACHE[key] = BiExpr(operator, left, right)
+            return cls.CACHE[key]
+        else:
+            return BiExpr(operator, left, right)
 
 
 class Operator(object):
@@ -283,7 +287,7 @@ class Operators(object):
     def all(cls):
         return (cls.ADD, cls.SUB, cls.MUL, cls.DIV)
 
-def get_subsets(lst, max_size=None):
+def get_subsets(lst, max_size=None, avoid_dups=False):
     """
     >>> [s for s in get_subsets(())]
     [()]
@@ -295,27 +299,32 @@ def get_subsets(lst, max_size=None):
     [(), (1,), (2,), (1, 2), (3,), (1, 3), (2, 3), (1, 2, 3)]
     >>> [s for s in get_subsets((1, 2, 3), max_size=2)]
     [(), (1,), (2,), (1, 2), (3,), (1, 3), (2, 3)]
-    >>> [s for s in get_subsets((1, 1))]
+    >>> [s for s in get_subsets((1, 1), avoid_dups=True)]
     [(), (1,), (1, 1)]
-    >>> [s for s in get_subsets((1, 1, 2))]
+    >>> [s for s in get_subsets((1, 1, 2), avoid_dups=True)]
     [(), (1,), (1, 1), (2,), (1, 2), (1, 1, 2)]
-    >>> [s for s in get_subsets((1, 1, 2, 2))]
+    >>> [s for s in get_subsets((1, 1, 2, 2), avoid_dups=True)]
     [(), (1,), (1, 1), (2,), (1, 2), (1, 1, 2), (2, 2), (1, 2, 2), (1, 1, 2, 2)]
     """
     if len(lst) <= 0:
         yield lst
         return
     seen = set()
-    for subset in get_subsets(lst[1:], max_size=max_size):
-        sset = tuple(sorted(subset))
-        if sset not in seen:
+    for subset in get_subsets(lst[1:], max_size=max_size,
+                              avoid_dups=avoid_dups):
+        if avoid_dups:
+            sset = tuple(sorted(subset))
+        if not avoid_dups or sset not in seen:
             yield subset
+        if avoid_dups:
             seen.add(sset)
         if max_size is None or len(subset) + 1 <= max_size:
             new = (lst[0],) + subset
-            sset = tuple(sorted((new)))
-            if sset not in seen:
+            if avoid_dups:
+                sset = tuple(sorted((new)))
+            if not avoid_dups or sset not in seen:
                 yield new
+            if avoid_dups:
                 seen.add(sset)
 
 def get_partitions(lst):
@@ -334,7 +343,7 @@ def get_partitions(lst):
     for ii in xrange(1, len(lst)):
         yield lst[:ii], lst[ii:]
 
-def permutations(lst):
+def permutations(lst, avoid_dups=False):
     """
     >>> import itertools
     >>> [p for p in permutations(())]
@@ -345,9 +354,9 @@ def permutations(lst):
     [(1, 2), (2, 1)]
     >>> [p for p in permutations((1, 2, 3))]
     [(1, 2, 3), (1, 3, 2), (2, 1, 3), (2, 3, 1), (3, 1, 2), (3, 2, 1)]
-    >>> [p for p in permutations((1, 1))]
+    >>> [p for p in permutations((1, 1), avoid_dups=True)]
     [(1, 1)]
-    >>> [p for p in permutations((1, 1, 2))]
+    >>> [p for p in permutations((1, 1, 2), avoid_dups=True)]
     [(1, 1, 2), (1, 2, 1), (2, 1, 1)]
     >>> comp = lambda lst: set(p for p in permutations(lst)) == set(p for p in itertools.permutations(lst))
     >>> comp(tuple(range(3)))
@@ -362,13 +371,15 @@ def permutations(lst):
         return
     seen = set()
     for (ii, elt) in enumerate(lst):
-        if elt in seen:
-            continue
-        seen.add(elt)
-        for perm in permutations(lst[:ii] + lst[ii+1:]):
+        if avoid_dups:
+            if elt in seen:
+                continue
+            else:
+                seen.add(elt)
+        for perm in permutations(lst[:ii] + lst[ii+1:], avoid_dups=avoid_dups):
             yield (elt,) + perm
 
-def get_splits(vals, all_orders=False, all_subsets=False):
+def get_splits(vals, all_orders=False, all_subsets=False, avoid_dups=True):
     """
     >>> [s for s in get_splits((), all_orders=True, all_subsets=True)]
     []
@@ -376,8 +387,9 @@ def get_splits(vals, all_orders=False, all_subsets=False):
     []
     >>> [s for s in get_splits(tuple(range(2)), all_orders=True, all_subsets=True)]
     [((0,), (1,)), ((1,), (0,))]
-    >>> [s for s in get_splits(tuple(range(3)), all_orders=True, all_subsets=True)]
-    [((0,), (1,)), ((1,), (0,)), ((0,), (2,)), ((2,), (0,)), ((1,), (2,)), ((2,), (1,)), ((0,), (1, 2)), ((0, 1), (2,)), ((0,), (2, 1)), ((0, 2), (1,)), ((1,), (0, 2)), ((1, 0), (2,)), ((1,), (2, 0)), ((1, 2), (0,)), ((2,), (0, 1)), ((2, 0), (1,)), ((2,), (1, 0)), ((2, 1), (0,))]
+    >>> sorted(s for s in get_splits(tuple(range(3)), all_orders=True, all_subsets=True, avoid_dups=True))
+    [((0,), (1,)), ((0,), (1, 2)), ((0,), (2,)), ((0,), (2, 1)), ((0, 1), (2,)), ((0, 2), (1,)), ((1,), (0,)), ((1,), (0, 2)), ((1,), (2,)), ((1,), (2, 0)), ((1, 0), (2,)), ((1, 2), (0,)), ((2,), (0,)), ((2,), (0, 1)), ((2,), (1,)), ((2,), (1, 0)), ((2, 0), (1,)), ((2, 1), (0,))]
+
     """
     import itertools
 
@@ -388,9 +400,11 @@ def get_splits(vals, all_orders=False, all_subsets=False):
         subsets = (vals,)
 
     if all_orders:
-        perms = set(p
-                    for s in subsets
-                    for p in permutations(s))
+        perms = (p
+                 for s in subsets
+                 for p in permutations(s, avoid_dups=avoid_dups))
+        if avoid_dups:
+            perms = set(perms)
     else:
         perms = subsets
 
