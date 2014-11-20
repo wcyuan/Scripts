@@ -67,7 +67,7 @@ def main():
         max_target=opts.max_target,
         num_large=opts.num_large,
         large_numbers=opts.large_numbers)
-    logging.info("Target: {0}, Vals: {1}".format(target, vals))
+    print "Target: {0}, Vals: {1}".format(target, vals)
     for expr in countdown(vals, target):
         print "{0} = {1}".format(expr, expr.value)
 
@@ -524,7 +524,7 @@ def countdown(vals, target):
             closest = [expr]
             best = distance
         elif distance == best:
-            logging.info(
+            logging.debug(
                 "Found {0} = {1}, distance = abs({2} - {1}) = {3} = {4}".format(
                     expr, value, target, distance, best))
             closest.append(expr)
@@ -535,7 +535,7 @@ def countdown(vals, target):
     logging.info("Tried {0} expressions".format(tries))
     if best != 0:
         for c in closest:
-            yield expr
+            yield c
 
 
 # --------------------------------------------------------------------------- #
