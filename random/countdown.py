@@ -289,12 +289,12 @@ def fpeq(a, b, epsilon=1e-6):
 def intdiv(a, b):
     if a % b != 0:
         raise ExpressionError("{0} is not a multiple of {1}".format(a, b))
-    operator.div(a, b)
+    return operator.div(a, b)
 
 def strictdiv(a, b):
     if a % b != 0 or b == 1:
         raise ExpressionError("{0} is not a multiple of {1}".format(a, b))
-    operator.div(a, b)
+    return operator.div(a, b)
 
 def asymadd(a, b):
     if a < b:
@@ -317,7 +317,7 @@ def strictadd(a, b):
     return a + b
 
 def try_round(v):
-    return round(v) if fpeq(v, round(v)) else v
+    return int(round(v)) if fpeq(v, round(v)) else v
 
 class Operators(object):
     ADD  = Operator(operator.add, '+', commutative=True)
