@@ -462,6 +462,8 @@ def countdown(vals, target):
             closest.append(expr)
         if distance == 0:
             yield expr
+        if tries % 1000000 == 0:
+            logging.info("{0} expressions tried so far".format(tries))
     logging.info("Tried {0} expressions".format(tries))
     if best != 0:
         for c in closest:
