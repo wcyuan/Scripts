@@ -33,6 +33,9 @@ Use 1, 3, 7, 10, 25, 50 to get 765
 
 http://www.4nums.com/game/difficulties/
 
+Compare to haskell version:
+http://www.cs.nott.ac.uk/~gmh/countdown2.hs
+
 """
 
 # --------------------------------------------------------------------------- #
