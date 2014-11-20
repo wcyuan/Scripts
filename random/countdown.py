@@ -202,6 +202,15 @@ class Value(Expression):
     def __init__(self, value):
         super(Value, self).__init__(value)
 
+    def __repr__(self):
+        return "Value({0})".format(self.value)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and self.value == other.value
+
+    def __hash__(self):
+        return hash(self.value)
+
 class BiExpr(Expression):
     CACHE = {}
 
@@ -218,7 +227,8 @@ class BiExpr(Expression):
         return '({0} {1} {2})'.format(self.left, self.operator, self.right)
 
     def __eq__(self, other):
-        return (self.operator, self.left, self.right) == (other.operator, other.left, other.right)
+        return ((self.operator, self.left, self.right) ==
+                (other.operator, other.left, other.right))
 
     def __hash__(self):
         return hash((self.operator, self.left, self.right))
@@ -289,20 +299,24 @@ def get_subsets(lst, max_size=None):
     [(), (1,), (1, 1)]
     >>> [s for s in get_subsets((1, 1, 2))]
     [(), (1,), (1, 1), (2,), (1, 2), (1, 1, 2)]
+    >>> [s for s in get_subsets((1, 1, 2, 2))]
+    [(), (1,), (1, 1), (2,), (1, 2), (1, 1, 2), (2, 2), (1, 2, 2), (1, 1, 2, 2)]
     """
     if len(lst) <= 0:
         yield lst
         return
     seen = set()
     for subset in get_subsets(lst[1:], max_size=max_size):
-        if subset not in seen:
+        sset = tuple(sorted(subset))
+        if sset not in seen:
             yield subset
-            seen.add(subset)
+            seen.add(sset)
         if max_size is None or len(subset) + 1 <= max_size:
             new = (lst[0],) + subset
-            if new not in seen:
+            sset = tuple(sorted((new)))
+            if sset not in seen:
                 yield new
-                seen.add(new)
+                seen.add(sset)
 
 def get_partitions(lst):
     """
@@ -374,9 +388,9 @@ def get_splits(vals, all_orders=False, all_subsets=False):
         subsets = (vals,)
 
     if all_orders:
-        perms = (p
-                 for s in subsets
-                 for p in permutations(s))
+        perms = set(p
+                    for s in subsets
+                    for p in permutations(s))
     else:
         perms = subsets
 
@@ -391,10 +405,15 @@ def all_expressions(vals, all_orders=False, all_subsets=False):
         yield vals[0]
         return
 
+    if all_orders and all_subsets:
+        logging.debug("Vals: {0}".format(vals))
+
     splits = get_splits(
         vals, all_orders=all_orders, all_subsets=all_subsets)
 
     for (lpart, rpart) in splits:
+        if all_orders and all_subsets:
+            logging.debug("Doing split {0} v {1}".format(lpart, rpart))
         for left in all_expressions(lpart):
             if left.exception:
                 continue
