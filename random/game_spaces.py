@@ -42,6 +42,11 @@ def main():
     #print life2
     print all(abs(life1[1:21] - life2[:20]) < 1e10)
 
+    #print prob_space_mat(11, prob_to_ten)
+    life3 = prob_space_mat(100, prob_to_ten)
+    #print life1
+    print all(abs(life1[1:11] - life3) < 1e10)
+
 def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--verbose',       action='store_true')
@@ -140,6 +145,36 @@ def prob_landed(nturns, step_prob, nspaces):
         prob = np.dot(transitions, prob)
         tots += prob
     return tots
+
+def make_transition_matrix(step_prob):
+    sz = len(step_prob)
+    trans = np.array([[1 if row+1 == col else 0 for col in xrange(sz)]
+                      for row in xrange(sz)],
+                     dtype=np.float64)
+    trans[-1] = step_prob
+    return trans
+
+def prob_space_mat(n, step_prob):
+    """
+    Probability of landing on any of the first n squares.
+
+    @param n: the square whose probability you want.
+    should be a positive integer.
+
+    @param step_prob: a numpy array where arr[k] is the
+    probability that each step will be of size k.
+
+    @return: a numpy array the same size as step_prob where the
+    last element is the probability of landing in square n, the
+    second to last element is the probability of landing in square
+    n-1, etc.
+    """
+    out = np.zeros(len(step_prob))
+    out[-1] = 1
+    transitions = make_transition_matrix(step_prob)
+    for _ in xrange(n):
+        out = np.dot(transitions, out)
+    return out
 
 # --------------------------------------------------------------------------- #
 
