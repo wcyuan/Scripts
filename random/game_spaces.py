@@ -21,13 +21,10 @@ logging.basicConfig(format='[%(asctime)s '
 def main():
     (opts, args) = getopts()
 
-    #prob_to_three = equal_prob(3)
-    prob_to_ten = equal_prob(10)
-    #prob_two_dice = dice_prob(2)
-    #print prob_space(11, prob_to_ten)
-    life1 = prob_space(100, prob_to_ten)
+    #print prob_space(11, equal_prob(10))
+    life1 = prob_space(100, equal_prob(10))
     #print life1
-    #transitions = make_transitions(prob_to_three, 6)
+    #transitions = make_transitions(equal_prob(3), 6)
     #start = transitions[:,-1]
     #start = np.zeros(6)
     #start[0] = 1
@@ -35,17 +32,30 @@ def main():
     #print transitions
     #print np.dot(transitions, start)
     #print np.dot(transitions, np.dot(transitions, start))
-    #print prob_nturns(1, prob_to_three, 6)
-    #print prob_nturns(2, prob_to_three, 6)
-    #print prob_nturns(100, prob_two_dice, 45)
-    life2 = prob_landed(50, prob_to_ten, 50*10+1)
+    #print prob_nturns(1, equal_prob(3), 6)
+    #print prob_nturns(2, equal_prob(3), 6)
+    #print prob_nturns(100, dice_prob(2), 45)
+    life2 = prob_landed(50, equal_prob(10), 50*10+1)
     #print life2
     print all(abs(life1[1:21] - life2[:20]) < 1e10)
 
-    #print prob_space_mat(11, prob_to_ten)
-    life3 = prob_space_mat(100, prob_to_ten)
+    #print prob_space_mat(11, equal_prob(10))
+    life3 = prob_space_mat(100, equal_prob(10))
     #print life1
     print all(abs(life1[1:11] - life3) < 1e10)
+
+    life3 = prob_space_mat(100, equal_prob(10))
+    #print life1
+    print all(abs(life1[1:11] - life3) < 1e10)
+
+    dice1 = prob_space(100, dice_prob(2))
+    dice2 = prob_space_mat(100, dice_prob(2))
+    print all(abs(dice1[-12:] - dice2) < 1e10)
+
+    dice1 = prob_space(12, dice_prob(2))
+    dice2 = prob_space_mat(12, dice_prob(2))
+    print all(abs(dice1[-12:] - dice2) < 1e10)
+
 
 def getopts():
     parser = optparse.OptionParser()
@@ -151,7 +161,7 @@ def make_transition_matrix(step_prob):
     trans = np.array([[1 if row+1 == col else 0 for col in xrange(sz)]
                       for row in xrange(sz)],
                      dtype=np.float64)
-    trans[-1] = step_prob
+    trans[-1] = step_prob[::-1]
     return trans
 
 def prob_space_mat(n, step_prob):
