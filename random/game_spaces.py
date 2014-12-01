@@ -82,11 +82,20 @@ def equal_prob(n):
 
 # For games where each step is roll of N dice
 def dice_prob(n):
+    return multidice_prob([6] * n)
+
+def multidice_prob(die_sizes):
+    """
+    Probabilities for rolling dice of given sizes
+
+    @param die_sizes: a sequence of die sizes.  E.g. [5, 5, 4] means
+    rolling two 5-sided dice and one 4-sided die
+    """
     import itertools
     # Not the most efficient way to compute this, especially
     # for 2 dice, but hopefully pretty easy to understand
-    die = np.arange(1, 7)
-    poss = sorted(sum(x) for x in (itertools.product(die, repeat=n)))
+    dice = [np.arange(1, sz+1) for sz in die_sizes]
+    poss = sorted(sum(x) for x in (itertools.product(*dice)))
     probs = dict((k, len(tuple(g)))
         for (k, g) in itertools.groupby(poss))
     tots = sum(probs.values())
@@ -96,7 +105,7 @@ def dice_prob(n):
         out[k-1] = probs[k]
     return out / tots
 
-def prob_space(n, step_prob):
+def prob_space(n, step_prob, initial=None):
     """
     Probability of landing on any of the first n squares.
     The output is a numpy array where arr[k] is the probability
@@ -106,7 +115,12 @@ def prob_space(n, step_prob):
     """
     out = np.zeros(n+1)
     out[0] = 1
-    for ii in xrange(1, n+1):
+    first = 1
+    if initial is not None:
+        ilen = initial.size
+        out[0:ilen] = initial
+        first = ilen
+    for ii in xrange(first, n+1):
         steps = min(ii, len(step_prob))
         #print "ii: ", ii
         #print "steps: ", steps
@@ -164,9 +178,13 @@ def make_transition_matrix(step_prob):
     trans[-1] = step_prob[::-1]
     return trans
 
-def prob_space_mat(n, step_prob):
+def prob_space_mat(n, step_prob, initial=None):
     """
     Probability of landing on any of the first n squares.
+
+    The probability converges to 1 / ev(step_prob).
+
+    For equal-value probabilities, that ends up being 2 / (n + 1)
 
     @param n: the square whose probability you want.
     should be a positive integer.
@@ -179,12 +197,26 @@ def prob_space_mat(n, step_prob):
     second to last element is the probability of landing in square
     n-1, etc.
     """
-    out = np.zeros(len(step_prob))
-    out[-1] = 1
+    if initial is not None:
+        out = initial.copy()
+    else:
+        out = np.zeros(len(step_prob))
+        out[-1] = 1
     transitions = make_transition_matrix(step_prob)
     for _ in xrange(n):
         out = np.dot(transitions, out)
     return out
+
+def ev(arr):
+    """
+    Expected value
+
+    >>> ev(dice_prob(1))
+    3.5
+    >>> ev(dice_prob(2))
+    7.0
+    """
+    return np.dot(np.arange(1, arr.size+1), arr).sum()
 
 # --------------------------------------------------------------------------- #
 
