@@ -46,6 +46,13 @@ import logging
 import optparse
 import operator
 
+from threading  import Thread
+
+try:
+    from Queue import Queue, Empty
+except ImportError:
+    from queue import Queue, Empty  # python 3.x
+
 logging.basicConfig(format='[%(asctime)s '
                     '%(funcName)s:%(lineno)s %(levelname)-5s] '
                     '%(message)s')
@@ -71,8 +78,17 @@ def main():
         num_large=opts.num_large,
         large_numbers=opts.large_numbers)
     print "Target: {0}, Vals: {1}".format(target, vals)
-    for expr in countdown(vals, target):
-        print "{0} = {1}".format(expr, expr.value)
+
+    (_, queue) = run_in_thread(("{0} = {1}".format(expr, expr.value)
+                                for expr in countdown(vals, target)))
+
+    raw_input("Press Enter to See Solutions: ")
+    while True:
+        try:
+            line = queue.get()
+            print line
+        except Empty:
+            break
 
 def getopts():
     parser = optparse.OptionParser()
@@ -91,8 +107,9 @@ def getopts():
     parser.add_option('--positive',      action='store_true',
                       help='Requires that every intermediate step in '
                       'the calculation produces a positive number')
-    parser.add_option('--prune',      action='store_true',
-                      help='prunes out some solutions if shorter solutions exist')
+    parser.add_option('--prune',         action='store_true',
+                      help='prunes out some solutions '
+                      'if shorter solutions exist')
 
     (opts, args) = parser.parse_args()
 
@@ -133,6 +150,22 @@ def getopts():
     return (opts, args)
 
 # --------------------------------------------------------------------------- #
+
+def run_in_thread(gen):
+    """
+    Mostly stolen from
+    http://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python
+    """
+    def enqueue_output(gen, queue):
+        for line in gen:
+            queue.put(line)
+
+    queue = Queue()
+    t = Thread(target=enqueue_output, args=(gen, queue))
+    t.daemon = True
+    t.start()
+
+    return (t, queue)
 
 def sample_without_replacement(n, vals):
     if n > len(vals):
