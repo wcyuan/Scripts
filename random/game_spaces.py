@@ -56,6 +56,11 @@ def main():
     dice2 = prob_space_mat(12, dice_prob(2))
     print all(abs(dice1[-12:] - dice2) < 1e10)
 
+    for NN in xrange(2, 11):
+        print NN, prob_chart(equal_prob(NN))
+
+    print prob_chart(dice_prob(2))
+
 
 def getopts():
     parser = optparse.OptionParser()
@@ -217,6 +222,29 @@ def ev(arr):
     7.0
     """
     return np.dot(np.arange(1, arr.size+1), arr).sum()
+
+def fpeq(a, b, epsilon=1e-5):
+    return abs(a - b) < epsilon
+
+def is_int(a):
+    return fpeq(a, int(round(a)))
+
+def to_frac(dec, top=100):
+    for ii in xrange(1, top):
+        if is_int(dec * ii):
+            return "{0}/{1}".format(int(round(dec * ii)), ii)
+    return dec
+
+def prob_chart(step_prob, top_den=1000, steps=200):
+    out = np.zeros(step_prob.size)
+    out2 = []
+    for ii in xrange(step_prob.size):
+        initial = np.zeros(step_prob.size)
+        initial[ii] = 1
+        out[ii] = prob_space_mat(steps, step_prob, initial=initial)[-1]
+        out2.append(to_frac(out[ii], top=top_den))
+    return out2
+
 
 # --------------------------------------------------------------------------- #
 
