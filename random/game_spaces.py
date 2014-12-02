@@ -71,6 +71,21 @@ def main():
     print o[-1]
     print to_frac(o[-1].eval(.1))
 
+    NN = 4
+    initial = [0] * NN
+    initial[0] = 1
+    o = prob_space_vanilla(10, [Polynomial([0, 1])] * NN, initial=initial)
+    for x in o[NN:]:
+        print x.eval(Polynomial([1, NN]))
+
+    initial = [Rational(0)] * NN
+    initial[0] = Rational(1)
+    o = prob_space_vanilla(10, [Polynomial([Rational(0), Rational(1)])] * NN,
+                           initial=initial)
+    for x in o[NN:]:
+        print x
+
+
 def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--verbose',       action='store_true')
@@ -311,7 +326,8 @@ class Polynomial(object):
     def powers(self):
         return self._powers
     def __repr__(self):
-        return "{cn}(powers={self.powers!r})".format(cn=self.__class__.__name__, self=self)
+        return "{cn}(powers={self.powers!r})".format(
+            cn=self.__class__.__name__, self=self)
     def __str__(self):
         if len(self.powers) == 0:
             return "0"
@@ -324,7 +340,7 @@ class Polynomial(object):
                 coeff = -coeff
             else:
                 op = "+ "
-                
+
             if power != 0:
                 if coeff == 1:
                     coeff = ""
@@ -340,32 +356,44 @@ class Polynomial(object):
 
             return "{0}{1}{2}".format(op, coeff, power)
         return " ".join(make_term(power, coeff, highest)
-                        for (power, coeff) in reversed(tuple(enumerate(self.powers)))
+                        for (power, coeff) in
+                        reversed(tuple(enumerate(self.powers)))
                         if coeff != 0)
     def __add__(self, other):
         if isinstance(other, Polynomial):
             import itertools
-            return Polynomial([x+y for (x, y) in
-                               itertools.izip_longest(self.powers, other.powers, fillvalue=0)])
+            return Polynomial([x if y is None else y if x is None else x+y
+                               for (x, y) in
+                               itertools.izip_longest(
+                                   self.powers, other.powers, fillvalue=None)])
         else:
             return Polynomial(coeff+other if power == 0 else coeff
                               for (power, coeff) in enumerate(self.powers))
-    def __sub__(self, other):
-        return self + (other * -1)
+    def __radd__(self, other):
+        return self + other
+    def __iadd__(self, other):
+        self._powers = (self + other).powers
+        return self
     def __mul__(self, other):
         if isinstance(other, Polynomial):
             powers = [0] * (len(self.powers) + len(other.powers))
             for ii in xrange(len(self.powers)):
                 for jj in xrange(len(other.powers)):
-                    powers[ii+jj] += self.powers[ii]*other.powers[jj]
+                    powers[ii+jj] = (self.powers[ii]*other.powers[jj] +
+                                     powers[ii+jj])
             while powers and powers[-1] == 0:
                 powers.pop()
             return Polynomial(powers)
         else:
             return Polynomial(i * other for i in self.powers)
+    def __sub__(self, other):
+        return self + (other * -1)
+    def __rmul__(self, other):
+        return self + other
     def __cmp__(self, other):
         import itertools
-        coeffs = tuple(itertools.izip_longest(self.powers, other.powers, fillvalue=0))
+        coeffs = tuple(itertools.izip_longest(
+            self.powers, other.powers, fillvalue=None))
         for (scoeff, ocoeff) in reversed(coeffs):
             val = cmp(scoeff, ocoeff)
             if val != 0:
@@ -376,14 +404,20 @@ class Polynomial(object):
     def eval(self, n):
         val = 0
         var = 1
-        for (power, coeff) in enumerate(self.powers):
-            val += coeff * var
-            var *= n
+        for coeff in self.powers:
+            val = coeff * var + val
+            var = n * var
         return val
 
 # --------------------------------------------------------------------------- #
 
 class Rational(object):
+    """
+    >>> print Rational(1, 3)
+    1/3
+    >>> print Rational(1, 3) * Rational(1, 4)
+    1/12
+    """
     def __init__(self, num, den=1):
         self._num, self._den = self._reduce(num, den)
     @property
@@ -402,9 +436,9 @@ class Rational(object):
     @classmethod
     def _gcd(cls, a, b):
         while b != 0:
-           t = b
-           b = a % b
-           a = t
+            t = b
+            b = a % b
+            a = t
         return a
     @classmethod
     def _lcm(cls, a, b):
@@ -428,6 +462,13 @@ class Rational(object):
                 den=self.den * other.den * gcd)
         else:
             return Rational(num=self.num + other * self.den, den=self.den)
+    def __radd__(self, other):
+        return self + other
+    def __iadd__(self, other):
+        new = self + other
+        self._num = new.num
+        self._den = new.den
+        return self
     def __sub__(self, other):
         return self + (other * -1)
     def __mul__(self, other):
@@ -435,6 +476,8 @@ class Rational(object):
             return Rational(num=self.num*other.num, den=self.den*other.den)
         else:
             return Rational(num=self.num*other, den=self.den)
+    def __rmul__(self, other):
+        return self * other
     def __div__(self, other):
         if isinstance(other, Rational):
             return Rational(num=self.num*other.den, den=self.den*other.num)
