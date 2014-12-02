@@ -408,11 +408,11 @@ class Rational(object):
         return a
     @classmethod
     def _lcm(cls, a, b):
-        return a*b / cls._gcd(a, b)
+        return a*b // cls._gcd(a, b)
     @classmethod
     def _reduce(cls, a, b):
         gcd = cls._gcd(a, b)
-        return a / gcd, b / gcd
+        return a // gcd, b // gcd
     def __hash__(self):
         return hash(self.num, self.den)
     def __cmp__(self, other):
