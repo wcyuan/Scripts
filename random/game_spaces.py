@@ -18,6 +18,10 @@ logging.basicConfig(format='[%(asctime)s '
 
 # --------------------------------------------------------------------------- #
 
+EPSILON = 1e-5
+
+# --------------------------------------------------------------------------- #
+
 def main():
     (opts, args) = getopts()
 
@@ -61,6 +65,11 @@ def main():
 
     print prob_chart(dice_prob(2))
 
+    print prob_space_vanilla(10, [Rational(1, 3)] * 3)
+
+    o = prob_space_vanilla(100, [Polynomial([0, 1])] * 10)
+    print o[-1]
+    print to_frac(o[-1].eval(.1))
 
 def getopts():
     parser = optparse.OptionParser()
@@ -110,6 +119,8 @@ def multidice_prob(die_sizes):
         out[k-1] = probs[k]
     return out / tots
 
+# --------------------------------------------------------------------------- #
+
 def prob_space(n, step_prob, initial=None):
     """
     Probability of landing on any of the first n squares.
@@ -138,6 +149,8 @@ def prob_space(n, step_prob, initial=None):
         #print w_probs
         out[ii] = w_probs.sum()
     return out
+
+# --------------------------------------------------------------------------- #
 
 def prob_nturns(nturns, step_prob, nspaces):
     """
@@ -174,6 +187,8 @@ def prob_landed(nturns, step_prob, nspaces):
         prob = np.dot(transitions, prob)
         tots += prob
     return tots
+
+# --------------------------------------------------------------------------- #
 
 def make_transition_matrix(step_prob):
     sz = len(step_prob)
@@ -212,6 +227,8 @@ def prob_space_mat(n, step_prob, initial=None):
         out = np.dot(transitions, out)
     return out
 
+# --------------------------------------------------------------------------- #
+
 def ev(arr):
     """
     Expected value
@@ -223,28 +240,206 @@ def ev(arr):
     """
     return np.dot(np.arange(1, arr.size+1), arr).sum()
 
-def fpeq(a, b, epsilon=1e-5):
+# --------------------------------------------------------------------------- #
+
+def fpeq(a, b, epsilon=EPSILON):
     return abs(a - b) < epsilon
 
-def is_int(a):
-    return fpeq(a, int(round(a)))
+def is_int(a, epsilon=EPSILON):
+    return fpeq(a, int(round(a)), epsilon=epsilon)
 
-def to_frac(dec, top=100):
+def to_frac(dec, top=100, epsilon=EPSILON):
     for ii in xrange(1, top):
-        if is_int(dec * ii):
+        if is_int(dec * ii, epsilon=epsilon):
             return "{0}/{1}".format(int(round(dec * ii)), ii)
     return dec
 
-def prob_chart(step_prob, top_den=1000, steps=200):
+def prob_chart(step_prob, top_den=1000, steps=200, epsilon=EPSILON):
     out = np.zeros(step_prob.size)
     out2 = []
     for ii in xrange(step_prob.size):
         initial = np.zeros(step_prob.size)
         initial[ii] = 1
         out[ii] = prob_space_mat(steps, step_prob, initial=initial)[-1]
-        out2.append(to_frac(out[ii], top=top_den))
+        out2.append(to_frac(out[ii], top=top_den, epsilon=epsilon))
     return out2
 
+# --------------------------------------------------------------------------- #
+
+def prob_space_vanilla(n, step_prob, initial=None):
+    """
+    Probability of landing on any of the first n squares.
+
+    avoids numpy, thus can be used with complex types
+    """
+    out = [0] * (n+1)
+    out[0] = 1
+    first = 1
+    if initial is not None:
+        ilen = len(initial)
+        out[0:ilen] = initial
+        first = ilen
+    for ii in xrange(first, n+1):
+        steps = min(ii, len(step_prob))
+        #print "ii: ", ii
+        #print "steps: ", steps
+        rev = out[::-1]
+        #print "reversed: ", rev
+        start = n-ii+1
+        #print "past probs: ", rev[start:start+steps]
+        #print "step probs: ", step_prob[:steps]
+        for jj in xrange(steps):
+            out[ii] = step_prob[jj] * rev[start+jj] + out[ii]
+    return out
+
+# --------------------------------------------------------------------------- #
+
+class Polynomial(object):
+    """
+    Represents a polynomial in one variable.
+    """
+    def __init__(self, powers=None):
+        """
+        @param powers: an iterable of coefficients such that the
+        nth value in the iterable (zero-indexed) is the coefficient
+        for x^n
+        """
+        if powers is None:
+            powers = ()
+        self._powers = tuple(powers)
+    @property
+    def powers(self):
+        return self._powers
+    def __repr__(self):
+        return "{cn}(powers={self.powers!r})".format(cn=self.__class__.__name__, self=self)
+    def __str__(self):
+        if len(self.powers) == 0:
+            return "0"
+        highest = len(self.powers) - 1
+        def make_term(power, coeff, highest):
+            if power == highest:
+                op = ""
+            elif coeff < 0:
+                op = "- "
+                coeff = -coeff
+            else:
+                op = "+ "
+                
+            if power != 0:
+                if coeff == 1:
+                    coeff = ""
+                elif coeff == -1:
+                    coeff = "-"
+
+            if power == 0:
+                power = ""
+            elif power == 1:
+                power = "x"
+            else:
+                power = "x^{0}".format(power)
+
+            return "{0}{1}{2}".format(op, coeff, power)
+        return " ".join(make_term(power, coeff, highest)
+                        for (power, coeff) in reversed(tuple(enumerate(self.powers)))
+                        if coeff != 0)
+    def __add__(self, other):
+        if isinstance(other, Polynomial):
+            import itertools
+            return Polynomial([x+y for (x, y) in
+                               itertools.izip_longest(self.powers, other.powers, fillvalue=0)])
+        else:
+            return Polynomial(coeff+other if power == 0 else coeff
+                              for (power, coeff) in enumerate(self.powers))
+    def __sub__(self, other):
+        return self + (other * -1)
+    def __mul__(self, other):
+        if isinstance(other, Polynomial):
+            powers = [0] * (len(self.powers) + len(other.powers))
+            for ii in xrange(len(self.powers)):
+                for jj in xrange(len(other.powers)):
+                    powers[ii+jj] += self.powers[ii]*other.powers[jj]
+            while powers and powers[-1] == 0:
+                powers.pop()
+            return Polynomial(powers)
+        else:
+            return Polynomial(i * other for i in self.powers)
+    def __cmp__(self, other):
+        import itertools
+        coeffs = tuple(itertools.izip_longest(self.powers, other.powers, fillvalue=0))
+        for (scoeff, ocoeff) in reversed(coeffs):
+            val = cmp(scoeff, ocoeff)
+            if val != 0:
+                return val
+        return 0
+    def __hash__(self):
+        return hash(self.powers)
+    def eval(self, n):
+        val = 0
+        var = 1
+        for (power, coeff) in enumerate(self.powers):
+            val += coeff * var
+            var *= n
+        return val
+
+# --------------------------------------------------------------------------- #
+
+class Rational(object):
+    def __init__(self, num, den=1):
+        self._num, self._den = self._reduce(num, den)
+    @property
+    def num(self):
+        return self._num
+    @property
+    def den(self):
+        return self._den
+    def __repr__(self):
+        return "{cn}(num={self._num!r}, den={self._den!r})".format(
+            cn=self.__class__.__name__, self=self)
+    def __str__(self):
+        if self.den == 1:
+            return str(self.num)
+        return "{0}/{1}".format(self.num, self.den)
+    @classmethod
+    def _gcd(cls, a, b):
+        while b != 0:
+           t = b
+           b = a % b
+           a = t
+        return a
+    @classmethod
+    def _lcm(cls, a, b):
+        return a*b / cls._gcd(a, b)
+    @classmethod
+    def _reduce(cls, a, b):
+        gcd = cls._gcd(a, b)
+        return a / gcd, b / gcd
+    def __hash__(self):
+        return hash(self.num, self.den)
+    def __cmp__(self, other):
+        if not isinstance(other, Rational):
+            return cmp(self, Rational(num=other))
+        gcd = self._gcd(self.den, other.den)
+        return cmp(self.num * other.den * gcd, other.num * self.den * gcd)
+    def __add__(self, other):
+        if isinstance(other, Rational):
+            gcd = self._gcd(self.den, other.den)
+            return Rational(
+                num=self.num * other.den * gcd + other.num * self.den * gcd,
+                den=self.den * other.den * gcd)
+        else:
+            return Rational(num=self.num + other * self.den, den=self.den)
+    def __sub__(self, other):
+        return self + (other * -1)
+    def __mul__(self, other):
+        if isinstance(other, Rational):
+            return Rational(num=self.num*other.num, den=self.den*other.den)
+        else:
+            return Rational(num=self.num*other, den=self.den)
+    def __div__(self, other):
+        if isinstance(other, Rational):
+            return Rational(num=self.num*other.den, den=self.den*other.num)
+        else:
+            return Rational(num=self.num, den=self.den*other)
 
 # --------------------------------------------------------------------------- #
 
