@@ -1133,6 +1133,18 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
 
 (GNUEmacs
  (if (require 'jedi nil 'noerror)
-     (add-hook 'python-mode-hook 'jedi:setup_and_keys)))
+     (progn
+       (defun enable-jedi()
+         "Add jedi to the python-mode-hook"
+         (interactive)
+         (add-hook 'python-mode-hook 'jedi:setup_and_keys))
+       (defun disable-jedi()
+         "Add jedi to the python-mode-hook"
+         (interactive)
+         (remove-hook 'python-mode-hook 'jedi:setup_and_keys))
+       (enable-jedi)
+       )
+   ))
+
 
 ;; ---------------------------------------------------------------- ;;
