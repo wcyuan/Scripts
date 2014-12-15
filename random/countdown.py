@@ -80,7 +80,10 @@ def main():
     print "Target: {0}, Vals: {1}".format(target, vals)
 
     (_, queue) = run_in_thread(("{0} = {1}".format(expr, expr.value)
-                                for expr in countdown(vals, target)))
+                                for expr in countdown(
+                                        vals, target,
+                                        all_orders=(not opts.in_order),
+                                        all_subsets=(not opts.use_all))))
 
     raw_input("Press Enter to See Solutions: ")
     while True:
@@ -101,6 +104,12 @@ def getopts():
     parser.add_option('--max_target',    type=int, default=DEFAULT_MAX_TARGET)
     parser.add_option('--num_large',     type=int, default=DEFAULT_NUM_LARGE)
     parser.add_option('--large_numbers', default=DEFAULT_LARGE_NUMBERS)
+    parser.add_option('--in_order',      action='store_true',
+                      help="The numbers must be used in order '
+                      'in the expression")
+    parser.add_option('--use_all',       action='store_true',
+                      help="All the given numbers must be used '
+                      "in the expression")
     parser.add_option('--integer',       action='store_true',
                       help='Requires that every intermediate step '
                       'in the calculation produces an integer')
@@ -534,13 +543,31 @@ def all_expressions(vals, all_orders=False, all_subsets=False):
                     #     if not expr.exception:
                     #         yield expr
 
-def countdown(vals, target):
+def countdown(vals, target, all_orders=True, all_subsets=True):
+    """
+    If all_orders is False, then the numbers must be used in the order
+    given.  I.e., if you give the numbers 1, 2, 3, 4, 5, 6, 7, 8, 9
+    and want to make 100 and all_orders is False, then
+      ((1 + (2 / 3)) / (((4 / 5) / 6) / 8)) = 100.0
+    is ok, but
+      (9 - (5 - (7 / ((2 - (1 / 4)) / (8 * (6 - 3)))))) = 100.0
+    is not.
+
+    if all_subsets is False, then you have to use every digit, so
+      (1 - (2 * (3 * (4 * (5 + (((6 - 7) / 8) - 9)))))) = 100.0
+    is ok, but
+      ((1 + (2 / 3)) / (((4 / 5) / 6) / 8)) = 100.0
+    is not.
+    """
+
     vals = tuple(Value(v) for v in vals)
     closest = []
     best = None
     tries = 0
     tried = set()
-    for expr in all_expressions(vals, all_orders=True, all_subsets=True):
+    for expr in all_expressions(vals,
+                                all_orders=all_orders,
+                                all_subsets=all_subsets):
         if str(expr) in tried:
             logging.error("Tried the same expression twice: {0}".format(expr))
             continue
