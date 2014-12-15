@@ -105,10 +105,10 @@ def getopts():
     parser.add_option('--num_large',     type=int, default=DEFAULT_NUM_LARGE)
     parser.add_option('--large_numbers', default=DEFAULT_LARGE_NUMBERS)
     parser.add_option('--in_order',      action='store_true',
-                      help="The numbers must be used in order '
-                      'in the expression")
+                      help="The numbers must be used in order "
+                      "in the expression")
     parser.add_option('--use_all',       action='store_true',
-                      help="All the given numbers must be used '
+                      help="All the given numbers must be used "
                       "in the expression")
     parser.add_option('--integer',       action='store_true',
                       help='Requires that every intermediate step '
