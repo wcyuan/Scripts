@@ -106,6 +106,10 @@ Doctests:
 ...          '20140104 23 Megan',
 ...          '20140105 15 Frank')
 
+>>> lines2 = ('#@desc date id name dept',
+...          '20140106 9 Jack HR',
+...          '20140107 86 Mary Payroll')
+
 >>> tuple(next(read_files([lines]))) # doctest: +NORMALIZE_WHITESPACE
 (['date', 'id', 'name'],
  ['20140102', '3', 'Bob'],
@@ -151,6 +155,71 @@ Doctests:
  ['Line', 'date', 'id', 'name'],
  ['3', '20140103', '5', 'Alice'])
 
+>>> [tuple(t)
+...  for t in read_files([lines, lines2],
+...                      add_filename=False)] # doctest: +NORMALIZE_WHITESPACE
+[(['date', 'id', 'name'],
+  ['20140102', '3', 'Bob'],
+  ['20140103', '5', 'Alice'],
+  ['20140104', '23', 'Megan'],
+  ['20140105', '15', 'Frank']),
+ (['date', 'id', 'name', 'dept'],
+  ['20140106', '9', 'Jack', 'HR'],
+  ['20140107', '86', 'Mary', 'Payroll'])]
+
+>>> [tuple(t)
+...  for t in read_files([lines, lines2],
+...                      add_filename=False)] # doctest: +NORMALIZE_WHITESPACE
+[(['date', 'id', 'name'],
+  ['20140102', '3', 'Bob'],
+  ['20140103', '5', 'Alice'],
+  ['20140104', '23', 'Megan'],
+  ['20140105', '15', 'Frank']),
+ (['date', 'id', 'name', 'dept'],
+  ['20140106', '9', 'Jack', 'HR'],
+  ['20140107', '86', 'Mary', 'Payroll'])]
+
+>>> [tuple(t)
+...  for t in read_files([lines, lines2],
+...                      add_filename=False,
+...                      merge_headers=True,
+...                      null_value='x',
+...                     )] # doctest: +NORMALIZE_WHITESPACE
+[(['date', 'id', 'name', 'dept'],
+  ['20140102', '3', 'Bob', 'x'],
+  ['20140103', '5', 'Alice', 'x'],
+  ['20140104', '23', 'Megan', 'x'],
+  ['20140105', '15', 'Frank', 'x'],
+  ['20140106', '9', 'Jack', 'HR'],
+  ['20140107', '86', 'Mary', 'Payroll'])]
+
+# Test a SQL query by adding to the Config:
+>>> conf = Config().add_tables(
+...     {'lines': [lines, []], 'lines2': [lines2, []]})
+>>> [tuple(t) for t in do_sql(
+...    ['SELECT * from lines where name="Bob"'],
+...    table_config=conf)
+... ] # doctest: +NORMALIZE_WHITESPACE
+[(['date', 'id', 'name'],
+  ['20140102', '3', 'Bob'])]
+
+
+# Test a SQL query by adding data directly to the database
+>>> db = Database.get()
+>>> data = list(next(read_files([lines, lines2],
+...                             add_filename=False,
+...                             merge_headers=True)))
+>>> db.make_table_from_data('merged', data[0], data[1:])
+>>> db.query(     # doctest: +NORMALIZE_WHITESPACE
+...          'SELECT * from merged where name="Bob"')
+[['date', 'id', 'name', 'dept'],
+ ['20140102', '3', 'Bob', '-']]
+>>> db.query(     # doctest: +NORMALIZE_WHITESPACE
+...          'SELECT * from merged where name="Jack"')
+[['date', 'id', 'name', 'dept'],
+ ['20140106', '9', 'Jack', 'HR']]
+
+
 """
 
 # --------------------------------------------------------------------
@@ -167,6 +236,8 @@ import sqlite3
 # --------------------------------------------------------------------
 
 DEFAULT_CONFIG_FILE = '~/.transrc'
+
+DEFAULT_NULL_VALUE = '-'
 
 HEADERS = ['#@desc']
 
@@ -230,7 +301,7 @@ def main():
                              'add_filename', 'raw', 'width', 'anypatt',
                              'clean_output', 'full_filenames', 'headerless',
                              'linenos', 'add_linenos', 'add_colnos',
-                             'noheader'))
+                             'noheader', 'merge_headers', 'null_value'))
 
     def get_input(fns):
         """
@@ -398,6 +469,13 @@ def getopts():
                       action='store_true',
                       help='Show the full filename instead of just '
                       'a shortened version')
+    parser.add_option('--merge_headers',
+                      action='store_true',
+                      help='If two files have different headers, '
+                      'merge the headers')
+    parser.add_option('--null_value',
+                      default=DEFAULT_NULL_VALUE,
+                      help='The null value to use when merging headers')
     opts, args = parser.parse_args()
 
     if opts.verbose:
@@ -1038,15 +1116,44 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
                filters=None, by_col_no=False, columns=(), linenos=None,
                add_filename=None, raw=False, width=None, clean_output=False,
                full_filenames=False, headerless=False, anypatt=False,
-               add_colnos=False, add_linenos=False, noheader=False):
+               add_colnos=False, add_linenos=False, noheader=False,
+               merge_headers=False, null_value=DEFAULT_NULL_VALUE):
     """
     Reads multiple files and returns a generator of tables, where a
     table is a generator of rows.
     """
+    if merge_headers:
+        yield do_merge_headers(
+            read_files(
+                fns,
+                patt=patt,
+                delim=delim,
+                comment=comment,
+                kind=kind,
+                reverse=reverse,
+                head=head,
+                header_patt=header_patt,
+                filters=filters,
+                by_col_no=by_col_no,
+                columns=columns,
+                linenos=linenos,
+                add_filename=add_filename,
+                raw=raw,
+                width=width,
+                clean_output=clean_output,
+                full_filenames=full_filenames,
+                headerless=headerless,
+                anypatt=anypatt,
+                add_colnos=add_colnos,
+                add_linenos=add_linenos,
+                noheader=noheader),
+            null_value=null_value)
+        return
 
     table = None
     prev_header = None
-    for (shortname, filename) in zip(shorten_filenames(fns), fns):
+    shortnames = None
+    for filename in fns:
         filetable = _read_input(filename, patt=patt, delim=delim,
                                 comment=comment, kind=kind,
                                 reverse=reverse, head=head,
@@ -1065,7 +1172,11 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
         # If there are multiple files, add a column of filenames
         # to the table.
         if (add_filename is None and len(fns) > 1) or add_filename:
-            fn_to_add = filename if full_filenames else shortname
+            fn_to_add = filename
+            if not full_filenames:
+                if shortnames is None:
+                    shortnames = dict(zip(fns, shorten_filenames(fns)))
+                fn_to_add = shortnames[filename]
             if headerless:
                 header = [fn_to_add] + header
             else:
@@ -1098,6 +1209,38 @@ def read_files(fns, patt=None, delim=None, comment=COMMENT_CHAR,
     if table is not None:
         yield(table)
 
+
+def uniquify(seq):
+    """
+    >>> list(uniquify(range(3)))
+    [0, 1, 2]
+    >>> list(uniquify(['a', 'b', 'c', 'a']))
+    ['a', 'b', 'c', 'a0']
+    >>> list(uniquify(['a', 'b', 'c', 'a', 'a', 'b', 'c']))
+    ['a', 'b', 'c', 'a0', 'a1', 'b0', 'c0']
+    """
+    seen = {}
+    for orig in seq:
+        newelt = orig
+        ii = 0
+        while newelt in seen:
+            newelt = '{0}{1}'.format(orig, ii)
+            ii += 1
+        seen[newelt] = 1
+        yield newelt
+
+def do_merge_headers(tables, null_value=DEFAULT_NULL_VALUE):
+    merged = []
+    dicts = []
+    for table in tables:
+        header = list(uniquify(next(table)))
+        merged += [col for col in header if col not in merged]
+        for line in table:
+            dicts.append(dict(
+                itertools.izip_longest(header, line, fillvalue=None)))
+    yield merged
+    for valdict in dicts:
+        yield [valdict.get(col, null_value) for col in merged]
 
 def file_to_table(filename, *args, **kwargs):
     """
@@ -1328,8 +1471,12 @@ class Database(object):
         create a table with that name from the file or command.
         """
         import glob
-        matches = glob.glob(command)
-        if len(matches) == 0:
+        try:
+            matches = glob.glob(command)
+            if len(matches) == 0:
+                matches = [command]
+        except TypeError:
+            # The "command" given might not be a string
             matches = [command]
         table = tuple(next(get_input(matches)))
         if len(table) < 1:
@@ -1358,6 +1505,11 @@ class Database(object):
             raise KeyError("Table {0} command {1} needs var {2} "
                            "to be set".format(table_name, table_create,
                                               kexc.args[0]))
+        except AttributeError:
+            # maybe table_create isn't a string, in that case just
+            # pass it to zopen, maybe it's a file descriptor or just
+            # the raw data
+            filename = table_create
         self.make_table_from_command(table_name, filename,
                                      get_input=get_input)
         for sql in sql_commands:
@@ -1413,7 +1565,8 @@ class Database(object):
                 self.make_table_by_name(missing, table_config,
                                         get_input=get_input, cvars=cvars)
 
-def do_sql(sql, args=None, get_input=read_files, config=None, cvars=None):
+def do_sql(sql, args=None, get_input=read_files, config=None, cvars=None,
+           table_config=None):
     """
     Build an in memory sqlite database and execute a sql query against
     it.  The tables of the database come from reading files or
@@ -1423,7 +1576,8 @@ def do_sql(sql, args=None, get_input=read_files, config=None, cvars=None):
     are needed to execute the sql query.
     """
     database = Database.get()
-    table_config = Config(config, args)
+    if table_config is None:
+        table_config = Config(config, args)
     for query in sql:
         data = database.query(query, table_config=table_config,
                               get_input=get_input, cvars=cvars)
