@@ -76,7 +76,7 @@ defbce on
 # bindkey -d -k kD stuff "\010"
 
 ## The default action key is Ctrl-A.
-# Here's the command to rebind Ctrl-T to action key
+# Here's the command to rebind Ctrl-T to action key so that it plays more nicely with emacs
 defescape ^Tt
 escape ^Tt
 
