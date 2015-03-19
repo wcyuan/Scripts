@@ -163,7 +163,8 @@ alias   findgrep='find . -name .svn -prune -o -type f  -print0 | xargs -0 grep -
 # Is this a dos style file or a unix style file?  Are the newlines
 # just CR (\n) or are the CRLF (\n\r)?  Returns 0 for a unix-style
 # file and non-zero for a dos-style file
-alias      isdos="\grep -c '$'"
+alias      isdos="\grep -c '
+$'"
 
 # find
 alias   findtext='find . -name .svn -prune -o -type f -print'
@@ -397,27 +398,32 @@ then
             line_color=$fail_color
         fi
 
-        #local pwdmaxlen=30
-        #if [ $HOME == "$PWD" ]
-        #then
-        #    newPWD="~"
-        #elif [ $HOME == ${PWD:0:${#HOME}} ]
-        #then
-        #    newPWD="~${PWD:${#HOME}}"
-        #else
-        #    newPWD=$PWD
-        #fi
-        #if [ ${#newPWD} -gt $pwdmaxlen ]
-        #then
-        #    # .../last/three/dirs
-        #    tmp="${PWD%/*/*/*}";
-        #    if [ ${#tmp} -gt 0 -a "$tmp" != "$PWD" ]
-        #    then
-        #        newPWD=".../${PWD:${#tmp}+1}"
-        #    else
-        #        newPWD="+/\\W"
-        #    fi
-        #fi
+        if false
+        then
+            local pwdmaxlen=30
+       	    if [ $HOME == "$PWD" ]
+            then
+                newPWD="~"
+            elif [ $HOME == ${PWD:0:${#HOME}} ]
+            then
+                newPWD="~${PWD:${#HOME}}"
+            else
+                newPWD=$PWD
+            fi
+            if [ ${#newPWD} -gt $pwdmaxlen ]
+            then
+                # .../last/three/dirs
+                tmp="${PWD%/*/*/*}";
+                if [ ${#tmp} -gt 0 -a "$tmp" != "$PWD" ]
+                then
+                    newPWD=".../${PWD:${#tmp}+1}"
+                else
+                    newPWD="+/\\W"
+                fi
+            fi
+        else
+            newPWD=$PWD
+        fi
 
         stop=$SECONDS
         start=${PREEXEC_TIME:-$stop}
@@ -436,7 +442,7 @@ then
         #title='\[\033]0;\u@\h:\w\007\]'
         : ${EXTRA_TITLE:=""}
         title='\[\033]0;${EXTRA_TITLE}\h:\w\007\]'
-        PS1="${title}${line_color}\\! ${time_color}[$etime][\\t]${path_color}[\\h:${PWD}]${reset_color}\n$ "
+        PS1="${title}${line_color}\\! ${time_color}[$etime][\\t]${path_color}[\\h:${newPWD}]${reset_color}\n$ "
     }
 
     function settitle
