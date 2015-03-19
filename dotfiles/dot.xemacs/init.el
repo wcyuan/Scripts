@@ -200,6 +200,7 @@
 (setq diff-switches "-wu")              ;; Switches to pass to diff
 (setq require-final-newline t)          ;; Always make sure files end
                                         ;; with newlines
+(column-number-mode)
 
 ;; customize mode line
 (setq display-time-string-forms '((format "%s:%s%s" 12-hours minutes am-pm)))
