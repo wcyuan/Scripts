@@ -36,6 +36,29 @@
 # <space>         - start highlighting / stop highlighting and copy to clipboard
 # ^A ]            - paste text copied while in copy mode
 #
+# C-u             - Scroll up a half page in copy mode
+# C-b             - Scroll up a full page in copy mode
+# C-d             - Scroll down a half page in copy mode
+# C-f             - Scroll down a full page in copy mode
+#
+# j or -          - Move the cursor down by one line
+# k or +          - Move the cursor up by one line
+# h               - Move the cursor left by one character
+# l               - Move the cursor right by one character
+# w, b, e, B, E   - Move the cursor by word
+#
+# H               - Move the cursor to the leftmost column of the top line of the window
+# M               - Move the cursor to the leftmost column of the center line of the window
+# L               - Move the cursor to the leftmost column of the bottom line of the window
+# g               - Move to the beginning of the buffer.
+# G               - Move to the end of the buffer (or the specified line)
+# %               - Move to the specified percentage of the buffer.
+#
+# 0               - Move to the front of the line
+# ^               - Move to the first non-whitespace character on the line
+# $               - Move to the last non-whitespace character on the line
+# |               - Moves to the specified column
+#
 # -- From within screen:
 #
 # ^A : quit             - quit and kill all windows
