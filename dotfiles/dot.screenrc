@@ -59,7 +59,8 @@
 # $               - Move to the last non-whitespace character on the line
 # |               - Moves to the specified column
 #
-# /               - search for a string
+# /               - search for a string like vi (n and N to go to next/prev matches)
+# C-s or C-r      - incremental search for a string like emacs
 #
 # -- From within screen:
 #
