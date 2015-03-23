@@ -27,12 +27,12 @@
 ;; M-<right> -- move forward a word
 ;; M-b       -- move backward a word
 ;; M-<left>  -- move backward a word
-;; M-e       -- move forward a block
-;; M-<up>    -- move forward a block
-;; M-}       -- move forward a block
-;; M-a       -- move backward a block
-;; M-<down>  -- move backward a block
-;; M-{       -- move backward a block
+;; M-e       -- move forward a sentence
+;; M-<up>    -- move forward a block/paragraph
+;; M-}       -- move forward a block/paragraph
+;; M-a       -- move backward a sentence
+;; M-<down>  -- move backward a block/paragraph
+;; M-{       -- move backward a block/paragraph
 ;; M-v       -- move backward a screen
 ;; C-v       -- move forward a screen
 ;; C-a       -- go to beginning of line
