@@ -59,6 +59,8 @@
 # $               - Move to the last non-whitespace character on the line
 # |               - Moves to the specified column
 #
+# /               - search for a string
+#
 # -- From within screen:
 #
 # ^A : quit             - quit and kill all windows
