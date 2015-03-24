@@ -400,7 +400,7 @@ then
 
         if false
         then
-            local pwdmaxlen=30
+            local pwdmaxlen=130
        	    if [ $HOME == "$PWD" ]
             then
                 newPWD="~"
@@ -470,6 +470,8 @@ then
                 }
                 # no precmd for now: we do everything we need in format_prompt
                 preexec_install
+            else
+                echo "WARNING: Could not find preexec.bash" >/dev/stderr
             fi
             ;;
         *) # not interactive: do not mess with complicated prompts
