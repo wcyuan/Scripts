@@ -70,7 +70,11 @@
 # ^A : title <win>      - set the current window name to <win>
 # ^A : chdir [<dir>]    - set the working directory for new windows
 # ^A : screen <cmd>     - run <cmd> in a new window
-# ^A : number <num>     - swap this tab with tab number <num>
+# ^A : number <num>     - set the number of this tab.  If there is already a tab with <num>,
+#                         swap this with that one.  Note that tab numbers don't need to be
+#                         consecutive, so you can set a tab to number 10 even if you don't
+#                         have 10 other tabs.
+# ^A : windowlist       - enter a mode that makes it easy to move windows around (with ',' and '.')
 #
 # -- From outside of screen:
 #
