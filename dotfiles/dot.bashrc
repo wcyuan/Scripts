@@ -438,11 +438,17 @@ then
             etime=$(printf "%02ds" $elapsed)
         fi
 
-        # This version also shows the username:
-        #title='\[\033]0;\u@\h:\w\007\]'
-        : ${EXTRA_TITLE:=""}
-        title='\[\033]0;${EXTRA_TITLE}\h:\w\007\]'
-        PS1="${title}${line_color}\\! ${time_color}[$etime][\\t]${path_color}[\\h:${newPWD}]${reset_color}\n$ "
+        if [ "$TERM" == 'screen-bce' ]
+        then
+            title='\[\033k\033\134\]'
+        else
+            # This version also shows the username:
+            #title='\[\033]0;\u@\h:\w\007\]'
+            : ${EXTRA_TITLE:=""}
+            title='\[\033]0;${EXTRA_TITLE}\h:\w\007\]'
+        fi
+    
+        PS1="${title}${line_color}\\! ${time_color}[$etime][\\t]${path_color}[\\h:${newPWD}]${reset_color}\n\$ "
     }
 
     function settitle
