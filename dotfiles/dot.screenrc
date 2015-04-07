@@ -122,7 +122,7 @@ caption always "%{kG} %?%-Lw%?%{bw}%n*%f %t%?(%u)%?%{-}%?%+Lw%? %= "
 # see also prompt setting in .cshrc.mine
 hardstatus string "[xen %n%?: %t%?] %H"
 #hardstatus string "[xen %n%?: %t%?]"
-shelltitle "> |tcsh"
+#shelltitle "> |tcsh"
 
 bell_msg " hello from window %n! "
 
@@ -161,4 +161,8 @@ shelltitle bash
 screen bash
 screen bash
 screen bash
+screen -t emacs 10 emacs -nw
+
+startup_message off
+
 
