@@ -89,6 +89,9 @@
 #                          Run a command in the given screen session, in its own window
 #
 
+# No screen startup message
+startup_message off
+
 # automatically detach the screen session when the screen process receives a
 # hangup signal.  you can then resume the session with `screen -r'.
 autodetach on
@@ -115,14 +118,23 @@ escape ^Tt
 #caption always "%{kG} %?%-Lw%?%{bw}%n*%f %t%?(%u)%?%{-}%?%+Lw%? %= %D %C%a "
 caption always "%{kG} %?%-Lw%?%{bw}%n*%f %t%?(%u)%?%{-}%?%+Lw%? %= "
 
+# default to bash
+shell bash
+
 # set the window title for xterm/putty to be descriptive
-# some other cool ideas:
-# http://gentoo-wiki.com/TIP_Using_screen
-# http://www4.informatik.uni-erlangen.de/~jnweiger/screen-faq.html (using shell to dynamically modify hardstatus)
-# see also prompt setting in .cshrc.mine
-hardstatus string "[xen %n%?: %t%?] %H"
-#hardstatus string "[xen %n%?: %t%?]"
-#shelltitle "> |tcsh"
+hardstatus string "[%n%?: %t%?] %H"
+
+# This is a special title that tells screen to rename the tab with the current command
+#   https://www.gnu.org/software/screen/manual/html_node/Dynamic-Titles.html
+# The part before the | is "$ ".  This is a search string.  Screen will search the
+# prompt and will consider everything before this string as the prompt.  The first
+# word after the search screen is taken to be the command.
+# If there is no command, it will fall back on the part after the |, which is "bash"
+#
+# In order for this to work, it has to cooperate with your shell prompt.
+#   - Your shell prompt has to end with "\$ "
+#   - Your shell prompt has to include this null title escape sequence: "\[\033k\033\]"
+shelltitle "$ |bash"
 
 bell_msg " hello from window %n! "
 
@@ -130,12 +142,9 @@ bell_msg " hello from window %n! "
 vbell off
 vbell_msg " boooooo! "
 
-# show the first screen by default
-select 0
-
 # make scrolling work
 termcapinfo xterm ti@:te@
-defscrollback 1000
+defscrollback 10000
 
 # screen writes to the terminal's hardstatus line
 termcapinfo xterm "hs:ts=\E]2;:fs=\007:ds=\E]2;$HOST\007"
@@ -153,16 +162,12 @@ multiuser on
 unsetenv SSH_AUTH_SOCK
 setenv SSH_AUTH_SOCK $HOME/.screen/sasock.$HOST
 
-# default to bash
-shell bash
-shelltitle bash
-
 # start with a few screens
 screen bash
 screen bash
-screen bash
-screen -t emacs 10 emacs -nw
+screen 10 emacs -nw
 
-startup_message off
+# show the first screen by default
+select 0
 
 
