@@ -21,6 +21,10 @@
 # ^A a            - send a control-a to the shell
 # ^A ?            - show all keybindings
 # ^A r            - turn on or off line wrapping
+# ^A F            - Change the window size to the size of the current region
+#                   Note, this is capital F, not lowercase f (which changes flow)
+#                   This should happen automatically unless you connect to the
+#                   screen from multiple places.
 #
 # ^A S            - Split the window horizontally into two regions
 # ^A |            - Split the window vertically into two regions
