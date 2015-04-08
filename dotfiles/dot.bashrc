@@ -517,7 +517,8 @@ then
                     export PREEXEC_TIME=$SECONDS
 	            if isscreen
                     then
-                        export CMD_FOR_SCREEN_TITLE="$BASH_COMMAND"
+                    	# Take the current command, remove arguments, and take the basename
+                        export CMD_FOR_SCREEN_TITLE=`echo $BASH_COMMAND | cut -d " " -f 1 | xargs basename`
                         set_default_screen_title
                         export CMD_FOR_SCREEN_TITLE=""
                     fi
