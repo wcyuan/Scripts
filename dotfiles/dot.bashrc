@@ -398,6 +398,7 @@ then
             line_color=$fail_color
         fi
 
+	local newPWD
         if false
         then
             local pwdmaxlen=130
@@ -425,39 +426,80 @@ then
             newPWD=$PWD
         fi
 
-        stop=$SECONDS
-        start=${PREEXEC_TIME:-$stop}
+        local stop=$SECONDS
+        local start=${PREEXEC_TIME:-$stop}
         let elapsed=$(($stop-$start))
         if [ $elapsed -gt 3600 ]
         then
-            etime=$(printf "%02dh %02dm %02ds" $((elapsed/3600)) $((elapsed/60%60)) $((elapsed%60)))
+            local etime=$(printf "%02dh %02dm %02ds" $((elapsed/3600)) $((elapsed/60%60)) $((elapsed%60)))
         elif [ $elapsed -gt 60 ]
         then
-            etime=$(printf "%02dm %02ds" $((elapsed/60%60)) $((elapsed%60)))
+            local etime=$(printf "%02dm %02ds" $((elapsed/60%60)) $((elapsed%60)))
         else
-            etime=$(printf "%02ds" $elapsed)
+            local etime=$(printf "%02ds" $elapsed)
         fi
 
-        if [ "$TERM" == 'screen-bce' ]
+	local title=""
+	export EXTRA_TITLE
+        : ${EXTRA_TITLE:=""}
+        if isscreen
         then
-            title='\[\033k\033\134\]'
+	    # This what we'd set title to if we wanted screen to do the work of 
+	    # adding the currently running command
+            #   title='\[\033k\033\134\]'
+	    # But we handle it ourselves with this function:
+            set_default_screen_title
         else
             # This version also shows the username:
             #title='\[\033]0;\u@\h:\w\007\]'
-            : ${EXTRA_TITLE:=""}
             title='\[\033]0;${EXTRA_TITLE}\h:\w\007\]'
         fi
     
         PS1="${title}${line_color}\\! ${time_color}[$etime][\\t]${path_color}[\\h:${newPWD}]${reset_color}\n\$ "
     }
 
+    #
+    # Sets the EXTRA_TITLE variable, which will show up as part of the
+    # window's title bar (by way of the prompt)
+    #
     function settitle
     {
         if [ "$#" -ne 0 ]; then
-            EXTRA_TITLE="($*) "
+            EXTRA_TITLE="($*):"
         else
             EXTRA_TITLE=$*
         fi
+    }
+
+    #
+    # Returns true iff we are in a GNU screen instance
+    #
+    function isscreen
+    {
+      [ "$TERM" == 'screen-bce' ]
+    }
+
+    #
+    # Sets the current tab's title in gnu screen.  If the argument is the
+    # empty string, we use the name of the shell (defaults to bash)
+    #
+    function set_screen_title
+    {
+        local newtitle=$1
+        if [ "$newtitle" == "" ]
+        then
+            newtitle=${SHELL:-bash}
+        fi
+        /bin/echo -ne "\ek${newtitle}\e\\"
+    }
+
+    #
+    # Sets the current tab's title to the default value, which includes
+    # the currently running command and the name of the citc client
+    #
+    function set_default_screen_title
+    {
+       set_screen_title "${EXTRA_TITLE}${CMD_FOR_SCREEN_TITLE}"
     }
 
     PROMPT_COMMAND='format_prompt'
@@ -473,6 +515,12 @@ then
                 function preexec () {
                     export PREEXEC_CMD="$BASH_COMMAND"
                     export PREEXEC_TIME=$SECONDS
+	            if isscreen
+                    then
+                        export CMD_FOR_SCREEN_TITLE="$BASH_COMMAND"
+                        set_default_screen_title
+                        export CMD_FOR_SCREEN_TITLE=""
+                    fi
                 }
                 # no precmd for now: we do everything we need in format_prompt
                 preexec_install
