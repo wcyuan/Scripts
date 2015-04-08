@@ -138,7 +138,12 @@ hardstatus string "[%n%?: %t%?] %H"
 # In order for this to work, it has to cooperate with your shell prompt.
 #   - Your shell prompt has to end with "\$ "
 #   - Your shell prompt has to include this null title escape sequence: "\[\033k\033\]"
-shelltitle "$ |bash"
+#
+# Best explanation of this that I have found is
+#   http://aperiodic.net/screen/title_examples
+#
+# Turn this off for now, we'll set the title in bashrc.
+#shelltitle "$ |bash"
 
 bell_msg " hello from window %n! "
 
