@@ -1,0 +1,15 @@
+In gnome, there are multiple clipboards, one that uses control-c to copy and control-v to paste,
+and a separate one that uses selection to copy and middle-click to paste.  I like having these
+clipboards merged (so I can select to copy and control-v to paste).  This is mostly because I
+got used to doing that when working on a windows machine and vnc'ing to a linux machine.  The easiest
+way to get that behavior seems to be by using clipit:
+   sudo apt-get install clipit
+Running clipit will add an icon to the task bar (next to the clock and volume, etc).  If you right-click
+on it and bring up preferences, there is an option to synchronize clipboards.  
+  http://sourceforge.net/projects/gtkclipit/
+
+One feature that Windows has that I wish Mac had is the ability to easily to put windows side-by-side by
+dragging the window to the side of the screen to make it take up exactly half of a screen.  Luckily, it's
+easy to add that feature to Mac with Better Touch Tool.  http://www.bettertouchtool.net/
+
+If using zsh, definitely use https://github.com/robbyrussell/oh-my-zsh.
