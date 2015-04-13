@@ -216,6 +216,21 @@
       mouse-drag-copy-region t)))
 
 ;; ---------------------------------------------------------------- ;;
+;; Handle different arrow-key key-sequences when in a terminal emulator
+;; http://stackoverflow.com/questions/4548106/screen-somehow-unmaps-my-arrow-keys-in-emacs-after-a-z
+;;
+(GNUEmacs
+ (define-key function-key-map "\eOA" [up])
+ (define-key function-key-map "\e[A" [up])
+ (define-key function-key-map "\eOB" [down])
+ (define-key function-key-map "\e[B" [down])
+ (define-key function-key-map "\eOC" [right])
+ (define-key function-key-map "\e[C" [right])
+ (define-key function-key-map "\eOD" [left])
+ (define-key function-key-map "\e[D" [left])
+)
+
+;; ---------------------------------------------------------------- ;;
 ;; This causes python docstrings to start on the next line like
 ;;
 ;; def foo():
