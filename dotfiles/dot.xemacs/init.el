@@ -1163,5 +1163,17 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
        )
    ))
 
+;; ---------------------------------------------------------------- ;;
+;; Mouse mode
+;;
+;; http://stackoverflow.com/questions/5710334/how-can-i-get-mouse-selection-to-work-in-emacs-and-iterm2-on-mac
+;;
+
+(unless window-system
+  (require 'mouse)
+  (xterm-mouse-mode t)
+  (defun track-mouse (e))
+  (setq mouse-sel-mode t)
+  )
 
 ;; ---------------------------------------------------------------- ;;
