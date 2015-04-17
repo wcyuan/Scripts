@@ -1,0 +1,10 @@
+# -*- mode: sh -*-
+#
+# This is meant to go at the end of the standard zshrc that oh-my-zshrc
+# creates for you.
+#
+
+# Pass unmatched globs to the command
+#
+# http://stackoverflow.com/questions/20037364/why-zsh-tries-to-expand-and-bash-does-not
+setopt nonomatch
