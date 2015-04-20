@@ -175,8 +175,14 @@ findname() {
 }
 
 # rarely used
-alias   ruinterm="echo -n ^N"
-alias    fixterm="echo -n "
+
+# The characters that look like ^N and ^O
+# are vt100 control sequences.  To generate
+# them in emacs, do:
+# ^N = Control-Q Control-N
+# ^O = Control-Q Control-O
+alias   ruinterm="echo -n "
+alias    fixterm="echo -n "
 alias        hex='printf "%x\n"'
 alias       beep='perl -e "print \"\a\";"'
 alias        fep=rlwrap
