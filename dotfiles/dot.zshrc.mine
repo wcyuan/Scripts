@@ -19,3 +19,5 @@ HIST_STAMPS="yyyy-mm-dd"
 setopt append_history
 unsetopt inc_append_history
 unsetopt share_history
+
+alias sa='unalias -m "*"; source ~/.zshrc'
