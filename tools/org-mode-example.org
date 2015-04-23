@@ -1,0 +1,76 @@
+#+STARTUP: indent
+#+STARTUP: logdrawer
+#+TODO: TODO(t!) ASAP(a!) DONE(d!)
+
+* Org-Mode Cheat Sheet
+** Manual: http://orgmode.org/org.html
+** Structure
+- <Tab>                :: Toggle what can be seen
+- Alt-<up>/<down>      :: Move items up or down
+- Alt-<left>/<right>   :: Increase/Decrease indent.  On lists, this
+     only moves the current item, not children.  To do children too,
+     do Alt-Shift-<left>/<right>
+- C-<RET>              :: Add a new item to the outline
+- C-S-<RET>            :: Add a new TODO item
+** Todo items
+- C-c C-t              :: Toggle TODO
+- C-c C-c              :: Toggle checkboxes
+- S-<up>/<down>        :: Move to the next/prev list item
+- M-<ret>              :: Insert a new item into a list
+- M-S-<ret>            :: Insert a new checkbox into a list
+- C-c a t              :: Show a list of all TODO items
+  Might need to global-set-key C-ca to org-agenda
+- C-c a T WORD         :: show a list of all TODO items in state WORD
+** Datetimes
+- C-c C-c              :: Normalize timestamps
+- C-c .                :: Insert a date into the agenda
+- C-c !                :: Insert a date, not in the agenda
+- C-u C-c .            :: Insert a datetime into the agenda
+- C-u C-c !            :: Insert a datetime, not in the agenda
+- Shift-<left>/<right> :: Change a date by a day at a time
+** Clocking
+- C-c C-x C-i          :: Clock-in
+- C-c C-x C-o          :: Clock-out
+- C-c C-x C-r          :: Clock Report
+** In-Buffer Settings
+- +STARTUP: indent     :: This causes org-mode to indent subitems,
+     rather than using ** for the second level and *** for the third,
+     etc.
+- +STARTUP: logdrawer  :: This causes org-mode to hide log messages
+      (like timestamps) into a separate drawer
+- +TODO: TODO(t!) DONE(d!) :: This specifies the valid values of TODO.
+     The ! tells it to add a timestamp when the TODO changes
+
+
+
+* The rest of this is mostly just an example
+
+* single-name carry sims [3/6]
+** DONE move fake div trades to carry swap
+- [X] make sure hedging.py still works
+** DONE add carry pnl to result trees [4/4]
+- [X] confirm that carry in the pnl plot matches (modulo sim_hedge)
+- [X] fix eod prices for carry
+- [X] in a carry sim, only Total, Option, and Hedge pnl types
+- [X] also change fill source
+** DONE add hedging.py result tree to sims
+** TODO get rid of div trades [/]
+- [ ] fix prices in reporting
+- [ ] fix simulation positions for splits
+- [ ] change expirations so they book expire trades
+  - [ ] add trades for expirations/exercises in production
+  - [ ] in sim, add to the end of the simulator
+  - [ ] add to assign swap
+** TODO change equity_splits to include type 4, so we get GOOG [/]
+- [ ] test:
+   make marketdata/yuanc its own directory
+   - cp -r marketdata/PROD/20140828 marketdata/yuanc
+   - ~/proj/eomm/bin/share/nightly_dump_splits.pl -- -i yuanc -date 20140829
+   for some reason, it takes 30 minutes
+   didn't work, there are some splits that disappeared
+** TODO for expirations with no implied, just skip them in sim
+* DONE review Josh's code
+:LOGBOOK:
+CLOCK: [2014-09-18 Thu 17:11]--[2014-09-18 Thu 17:11] =>  0:00
+- State "DONE"       from "DONE"       [2014-09-18 Thu 17:11]
+:END:
