@@ -12,3 +12,19 @@ Mem	fieldscur=ANOPQRSTUVbcdefgjlmyzWHIKX
 Usr	fieldscur=ABDECGfhijlopqrstuvyzMKNWX
 	winflags=64825, sortindx=4, maxtasks=0
 	summclr=3, msgsclr=3, headclr=2, taskclr=3
+
+#
+# Cheatsheet:
+#  1        - toggles between showing each cpu and showing a
+#             summary of the cpus
+#  c        - toggle between command name and full command line
+#  z        - show colors
+#  W        - write a config file saving your settings
+#  A        - show 4 separate windows (alternate-display mode)
+#  g <1-4>  - which of the 4 windows gets focus
+#
+
+#
+# Putting comments at the top of the .toprc file seems to break it, so
+# I put the comments at the end.
+#
