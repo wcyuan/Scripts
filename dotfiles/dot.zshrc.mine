@@ -21,3 +21,8 @@ unsetopt inc_append_history
 unsetopt share_history
 
 alias sa='unalias -m "*"; source ~/.zshrc'
+
+if [ -r ~/.bashzsh ]
+then
+  source ~/.bashzsh
+fi

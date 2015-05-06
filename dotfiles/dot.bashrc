@@ -1,4 +1,18 @@
-# -*- mode: bash -*-
+# -*- mode: sh -*-
+# ----------------------------------------------------
+# Bash config file
+#
+
+
+# ----------------------------------------------------
+# Load in configuration which is common to bash and zsh
+#
+
+if [ -r ~/.bashzsh ]
+then
+  source ~/.bashzsh
+fi
+
 # ----------------------------------------------------
 # PATH
 
@@ -22,95 +36,7 @@ add_to_path_end   /cygdrive/c/Ruby193/bin
 
 # ----------------------------------------------------
 # aliases
-alias      rm='rm -i'
-alias      cp='cp -i'
-alias      mv='mv -i'
-alias       l='ls -lF'
-alias      la='ls -alF'
-alias     lsd='ls -dlF'
-alias     ltr='ls -lrt'
-alias     lss='ls -Shr' # sort by human-readable file size ascending
 alias      sa='unalias -a; . ~/.bashrc'
-
-# for using windows python from cygwin, ipython has to be started like this:
-# http://stackoverflow.com/questions/3250749/using-windows-python-from-cygwin
-alias ipython='PYTHONUNBUFFERED=1 python c:/cygwin/home/Yuan/usr/pkgs/ipython-0.12/ipython.py'
-alias     irb='/cygdrive/c/Ruby193/bin/irb.bat --prompt default'
-
-alias    node='/cygdrive/c/Program\ Files/nodejs/node.exe'
-alias     npm="/cygdrive/c/Program\ Files/nodejs/node.exe 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js'"
-alias webserver="python -m SimpleHTTPServer"
-
-alias tophonors='cd "/cygdrive/c/Users/Yuan/Dropbox/Top Honors Pairing"'
-
-#
-# ps BSD-style options
-#
-# u   = user format (shows username)
-# www = wide format (shows as many arguments as it can)
-# x   = show process that aren't attached to a terminal.  this has
-#       the effect of always showing the processes of the current
-#       user, even if you add a -U or -u option
-# f   = forest view: show ascii art representation of process tree
-#
-# to show sps for another user, try 'ps uwwwf -u <username> -U <username>'
-# or, if you do 'sps -u <user>' it'll work, but you'll see
-# processes for yourself and for <user>
-#
-alias     sps='ps uxwwwf'
-
-gitall() {
-    cmd="$@"
-    if [[ $cmd == "" ]]
-    then
-        cmd='cherry -v'
-    fi
-    for d in ~/code/github/* ~/code/*
-    do
-      if [ -d $d ]
-      then
-          if [[ $d =~ /(github|projectlocker)$ ]]
-          then
-              :
-          else
-              echo " -- $d"
-              (cd $d ; git $cmd)
-          fi
-      fi
-    done
-}
-
-aws() {
-    default_host='ec2-184-72-254-238.compute-1.amazonaws.com'
-
-    if [ "$1" = "-v" ]
-    then
-        vncopt="-L *:9000:localhost:5901"
-        shift
-    else
-        vncopt=""
-    fi
-
-    # e.g. ec2-23-22-197-139.compute-1.amazonaws.com
-    host=$1
-
-    if [ "$#" -lt 1 ]
-    then
-        if [ "$default_host" != "" ]
-        then
-            host=$default_host
-            echo "Using default host $host"
-        else
-            echo "ERROR: No default host, need an IP" > /dev/stderr
-            return 1
-        fi
-    elif [ "$#" -gt 1 ]
-    then
-        echo "Too many args: $*" > /dev/stderr
-        return 1
-    fi
-    ssh $vncopt -i ~/code/aws/startup.pem ubuntu@$host
-}
 
 which() {
     args=$*
@@ -146,73 +72,6 @@ go() {
     fi
 }
 
-sshbash() {
-    # ssh -t gives you a terminal
-    # bash -i gives you interactive mode
-    ssh -t $* bash -i
-}
-
-# grep
-alias       grep='grep --color'
-alias      egrep='egrep --color'
-# -H forces printing of the file name, even if there is only one file
-alias      xgrep='xargs -d"\n" grep -H --color'
-alias     xegrep='xargs -d"\n" egrep -H --color'
-# Should use ack instead?
-alias   findgrep='find . -name .svn -prune -o -type f  -print0 | xargs -0 grep -H --color'
-# Is this a dos style file or a unix style file?  Are the newlines
-# just CR (\n) or are the CRLF (\n\r)?  Returns 0 for a unix-style
-# file and non-zero for a dos-style file
-alias      isdos="\grep -c '
-$'"
-
-# find
-alias   findtext='find . -name .svn -prune -o -type f -print'
-alias   findpath='find . $path -type f'
-findname() {
-    pattern="$*"
-    find . -iname "*$pattern*" | grep -i "$pattern"
-}
-
-# rarely used
-
-# The characters that look like ^N and ^O
-# are vt100 control sequences.  To generate
-# them in emacs, do:
-# ^N = Control-Q Control-N
-# ^O = Control-Q Control-O
-alias   ruinterm="echo -n "
-alias    fixterm="echo -n "
-alias        hex='printf "%x\n"'
-alias       beep='perl -e "print \"\a\";"'
-alias        fep=rlwrap
-
-pynotebook() {
-    #cd ~/notebook-directory
-    ipython notebook --pylab=inline --no-browser --ip="*"
-}
-
-embolden() {
-    # Takes one argument, which is a pattern.
-    #
-    # Passes through stdin, but highlights the pattern in bold red.
-    #
-    # terminal colors are specified as "1;31"
-    # 1 means bold
-    # 31 means red
-    sed "s/\($1\)/[1;31m\1[m/g"
-}
-
-winpath() {
-    cygpath --windows `which $*`
-}
-
-python27() {
-    cmd=`winpath $1`
-    shift
-    /cygdrive/c/Python27/python $cmd $*
-}
-
 # ----------------------------------------------------
 # Completion
 #
@@ -245,25 +104,6 @@ fi
 
 # don't clobber files
 set -o noclobber
-
-# ----------------------------------------------------
-
-# python
-PYTHONPATH=$HOME/usr/python
-export PYTHONPATH
-
-# ----------------------------------------------------
-
-# less
-# use a verbose prompt
-LESS='-M'
-export LESS
-
-# ----------------------------------------------------
-
-# turn off cygwin xemacs warning
-nodosfilewarning=1
-export nodosfilewarning
 
 # ----------------------------------------------------
 
@@ -317,13 +157,13 @@ function test_identities {
 if [ -n "$SSH_AGENT_PID" ]; then
     ps -ef | grep "$SSH_AGENT_PID" | grep ssh-agent > /dev/null
     if [ $? -eq 0 ]; then
-	test_identities
+        test_identities
     fi
 # if $SSH_AGENT_PID is not properly set, we might be able to load one from
 # $SSH_ENV
 else
     if [ -f "$SSH_ENV" ]; then
-	. "$SSH_ENV" > /dev/null
+        . "$SSH_ENV" > /dev/null
     fi
     ps -ef | grep "$SSH_AGENT_PID" | grep -v grep | grep ssh-agent > /dev/null
     if [ $? -eq 0 ]; then
@@ -404,11 +244,11 @@ then
             line_color=$fail_color
         fi
 
-	local newPWD
+        local newPWD
         if false
         then
             local pwdmaxlen=130
-       	    if [ $HOME == "$PWD" ]
+            if [ $HOME == "$PWD" ]
             then
                 newPWD="~"
             elif [ $HOME == ${PWD:0:${#HOME}} ]
@@ -445,22 +285,22 @@ then
             local etime=$(printf "%02ds" $elapsed)
         fi
 
-	local title=""
-	export EXTRA_TITLE
+        local title=""
+        export EXTRA_TITLE
         : ${EXTRA_TITLE:=""}
         if isscreen
         then
-	    # This what we'd set title to if we wanted screen to do the work of 
-	    # adding the currently running command
+            # This what we'd set title to if we wanted screen to do the work of
+            # adding the currently running command
             #   title='\[\033k\033\134\]'
-	    # But we handle it ourselves with this function:
+            # But we handle it ourselves with this function:
             set_default_screen_title
         else
             # This version also shows the username:
             #title='\[\033]0;\u@\h:\w\007\]'
             title='\[\033]0;${EXTRA_TITLE}\h:\w\007\]'
         fi
-    
+
         PS1="${title}${line_color}\\! ${time_color}[$etime][\\t]${path_color}[\\h:${newPWD}]${reset_color}\n\$ "
     }
 
@@ -521,9 +361,9 @@ then
                 function preexec () {
                     export PREEXEC_CMD="$BASH_COMMAND"
                     export PREEXEC_TIME=$SECONDS
-	            if isscreen
+                    if isscreen
                     then
-                    	# Take the current command, remove arguments, and take the basename
+                        # Take the current command, remove arguments, and take the basename
                         export CMD_FOR_SCREEN_TITLE=`echo $BASH_COMMAND | cut -d " " -f 1 | xargs basename`
                         set_default_screen_title
                         export CMD_FOR_SCREEN_TITLE=""
