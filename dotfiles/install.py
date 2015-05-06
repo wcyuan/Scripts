@@ -10,33 +10,38 @@ checkouts.
 
 # --------------------------------------------------------------------
 
+import logging
 import optparse
 import os
+
+logging.basicConfig(format='[%(asctime)s '
+                    '%(funcName)s:%(lineno)s %(levelname)-5s] '
+                    '%(message)s')
 
 # --------------------------------------------------------------------
 
 #
-# Each file is a tuple of 1 or 2 elements.
+# Each file is a sting or a tuple of 1 or 2 elements.
 #
-# If the tuple has 2 elements, the first element is the link to
+# If it is a tuple of 2 elements, the first element is the link to
 # create, the second is the name of the file to link to.
 #
-# If the tuple has 1 element, then it's the name of the link to
-# create.  We assume that the link will point to a file of the same
-# name except with "dot" added to the front of it.
+# If it is a string or a tuple with 1 element, then it's the name of
+# the link to create.  We assume that the link will point to a file of
+# the same name except with "dot" added to the front of it.
 #
 FILES = (
-    ('.bashrc',),
-    ('.bash_profile',),
-    ('.bashzsh',),
-    ('.emacs',),
-    ('.gitconfig',),
-    ('.preexec.bash',),
-    ('.screenrc',),
-    ('.toprc',),
-    ('.tmux.conf',),
-    ('.zshrc',),
-    ('~/.local/share/applications/emacsclient.desktop', 'emacsclient.desktop'),
+    '.bashrc',
+    '.bashzsh',
+    '.emacs',
+    '.gitconfig',
+    '.preexec.bash',
+    '.screenrc',
+    '.toprc',
+    '.tmux.conf',
+    '.zshrc',
+    '~/.local/share/applications/emacsclient.desktop',
+    '~/.oh-my-zsh/themes/wcy.zsh-theme',
     )
 
 # By default, we link to files in the directory where this script
@@ -79,9 +84,23 @@ def getopts():
                     default=DEFAULT_LINKDIR)
 
   parser.add_option("--force",
+                    action="store_true",
                     help="Force overriding existing dot files")
 
+  parser.add_option('--verbose',  action='store_true')
+
+  parser.add_option('--log_level',
+                    help="The level to log at")
+
   (opts, args) = parser.parse_args()
+
+  if opts.verbose:
+    logging.getLogger().setLevel(logging.DEBUG)
+
+  if opts.log_level is not None:
+    level = getattr(logging, opts.log_level.upper())
+    logging.getLogger().setLevel(level)
+    logging.info("Setting log level to %s", level)
 
   return (opts, args)
 
@@ -118,14 +137,17 @@ def resolve_files(filenames, tgtdir=None, linkdir=None):
   If no directory is given for the target, add the tgtdir.
 
   """
-  if len(filenames) == 2:
-    (fn, tgt) = filenames
-  else:
-    (fn,) = filenames
+  if isinstance(filenames, basestring) or len(filenames) < 2:
+    if isinstance(filenames, basestring):
+      fn = filenames
+    else:
+      (fn,) = filenames
     (fdir, fbase) = os.path.split(fn)
     if fbase.startswith("."):
       fbase = "dot{0}".format(fbase)
-    tgt = os.path.join(fdir, fbase)
+    tgt = fbase
+  else:
+    (fn, tgt) = filenames
 
   if os.path.dirname(tgt) == '':
     tgt = os.path.join(tgtdir, tgt)
@@ -145,20 +167,22 @@ def update_file(fn, tgt, no_write=False, force=False):
   But does nothing if fn already points to tgt
   and complains if fn exists and points somewhere else (unless force is True)
   """
+  tbase = os.path.basename(tgt)
   if os.path.lexists(fn):
     if os.path.islink(fn):
       existing = os.readlink(fn)
       if os.path.realpath(existing) == os.path.realpath(tgt):
-        print "{0} already points to {1}".format(fn, tgt)
+        logging.info("NOP %s: %s already points to %s", tbase, fn, tgt)
         return
       elif not force:
-        print("{0} already exists and points to the wrong place.  "
-              "({1} instead of {2}).  Use --force to overwrite.".format(
-                  fn, existing, tgt))
+        logging.error("ERR %s: %s already exists and points to the wrong place."
+                      "  (%s instead of %s).  Use --force to overwrite.",
+                      tbase, fn, existing, tgt)
         return
     elif not force:
-      print("{0} already exists and isn't a link, not pointing to {1}.  "
-            "Use --force to overwrite.".format(fn, tgt))
+      logging.error("ERR %s: %s already exists and isn't a link, "
+                    "not pointing to %s."
+                    "  Use --force to overwrite.", tbase, fn, tgt)
       return
     run(lambda: os.remove(fn), 'rm "{0}"'.format(fn), no_write=no_write)
 
