@@ -10,19 +10,23 @@
 
 if [ -r ~/.bashzsh ]
 then
-  source ~/.bashzsh
+    source ~/.bashzsh
 fi
 
 # ----------------------------------------------------
 # PATH
 
 add_to_path_front() {
-    newpath=$*
-    newpath=`~/bin/rmdups -F : -e . $newpath:$PATH`
-    if [[ $? -eq 0 ]]
+    local rmdups=~/bin/rmdups
+    if [ -x $rmdups ]
     then
-        PATH=$newpath
-        export PATH
+        local newpath=$*
+        newpath=`$rmdups -F : -e . $newpath:$PATH`
+        if [[ $? -eq 0 ]]
+        then
+            PATH=$newpath
+            export PATH
+        fi
     fi
 }
 
@@ -153,28 +157,31 @@ function test_identities {
     fi
 }
 
-# check for running ssh-agent with proper $SSH_AGENT_PID
-if [ -n "$SSH_AGENT_PID" ]; then
-    ps -ef | grep "$SSH_AGENT_PID" | grep ssh-agent > /dev/null
-    if [ $? -eq 0 ]; then
-        test_identities
-    fi
-# if $SSH_AGENT_PID is not properly set, we might be able to load one from
-# $SSH_ENV
-else
-    if [ -f "$SSH_ENV" ]; then
-        . "$SSH_ENV" > /dev/null
-    fi
-    ps -ef | grep "$SSH_AGENT_PID" | grep -v grep | grep ssh-agent > /dev/null
-    if [ $? -eq 0 ]; then
-        test_identities
+if false
+then
+    # check for running ssh-agent with proper $SSH_AGENT_PID
+    if [ -n "$SSH_AGENT_PID" ]; then
+        ps -ef | grep "$SSH_AGENT_PID" | grep ssh-agent > /dev/null
+        if [ $? -eq 0 ]; then
+            test_identities
+        fi
+    # if $SSH_AGENT_PID is not properly set, we might be able to load one from
+    # $SSH_ENV
     else
-        # Don't start_agent until we need it.  Otherwise, it will ask
-        # for your passphrase every time we start a new shell.
-        #
-        #start_agent
-        #
-        :
+        if [ -f "$SSH_ENV" ]; then
+            . "$SSH_ENV" > /dev/null
+        fi
+        ps -ef | grep "$SSH_AGENT_PID" | grep -v grep | grep ssh-agent > /dev/null
+        if [ $? -eq 0 ]; then
+            test_identities
+        else
+            # Don't start_agent until we need it.  Otherwise, it will ask
+            # for your passphrase every time we start a new shell.
+            #
+            #start_agent
+            #
+            :
+        fi
     fi
 fi
 
