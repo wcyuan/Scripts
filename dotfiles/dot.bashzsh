@@ -18,6 +18,8 @@ export LESS='-M'
 # turn off cygwin xemacs warning
 export nodosfilewarning=1
 
+# Uncomment this to use emacsclient as the editor
+#export EDITOR='emacsclient --alternate-editor="" -nw'
 
 # ----------------------------------------------------
 # aliases and functions

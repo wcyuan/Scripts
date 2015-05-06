@@ -1,0 +1,19 @@
+#
+# This is an Ubuntu command file for adding emacsclient to the sidebar.
+#
+# http://askubuntu.com/questions/67753/how-do-i-add-an-application-to-the-dash
+#
+# Install with the command:
+#   ln -s .../emacsclient.desktop ~/.local/share/applications/
+#
+# That will put the command into the "dash" (the thing you get if you
+# hit the windows key, or if you click on the icon at the top of the
+# sidebar.  To get it on the sidebar, open the dash, find the icon for
+# this item and drag it to the sidebar, in whatever position you like.
+#
+[Desktop Entry]
+Type=Application
+Terminal=false
+Name=emacsclient
+Icon=/usr/share/icons/hicolor/scalable/apps/emacs24.svg
+Exec=emacsclient --alternate-editor="" -c
