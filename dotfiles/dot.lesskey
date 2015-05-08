@@ -1,0 +1,16 @@
+#
+# Handle different arrow-key key-sequences when in a terminal emulator
+# http://stackoverflow.com/questions/4548106/screen-somehow-unmaps-my-arrow-keys-in-emacs-after-a-z
+#
+# To install the changes, run "lesskey"
+# http://linux.die.net/man/1/lesskey
+#
+#command
+\eOA   back-line-force
+\e[A   back-line-force
+\eOB   forw-line-force
+\e[B   forw-line-force
+\eOC   right-scroll
+\e[C   right-scroll
+\eOD   left-scroll
+\e[D   left-scroll
