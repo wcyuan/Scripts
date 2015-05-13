@@ -29,17 +29,21 @@ def getopts():
     (opts, args) = parser.parse_args()
 
     if opts.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+        logat(logging.DEBUG)
 
     if opts.log_level is not None:
-        level = getattr(logging, opts.log_level.upper())
-        logging.getLogger().setLevel(level)
-        logging.info("Setting log level to %s", level)
+        logat(opts.log_level)
 
     if opts.no_write:
         Runner.NO_WRITE = True
 
     return (opts, args)
+
+def logat(level):
+    if isinstance(level, basestring):
+        level = getattr(logging, level.upper())
+    logging.getLogger().setLevel(level)
+    logging.info("Setting log level to %s", level)
 
 class Runner(object):
     """A class to run commands. """
@@ -76,7 +80,7 @@ class Runner(object):
     Returns:
       In NO_WRITE mode, we always return None.
       Otherwise, if capture_stdout is True, we return the command's stdout.
-      Otherwise, if capture_stdout is False, we return None.
+      Otherwise, if capture_stdout is False, we return True iff returncode == 0
 
     Raises:
       RuntimeError: if the command fails and die_on_error is True.
@@ -111,7 +115,10 @@ class Runner(object):
             logging.debug("Error running %s", cmd)
     logging.info("Command %s finished with return code %s",
                  cmd, process.returncode)
-    return stdout
+    if capture_stdout:
+        return stdout
+    else:
+        return process.returncode == 0
 
 # --------------------------------------------------------------------------- #
 
