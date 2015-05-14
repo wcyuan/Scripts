@@ -11,6 +11,7 @@ import contextlib
 import logging
 import optparse
 import subprocess
+import traceback
 
 logging.basicConfig(format='[%(asctime)s '
                     '%(funcName)s:%(lineno)s %(levelname)-5s] '
@@ -25,13 +26,14 @@ def main():
     stream_pull(opts.num)
 
   if opts.push:
-    stream_push(args, num=opts.num)
+    stream_push(args, num=opts.num, leave=opts.leave)
     stream_pull(opts.num)
 
 def getopts():
   parser = optparse.OptionParser()
   parser.add_option('--pull', action='store_true')
   parser.add_option('--push', action='store_true')
+  parser.add_option('--leave', action='store_true')
   parser.add_option('-n', '--num', type=int)
   parser.add_option('--verbose',  action='store_true')
   parser.add_option('--log_level',
@@ -74,9 +76,16 @@ def stream_pull(num=None):
 
 def stream_push(revs, num=None, leave=False):
   if not revs:
-    revs = [get_revision_hash()]
+    rev = get_revision_hash()
+    if rev is None:
+      return
+    revs = [rev]
   else:
-    revs = [get_revision_hash(rev) for rev in revs]
+    revs = [(rev, get_revision_hash(rev)) for rev in revs]
+    if any(r[1] is None for r in revs):
+      raise ValueError(
+          "Can't find revisions: {0}".format(
+              ",".join(rev for (rev, hsh) in revs if hsh is None)))
 
   trail = get_upstream_trail()
   if num is not None:
@@ -95,18 +104,21 @@ def stream_push(revs, num=None, leave=False):
         for rev in revs:
           Runner.run(["git", "cherry-pick", rev])
   else:
+    remote_name, remote_branch_name = target.split("/", 1)
+
     # local branch to remote branch -- create a temp branch with just
     # the desired changes and push that.
     with stash_if_needed(leave=leave):
       with temp_branch(target, leave=leave) as branch_name:
-        with checkout(target, leave=leave):
+        with checkout(branch_name, leave=leave):
           for rev in revs:
             print "Cherry-picking commit {0} to {1}\n\n{2}".format(
                 rev, target, get_revision_message(rev))
           for rev in revs:
             Runner.run(["git", "cherry-pick", rev])
             Runner.run(["git", "pull", "--rebase"])
-            Runner.run(["git", "push"])
+            Runner.run(["git", "push", remote_name,
+                        "HEAD:" + remote_branch_name])
 
 # --------------------------------------------------------------------------- #
 
@@ -114,9 +126,10 @@ def handle_exception(exception, leave=False):
     if leave:
         raise(exception)
     else:
-        print("[cherry-push] Failed due to error %s" % exception)
-        print("[cherry-push] Cleaning up temp branch.")
-        print("[cherry-push] To be left in the middle of the "
+        traceback.print_exc()
+        print("[upstream] Failed due to error %s" % exception)
+        print("[upstream] Cleaning up temp branch.")
+        print("[upstream] To be left in the middle of the "
               "conflict, use the --leave option.")
 
 def get_current_branch():
@@ -191,7 +204,10 @@ def get_revision_hash(rev=None):
   cmd = ["git", "log", "--pretty=format:%H", "-n", "1"]
   if rev is not None:
     cmd.append(rev)
-  return Runner.run(cmd, always=True).rstrip()
+  else:
+    cmd.append("@{upstream}..")
+  rev = Runner.run(cmd, always=True).rstrip()
+  return rev if rev else None
 
 def get_revision_message(rev):
   return Runner.run(["git", "log", "-n", "1", rev], always=True).rstrip()
