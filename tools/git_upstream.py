@@ -81,11 +81,14 @@ def stream_push(revs, num=None, leave=False):
       return
     revs = [rev]
   else:
-    revs = [(rev, get_revision_hash(rev)) for rev in revs]
-    if any(r[1] is None for r in revs):
+    hshs = [get_revision_hash(rev) for rev in revs]
+    if any(r is None for r in hshs):
       raise ValueError(
           "Can't find revisions: {0}".format(
-              ",".join(rev for (rev, hsh) in revs if hsh is None)))
+              ",".join(rev
+                       for (rev, hsh) in zip(revs, hshs)
+                       if hsh is None)))
+    revs = hshs
 
   trail = get_upstream_trail()
   if num is not None:
@@ -100,7 +103,7 @@ def stream_push(revs, num=None, leave=False):
       with checkout(target, leave=leave):
         for rev in revs:
           print "Cherry-picking commit {0} to {1}\n\n{2}".format(
-              rev, target, get_revision_message())
+              rev, target, get_revision_message(rev))
         for rev in revs:
           Runner.run(["git", "cherry-pick", rev])
   else:
