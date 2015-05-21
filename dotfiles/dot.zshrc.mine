@@ -20,6 +20,13 @@ setopt append_history
 unsetopt inc_append_history
 unsetopt share_history
 
+# zsh's forward-word goes to the beginning of the next word. I prefer
+# emacs-forward-word, which goes to the end of the word
+# http://zsh.sourceforge.net/Doc/Release/Zsh-Line-Editor.html
+bindkey 'F' emacs-forward-word
+bindkey 'f' emacs-forward-word
+bindkey '[1;5C' emacs-forward-word
+
 alias sa='unalias -m "*"; source ~/.zshrc'
 
 if [ -r ~/.bashzsh ]
