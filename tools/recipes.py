@@ -281,3 +281,23 @@ def memoize(obj):
   return memoizer
 
 # --------------------------------------------------------------------------- #
+
+import itertools
+
+def make_table(table, delim=" ", left=True, ors="\n"):
+    """
+    Args:
+      table: A sequence of rows, where each row is a sequence of fields.
+      Can't be a generator, it will be traversed twice.
+    Returns:
+      A string where the rows are printed with the columns lined up
+    """
+    transposed = itertools.izip_longest(*table, fillvalue="")
+    widths = (max(len(fld) for fld in line) for line in transposed)
+    lch = "-" if left else ""
+    formats = ["%{0}{1}s".format(lch, width) for width in widths]
+    return ors.join("%s" % delim.join(format % (fld)
+                                      for (format, fld) in zip(formats, line))
+                    for line in table)
+
+# --------------------------------------------------------------------------- #
