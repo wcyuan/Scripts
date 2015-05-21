@@ -264,6 +264,8 @@ class FP(object):
 
 # --------------------------------------------------------------------------- #
 
+import functools
+
 def memoize(obj):
   """from https://wiki.python.org/moin/PythonDecoratorLibrary
   """
