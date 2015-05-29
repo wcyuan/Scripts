@@ -37,6 +37,8 @@ bindkey '[1;5C' emacs-forward-word
 # http://stackoverflow.com/questions/3483604/which-shortcut-in-zsh-does-the-same-as-ctrl-u-in-bash
 #
 # "man zshzle" for more information about zsh command line editor
+#
+# if you just run bindkey by itself, it will list all keybindings
 bindkey \^U backward-kill-line
 
 alias sa='unalias -m "*"; source ~/.zshrc'
