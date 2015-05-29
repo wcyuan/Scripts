@@ -20,19 +20,21 @@ setopt append_history
 unsetopt inc_append_history
 unsetopt share_history
 
-# zsh's forward-word goes to the beginning of the next word. I prefer
-# emacs-forward-word, which goes to the end of the word
+# By default, meta-F in zsh does forward-word, which goes to the
+# beginning of the next word. I prefer emacs-forward-word, which
+# goes to the end of the current word (then the end of the next
+# word, etc).
 # http://zsh.sourceforge.net/Doc/Release/Zsh-Line-Editor.html
 bindkey 'F' emacs-forward-word
 bindkey 'f' emacs-forward-word
 bindkey '[1;5C' emacs-forward-word
 
 
-# Make zsh's control-u the same as bash's
-#
-# Make it kill all the characters on this line from the beginning
-# to the cursor, but leave the characters after the cursor.
-# By default, it removes everything on the line.
+# Make zsh's control-u the same as bash's.  That is, make it do
+# backward-kill-line, which deletes all the characters on this line
+# from the beginning to the cursor,  but leave the characters after
+# the cursor.  By default, it does kill-whole-line, which removes
+# everything on the line.
 #
 # http://stackoverflow.com/questions/3483604/which-shortcut-in-zsh-does-the-same-as-ctrl-u-in-bash
 #
