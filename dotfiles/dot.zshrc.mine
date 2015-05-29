@@ -27,6 +27,18 @@ bindkey 'F' emacs-forward-word
 bindkey 'f' emacs-forward-word
 bindkey '[1;5C' emacs-forward-word
 
+
+# Make zsh's control-u the same as bash's
+#
+# Make it kill all the characters on this line from the beginning
+# to the cursor, but leave the characters after the cursor.
+# By default, it removes everything on the line.
+#
+# http://stackoverflow.com/questions/3483604/which-shortcut-in-zsh-does-the-same-as-ctrl-u-in-bash
+#
+# "man zshzle" for more information about zsh command line editor
+bindkey \^U backward-kill-line
+
 alias sa='unalias -m "*"; source ~/.zshrc'
 
 if [ -r ~/.bashzsh ]
