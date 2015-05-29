@@ -147,7 +147,7 @@ sub main() {
                 print shorten($line) . "\n";
             }
             close($fd)
-                or error("Can't close $f: $? $! $@");
+                or $logger->error("Can't close $f: $? $! $@");
         }
     }
 }
