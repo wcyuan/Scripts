@@ -1,8 +1,19 @@
 # -*- mode: sh -*-
 #
-# This is meant to go at the end of the standard zshrc that oh-my-zshrc
+# This is meant to go at the end of the standard zshrc that oh-my-zsh
 # creates for you.
 #
+
+
+# You oh-my-zsh created zshrc file should have this line:
+#    source $ZSH/oh-my-zsh.sh
+# But oh-my-zsh completion is super slow.  If you want to
+# get rid of oh-my-zsh, you should not source oh-my-zsh.sh
+# and just figure out what parts you need.  At very least,
+# I like these:
+#    source $ZSH/lib/git.zsh
+#    source $ZSH/lib/theme-and-appearance.zsh
+#    source $ZSH/themes/wcy.zsh-theme
 
 # Pass unmatched globs to the command
 #
@@ -42,6 +53,17 @@ bindkey '[1;5C' emacs-forward-word
 #
 # if you just run bindkey by itself, it will list all keybindings
 bindkey \^U backward-kill-line
+
+# I want backward-kill-word to stop at directory delimiters
+# It works that way if you use oh-my-zsh, but if you don't,
+# you need to set these separately.
+#
+# http://stackoverflow.com/questions/444951/zsh-stop-backward-kill-word-on-directory-delimiter
+autoload -U select-word-style
+select-word-style bash
+# that works for backwards, but not forwards, maybe emacs-forward-word
+# doesn't respect it?
+export WORDCHARS=""
 
 alias sa='unalias -m "*"; source ~/.zshrc'
 

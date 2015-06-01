@@ -18,8 +18,8 @@ function setprompt() {
   # To have a newline in your path, just put an actual newline in the
   # variable (\n doesn't work)
   ret_status="%(?:%{$fg_bold[green]%}:%{$fg_bold[red]%}%s)[${timer_show}%D{%l:%M:%S%P}]"
-  export PROMPT='${ret_status}%{$fg_bold[green]%}%p %{$fg[cyan]%}%~ %{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%} % %{$reset_color%}
-$ '
+  export PROMPT="${ret_status}%{$fg_bold[green]%}%p %{$fg[cyan]%}%~ %{$fg_bold[blue]%}$(git_prompt_info)%{$fg_bold[blue]%} % %{$reset_color%}
+$ "
 }
 
 setprompt
