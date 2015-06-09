@@ -471,7 +471,7 @@ def by_prefix(trie, prefixes):
     of the given length that start with the given prefix,
     and return all valid next letters
     """
-    letters = set()
+    letters = None
     for prefix in prefixes:
         subtrie = trie.subtrie(prefix)
         if not subtrie:
@@ -479,10 +479,12 @@ def by_prefix(trie, prefixes):
             #raise ValueError("No possibilities for prefix: {0}".format(prefix))
             continue
         next_letters = subtrie.children.keys()
-        if letters:
-            letters.intersection_update(next_letters)
+        if letters is None:
+            letters = set(next_letters)
         else:
-            letters.update(next_letters)
+            letters.intersection_update(next_letters)
+    if letters is None:
+        return ()
     return letters
 
 def get_possible_letters(trie, board, loc):
@@ -519,7 +521,7 @@ def solve(words, nchars=None):
         yield solution
 
 def get_words():
-    url = 'https://raw.githubusercontent.com/wcyuan/Scripts/26b963ce9746f5dde16855dece9f2a1da2206f00/random/4_letter_enable2k_words.txt'
+    url = 'https://raw.githubusercontent.com/wcyuan/Scripts/master/random/4_letter_enable2k_words.txt'
     with contextlib.closing(urllib.urlopen(url)) as fd:
         words = [word.rstrip() for word in fd.readlines()
                  if not word.startswith("#")]
