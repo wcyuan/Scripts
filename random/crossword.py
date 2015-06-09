@@ -56,7 +56,7 @@ def main():
 def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--start', type=int, default=10000)
-    parser.add_option('--num', type=int, default=0)
+    parser.add_option('--num', type=int, default=1)
     parser.add_option('--test', action='store_true')
     parser.add_option('--verbose',  action='store_true')
     parser.add_option('--log_level',
