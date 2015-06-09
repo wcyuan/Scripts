@@ -1,4 +1,6 @@
 # http://www.morewords.com/wordsbylength/4a/
+# http://www.morewords.com/wordsbylength/4b/
+# ...
 aahs
 aals
 abas
@@ -910,7 +912,7 @@ dyer
 dyes
 dyke
 dyne
-ch
+each
 earl
 earn
 ears
@@ -1203,7 +1205,7 @@ fuze
 fuzz
 fyce
 fyke
-bs
+gabs
 gaby
 gadi
 gads
