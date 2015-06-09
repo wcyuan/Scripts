@@ -50,12 +50,13 @@ def main():
     else:
         words = get_words()
 
-    print_solutions(words, opts.start)
+    print_solutions(words, start=opts.start, num=opts.num)
     
 
 def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--start', type=int, default=10000)
+    parser.add_option('--num', type=int, default=0)
     parser.add_option('--test', action='store_true')
     parser.add_option('--verbose',  action='store_true')
     parser.add_option('--log_level',
@@ -410,7 +411,7 @@ class Board(FieldMixin):
             self._reset_board()
         return self
 
-    def _is_empty(self, loc):
+    def is_empty(self, loc):
         return self._get(loc) == self.EMPTY
 
     def _all_locs(self):
@@ -420,7 +421,7 @@ class Board(FieldMixin):
 
     def empty_locs(self):
         return (loc for loc in self._all_locs()
-                if self._is_empty(loc))
+                if self.is_empty(loc))
 
     def get(self, loc):
         return self._get(loc)
@@ -455,13 +456,54 @@ class Board(FieldMixin):
 
 # --------------------------------------------------------------------------- #
 
+def iter_empties(board):
+    """
+    Find empty locs in this order.  By alternating rows/cols somewhat,
+    we find conflicts more quickly.
+    0, 0
+    
+    0, 1
+    1, 0
+    1, 1
+    
+    2, 0
+    2, 1
+    0, 2
+    1, 2
+    2, 2
+    
+    3, 0
+    3, 1
+    3, 2
+    0, 3
+    1, 3
+    2, 3
+    3, 3
+    ...
+    
+    """
+    maxn = max(board.rows, board.cols)
+    maxrow = board.rows - 1
+    maxcol = board.cols - 1
+    for ii in xrange(maxn):
+        max_ii_row = min(ii, maxrow)
+        max_ii_col = min(ii, maxcol)
+        row = max_ii_row
+        for col in xrange(max_ii_col):
+            if board.is_empty((row, col)):
+                yield (row, col)
+        col = max_ii_col
+        for row in xrange(max_ii_row + 1):
+            if board.is_empty((row, col)):
+                yield (row, col)
+
 def next_empty(board):
     """
-    It would probably be more efficient if we did this in a different order,
-    alternating between rows and columns.
+    Return the next empty location, or None if the board is full.
     """
     try:
-        return next(board.empty_locs())
+        #return next(board.empty_locs())
+        return next(iter_empties(board))
     except StopIteration:
         return None
 
@@ -527,9 +569,8 @@ def get_words():
                  if not word.startswith("#")]
     return words
 
-def print_solutions(words, start=300, end=None):
-    if not end:
-        end = start + 100
+def print_solutions(words, start=10000, num=1):
+    end = start + num - 1
     nvalues = 0
     for board in solve(words):
         nvalues += 1
