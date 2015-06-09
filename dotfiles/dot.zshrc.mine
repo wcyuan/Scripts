@@ -5,7 +5,7 @@
 #
 
 
-# You oh-my-zsh created zshrc file should have this line:
+# Your oh-my-zsh created zshrc file should have this line:
 #    source $ZSH/oh-my-zsh.sh
 # But oh-my-zsh completion is super slow.  If you want to
 # get rid of oh-my-zsh, you should not source oh-my-zsh.sh
@@ -14,6 +14,7 @@
 #    source $ZSH/lib/git.zsh
 #    source $ZSH/lib/theme-and-appearance.zsh
 #    source $ZSH/themes/wcy.zsh-theme
+#    compdef _dirs cd
 
 # Pass unmatched globs to the command
 #
