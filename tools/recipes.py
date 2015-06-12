@@ -301,3 +301,23 @@ def make_table(table, delim=" ", left=True, ors="\n"):
                     for line in table)
 
 # --------------------------------------------------------------------------- #
+
+def extract_from_string(full_str, start_str, end_str=None, default=''):
+    """Extract a substring from full_str.
+
+    Extract the substring that starts with start_str and ends with
+    end_str.  If end_str is None, or if it is not found, the extract
+    until the end of the string.  The extracted string will include
+    start_str, but will not include end_str.  If start_str is not
+    found, return default (which defaults to the empty string).
+    """
+    idx = full_str.find(start_str)
+    if idx < 0:
+        return default
+    if end_str is not None:
+        length = full_str[idx + len(start_str):].find(end_str)
+        if length >= 0:
+            return full_str[idx:idx + len(start_str) + length]
+    return full_str[idx:]
+
+# --------------------------------------------------------------------------- #
