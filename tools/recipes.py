@@ -320,4 +320,37 @@ def extract_from_string(full_str, start_str, end_str=None, default=''):
             return full_str[idx:idx + len(start_str) + length]
     return full_str[idx:]
 
+def partition_string(full_str, markers):
+    """Parition a string into pieces.
+
+    >>> list(partition_string("abcdef", []))
+    ['abcdef']
+    >>> list(partition_string("abcdef", ["g"]))
+    ['abcdef', '']
+    >>> list(partition_string("abcdef", ["c"]))
+    ['ab', 'cdef']
+    >>> list(partition_string("abcdef", ["c", "e"]))
+    ['ab', 'cd', 'ef']
+    >>> list(partition_string("abcdef", ["bc", "e"]))
+    ['a', 'bcd', 'ef']
+    >>> list(partition_string("abcdef abcdef", ["bc", "a"]))
+    ['a', 'bcdef ', 'abcdef']
+    >>> list(partition_string("abcdef abcdef", ["bc", "g"]))
+    ['a', 'bcdef abcdef', '']
+    >>> list(partition_string("abcdef abcdef", ["bc", "c"]))
+    ['a', 'bcdef ab', 'cdef']
+    """
+    idx = 0
+    last_marker = ''
+    rest = full_str
+    for marker in markers:
+        next_idx = rest.find(marker)
+        if next_idx < 0:
+            next_idx = len(rest)
+            marker = ''
+        yield last_marker + rest[idx:next_idx]
+        last_marker = marker
+        rest = rest[next_idx + len(marker):]
+    yield last_marker + rest
+
 # --------------------------------------------------------------------------- #
