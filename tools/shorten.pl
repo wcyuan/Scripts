@@ -54,100 +54,193 @@ use warnings 'all';
 
 use Pod::Usage;
 use Getopt::Long;
-use Log::Log4perl qw(:levels);
 use Scalar::Util qw(looks_like_number);
 use Text::Tabs qw(expand);
+use Term::ANSIColor qw(:constants);
 
-# ----------------------
+# ------------------------------------------------------------------------------
 
-# Default values
-my $OFFSET = 0;
-Log::Log4perl->easy_init($ERROR);
-my $logger = Log::Log4perl->get_logger();
+package Logger;
 
-# Parse any command-line options
-GetOptions( "offset|o=i" => \$OFFSET,
-            "width|w=i"  => \my $WIDTH,
-            "verbose|v!" => sub { $logger->level($DEBUG) },
-          )
-    or pod2usage();
+#
+# Use this simple Logger class instead of Log::Log4perl because
+# Log::Log4perl doesn't seem to be installed by default on cygwin.
+#
 
-if (!defined($WIDTH) &&
-    scalar(@ARGV) > 0 &&
-    ! -f $ARGV[0] &&
-    looks_like_number($ARGV[0]))
-{
-    $logger->debug("Taking WIDTH from first argument");
-    $WIDTH = shift(@ARGV);
+use Carp;
+use Data::Dumper;
+
+our %LEVELS = (DEBUG      => 50,
+               INFO       => 40,
+               WARN       => 30,
+               ERROR      => 20,
+               LOGCONFESS => 10);
+our %REVLEVELS = map { $LEVELS{$_} => $_ } keys(%LEVELS);
+
+sub new($;$) {
+    my ($this, $level) = @_;
+    my $class = ref($this) || $this;
+    my $self = {};
+    $level //= 'WARN';
+    $self->{level} = $level;
+    bless $self, $class;
+    return $self;
 }
 
-if (!defined($WIDTH))
-{
-    $logger->debug("Trying to get width from Term::ReadKey");
-    eval {
-        require Term::ReadKey;
-        my ($wchar, $hchar, $wpixels, $hpixels) = Term::ReadKey::GetTerminalSize();
-        $WIDTH = $wchar;
-    };
+sub level($;$) {
+    my ($self, $level) = @_;
+    if (defined($level)) {
+        if (defined($LEVELS{$level})) {
+            $self->{level} = $level;
+        } elsif (defined($REVLEVELS{$level})) {
+            $self->{level} = $REVLEVELS{$level};
+        } else {
+            confess("Unknown level: $level");
+        }
+    }
+    return $self->{level};
 }
 
-if (!defined($WIDTH))
-{
-    $logger->debug("Trying to get width from stty size");
-    eval {
-        # This is supposed to work on linux, but it doesn't seem to.
-        # Could also try to parse stty -a.
-        chomp(my $tty_size = `stty size`);
-        $WIDTH = (split(' ', $tty_size))[1];
+sub output($$$) {
+    my ($self, $level, $msg) = @_;
+    if ($LEVELS{$self->{level}} >= $LEVELS{$level}) {
+        my ($pack, $fn, $line, $sub) = caller(2);
+        my $str = "[$level][$sub:$line] $msg";
+        if ($level eq 'LOGCONFESS') {
+            confess($str);
+        } else {
+            print STDERR "$str\n";
+        }
     }
 }
 
-if (!defined($WIDTH))
-{
-    $logger->debug("Defaulting to hard coded width");
-    $WIDTH = 139;
-}
-
-my @FILES = @ARGV;
-
-$logger->debug("WIDTH  = $WIDTH");
-$logger->debug("OFFSET = $OFFSET");
-$logger->debug("FILES  = " . join(', ', @FILES));
+sub debug($$)      { $_[0]->output('DEBUG',      $_[1]) }
+sub info($$)       { $_[0]->output('INFO',       $_[1]) }
+sub warn($$)       { $_[0]->output('WARN',       $_[1]) }
+sub error($$)      { $_[0]->output('ERROR',      $_[1]) }
+sub logconfess($$) { $_[0]->output('LOGCONFESS', $_[1]) }
 
 # ----------------------
 
-sub shorten($) {
-    my ($line) = @_;
+package main;
+
+# Default values
+my $LOGGER = new Logger();
+
+sub getopt() {
+  # Parse any command-line options
+  GetOptions( "offset|o=i" => \my $offset,
+              "width|w=i"  => \my $width,
+              "verbose|v!" => sub { $LOGGER->level('DEBUG') },
+              "pattern|p=s" => \my $pattern,
+    )
+    or pod2usage();
+
+  if (!defined($width) &&
+      scalar(@ARGV) > 0 &&
+      ! -f $ARGV[0] &&
+      looks_like_number($ARGV[0]))
+  {
+    $LOGGER->debug("Taking WIDTH from first argument");
+    $width = shift(@ARGV);
+  }
+
+  if (!defined($width))
+  {
+    $LOGGER->debug("Trying to get width from Term::ReadKey");
+    eval {
+      require Term::ReadKey;
+      my ($wchar, $hchar, $wpixels, $hpixels) = Term::ReadKey::GetTerminalSize();
+      $width = $wchar;
+    };
+  }
+
+  if (!defined($width))
+  {
+    $LOGGER->debug("Trying to get width from stty size");
+    eval {
+      # This is supposed to work on linux, but it doesn't seem to.
+      # Could also try to parse stty -a.
+      chomp(my $tty_size = `stty size`);
+      $width = (split(' ', $tty_size))[1];
+    }
+  }
+
+  if (!defined($width))
+  {
+    $LOGGER->debug("Defaulting to hard coded width");
+    $width = 139;
+  }
+
+  my @files = @ARGV;
+
+  $LOGGER->debug("WIDTH  = $width");
+  if (defined($offset)) {
+    $LOGGER->debug("OFFSET = $offset");
+  } else {
+    $LOGGER->debug("OFFSET = undefined");
+  }
+  $LOGGER->debug("PATTERN = $pattern");
+  $LOGGER->debug("FILES  = " . join(', ', @files));
+
+  return (\@files, $width, $offset, $pattern);
+}
+
+# ----------------------
+
+sub shorten($$$$) {
+    my ($line, $offset, $width, $pattern) = @_;
     # expand tabs.  otherwise substr sees the tab as a
     # single character, and won't shorten the line enough.
     $line = expand($line);
-    $line = substr($line, $OFFSET, $WIDTH);
+
+    if (!defined($offset)) {
+      if (defined($pattern)) {
+        $offset = index($line, $pattern);
+        if ($offset > 10) {
+          $offset -= 10;
+        } elsif ($offset >= 0) {
+          $offset = 0;
+        }
+      }
+      if (!defined($offset) || $offset < 0) {
+        $offset = 0;
+      }
+    }
+
+    $line = substr($line, $offset, $width);
+    if (defined($pattern)) {
+      my $boldred = BOLD RED;
+      my $reset = RESET;
+      $line =~ s/($pattern)/${boldred}${1}${reset}/g;
+    }
     # trim trailing whitespace
     $line =~ s/\s+$//g;
     return $line;
 }
 
 sub main() {
-    if (scalar(@FILES) == 0) {
+    my ($files, $width, $offset, $pattern) = getopt();
+    if (scalar(@$files) == 0) {
         while (my $line = <>) {
             chomp($line);
-            print shorten($line) . "\n";
+            print shorten($line, $offset, $width, $pattern) . "\n";
         }
     }
     else {
-        foreach my $f (@FILES) {
+        foreach my $f (@$files) {
             my $fd;
             open($fd, $f, "r");
             if (!$fd) {
-                $logger->error("Can't open $f: $? $! $@");
+                $LOGGER->error("Can't open $f: $? $! $@");
                 next;
             }
             while (my $line = <$fd>) {
                 chomp($line);
-                print shorten($line) . "\n";
+                print shorten($line, $offset, $width, $pattern) . "\n";
             }
             close($fd)
-                or $logger->error("Can't close $f: $? $! $@");
+                or $LOGGER->error("Can't close $f: $? $! $@");
         }
     }
 }
@@ -165,4 +258,3 @@ __END__
  Conan Yuan
 
 =cut
-
