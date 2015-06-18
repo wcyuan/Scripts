@@ -61,7 +61,7 @@ alias tophonors='cd "/cygdrive/c/Users/Yuan/Dropbox/Top Honors Pairing"'
 #
 alias     sps='ps uxwwwf'
 
-gitall() {
+function gitall() {
     cmd="$@"
     if [[ $cmd == "" ]]
     then
@@ -82,7 +82,7 @@ gitall() {
     done
 }
 
-aws() {
+function aws() {
     default_host='ec2-184-72-254-238.compute-1.amazonaws.com'
 
     if [ "$1" = "-v" ]
@@ -114,7 +114,7 @@ aws() {
     ssh $vncopt -i ~/code/aws/startup.pem ubuntu@$host
 }
 
-sshbash() {
+function sshbash() {
     # ssh -t gives you a terminal
     # bash -i gives you interactive mode
     ssh -t $* bash -i
@@ -137,7 +137,7 @@ $'"
 # find
 alias   findtext='find . -name .svn -prune -name .git -prune -o -type f -print'
 alias   findpath='find . $path -type f'
-findname() {
+function findname() {
     pattern="$*"
     find . -iname "*$pattern*" | grep -i "$pattern"
 }
@@ -155,12 +155,12 @@ alias        hex='printf "%x\n"'
 alias       beep='perl -e "print \"\a\";"'
 alias        fep=rlwrap
 
-pynotebook() {
+function pynotebook() {
     #cd ~/notebook-directory
     ipython notebook --pylab=inline --no-browser --ip="*"
 }
 
-embolden() {
+function embolden() {
     # Takes one argument, which is a pattern.
     #
     # Passes through stdin, but highlights the pattern in bold red.
@@ -171,11 +171,11 @@ embolden() {
     sed "s/\($1\)/[1;31m\1[m/g"
 }
 
-winpath() {
+function winpath() {
     cygpath --windows `which $*`
 }
 
-python27() {
+function python27() {
     cmd=`winpath $1`
     shift
     /cygdrive/c/Python27/python $cmd $*
