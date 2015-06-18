@@ -16,7 +16,7 @@ fi
 # ----------------------------------------------------
 # PATH
 
-add_to_path_front() {
+function add_to_path_front() {
     local rmdups=~/bin/rmdups
     if [ -x $rmdups ]
     then
@@ -30,7 +30,7 @@ add_to_path_front() {
     fi
 }
 
-add_to_path_end() {
+function add_to_path_end() {
     add_to_path_front $PATH:$*
 }
 
@@ -42,7 +42,7 @@ add_to_path_end   /cygdrive/c/Ruby193/bin
 # aliases
 alias      sa='unalias -a; . ~/.bashrc'
 
-which() {
+function which() {
     args=$*
     if [ "`type -t $args`" == "file" ]
     then
@@ -56,7 +56,7 @@ which() {
 }
 alias      where='which -a'
 
-go() {
+function go() {
     file=$*
     if [[ ! -e $file ]]
     then
