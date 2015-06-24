@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, with_statement
 import contextlib
 import logging
 import optparse
+import os
 import subprocess
 import traceback
 
@@ -217,8 +218,8 @@ def get_revision_message(rev):
 
 @contextlib.contextmanager
 def chdir(directory):
-  current_directory = os.getcwd()
-  if current_directory == directory:
+  current_directory = os.path.realpath(os.getcwd())
+  if current_directory == os.path.realpath(directory):
     yield
   else:
     print "cd {0}".format(directory)
