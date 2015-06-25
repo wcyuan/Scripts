@@ -141,6 +141,14 @@
 ;; (Note these commands are for the python.el that comes standard with emacs, not
 ;;  python-mode.el which is maintained by the python community.)
 ;;
+;; -- Buffer List --
+;; C-x C-b   -- bring up the buffer list
+;; d         -- mark a buffer for deletion
+;; s         -- mark a buffer to be saved
+;; u         -- clear all marks on a buffer
+;; x         -- execute the changes (delete buffers marked for deletion, save buffers mark for saving)
+;; q         -- quit the buffer list
+;;
 ;; http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html
 ;; http://www.emacswiki.org/emacs/EmacsWiki
 ;;
