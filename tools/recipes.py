@@ -354,3 +354,33 @@ def partition_string(full_str, markers):
     yield last_marker + rest
 
 # --------------------------------------------------------------------------- #
+
+import contextlib
+import gzip
+import logging
+import sys
+
+@contextlib.contextmanager
+def zopen(filename, mode="w"):
+  compressors = [(".gz", gzip.open)]
+  action = "Reading" if mode == "r" else "Writing"
+  if not filename:
+    if mode == "r":
+      logging.info("%s from stdin", action)
+      yield sys.stdin
+    else:
+      logging.info("%s to stdout", action)
+      yield sys.stdout
+  else:
+    func = open
+    for (suffix, compress_func) in compressors:
+      if filename.endswith(suffix):
+        logging.info("%s compressed to %s", action, filename)
+        func = compress_func
+        break
+    else:
+      logging.info("%s to %s", action, filename)
+    with func(filename, mode) as fd:
+      yield fd
+
+# --------------------------------------------------------------------------- #
