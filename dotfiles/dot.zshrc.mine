@@ -31,6 +31,8 @@ HIST_STAMPS="yyyy-mm-dd"
 setopt append_history
 unsetopt inc_append_history
 unsetopt share_history
+HISTSIZE=15000
+SAVEHIST=10000
 
 # By default, meta-F in zsh does forward-word, which goes to the
 # beginning of the next word. I prefer emacs-forward-word, which
