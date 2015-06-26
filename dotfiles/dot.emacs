@@ -873,6 +873,47 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
        )))
 
 ;; ---------------------------------------------------------------- ;;
+;; An alternative to column-marker
+;;
+;; Turn on red highlighting for characters outside of the 80/100 char limit
+;; from http://cxwangyi.blogspot.com/2009/06/make-emacs-warns-for-long-lines.html
+;;
+(add-hook 'c++-mode-hook
+          (lambda () (font-lock-set-up-width-warning 80)))
+(add-hook 'java-mode-hook
+          (lambda () (font-lock-set-up-width-warning 100)))
+(add-hook 'js-mode-hook
+          (lambda () (font-lock-set-up-width-warning 80)))
+(add-hook 'python-mode-hook
+          (lambda () (font-lock-set-up-width-warning 80)))
+(add-hook 'sh-mode-hook
+          (lambda () (font-lock-set-up-width-warning 80)))
+
+;; (defun font-lock-width-keyword (width)
+;;   "Return a font-lock style keyword for a string beyond width WIDTH
+;; that uses 'font-lock-warning-face'."
+;;   `((,(format "^%s\\(.+\\)" (make-string width ?.))
+;;      (1 font-lock-warning-face t))))
+
+;; (font-lock-add-keywords 'c++-mode (font-lock-width-keyword 80))
+;; (font-lock-add-keywords 'java-mode (font-lock-width-keyword 100))
+;; (font-lock-add-keywords 'js-mode (font-lock-width-keyword 80))
+;; (font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
+
+;; font-lock-set-up-width-warning appears to be standard
+;; but in case it doesn't exist, here's a version that seems to work
+;; from https://github.com/msparks/dotfiles/blob/master/.emacs
+;; (defun font-lock-set-up-width-warning (width)
+;;   "In the current buffer, make text beyond column `width' appear in
+;; `font-lock-warning-face'."
+;;   (require 'font-lock)
+;;   (font-lock-mode 1)
+;;   (make-local-variable 'font-lock-keywords)
+;;   (font-lock-add-keywords
+;;    nil
+;;    `((,(format "^.\\{%d\\}\\(.+\\)" width) 1 font-lock-warning-face t))))
+
+;; ---------------------------------------------------------------- ;;
 ;; Nice unique buffer names.  More descriptive than sim.pl<2>
 ;;
 
