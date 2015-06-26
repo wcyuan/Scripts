@@ -21,9 +21,12 @@
 # http://stackoverflow.com/questions/20037364/why-zsh-tries-to-expand-and-bash-does-not
 setopt nonomatch
 
+# Set up history
+export HISTSIZE=15000
+export SAVEHIST=10000
+export HISTFILE=~/.zsh_history
 # Add time/date stamps to history
-HIST_STAMPS="yyyy-mm-dd"
-
+export HIST_STAMPS="yyyy-mm-dd"
 # inc_append_history and share_history seem to make it so that up-arrow on
 # any shell will see every command you've run in any shell.  I want the recent
 # histories of different shells to be independent, but I want to be able to
@@ -31,8 +34,6 @@ HIST_STAMPS="yyyy-mm-dd"
 setopt append_history
 unsetopt inc_append_history
 unsetopt share_history
-HISTSIZE=15000
-SAVEHIST=10000
 
 # By default, meta-F in zsh does forward-word, which goes to the
 # beginning of the next word. I prefer emacs-forward-word, which
