@@ -383,4 +383,92 @@ def zopen(filename, mode="w"):
     with func(filename, mode) as fd:
       yield fd
 
+# An alternative version that is not as nice, in some ways, but probably
+# easier to read
+#
+# @contextlib.contextmanager
+# def zopen(filename, mode="r"):
+#   if filename.endswith('.gz'):
+#     with gzip.open(filename, mode=mode) as fd:
+#       yield fd
+#   else:
+#     with open(filename, mode=mode) as fd:
+#       yield fd
+
+# --------------------------------------------------------------------------- #
+# Here an example of how to use cache_to_disk
+#
+#   @cache_to_disk(lambda input: "~/data/foo_{0}.csv.gz".format(input))
+#   def get_data(input):
+#     return to_csv_string(get_data_raw(input))
+#
+#   def main():
+#     ...
+#     foo = from_csv_string(get_data(input))
+#     ...
+#
+# The output from get_data_raw will be stored in the specified file.
+# If that file exists, it will read the data from the file instead of
+# running the command again.
+#
+
+import logging
+import os
+
+def cache_to_disk(make_filename,
+                  serializer=None,
+                  deserializer=None,
+                  make_cache_key=None):
+  if not hasattr(cache_to_disk, "NO_WRITE"):
+    cache_to_disk.NO_WRITE = False
+  if isinstance(make_filename, basestring):
+    single_filename = make_filename
+    make_filename = None
+  else:
+    single_filename = None
+  cache = {}
+  def wrapped(func):
+    def newfunc(*args, **kwargs):
+      if make_cache_key:
+        key = make_cache_key(*args, **kwargs)
+      else:
+        key = (tuple(args), tuple(kwargs.items()))
+      logging.debug("Cache key: %s", key)
+      if key not in cache:
+        if single_filename:
+          filename = single_filename
+        else:
+          filename = make_filename(*args, **kwargs)
+        filename = os.path.expanduser(filename)
+        logging.debug("Cache filename: %s", filename)
+        if not os.path.exists(filename):
+          logging.debug("Calling func %s", func)
+          output = func(*args, **kwargs)
+          if serializer:
+            logging.debug("Serializing to file %s", filename)
+            serializer(filename, output, no_write=cache_to_disk.NO_WRITE)
+          else:
+            if cache_to_disk.NO_WRITE:
+              logging.debug("NO WRITE: Would write to file %s", filename)
+            else:
+              logging.debug("Writing to file %s", filename)
+              with zopen(filename, "w") as fd:
+                cache[key] = fd.write(output)
+        if deserializer:
+          logging.debug("Deserializing from file %s", filename)
+          cache[key] = deserializer(filename)
+        else:
+          logging.debug("Reading from file %s", filename)
+          with zopen(filename) as fd:
+            cache[key] = fd.read()
+      return cache[key]
+    return newfunc
+  return wrapped
+
+def to_csv_string(list_of_lists, ors="\n", ofs=","):
+  return ors.join(ofs.join(lst) for lst in list_of_lists)
+
+def from_csv_string(csv_string, ors="\n", ofs=","):
+  return [line.split(ofs) for line in csv_string.split(ors)]
+
 # --------------------------------------------------------------------------- #
