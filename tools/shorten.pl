@@ -175,12 +175,8 @@ sub getopt() {
   my @files = @ARGV;
 
   $LOGGER->debug("WIDTH  = $width");
-  if (defined($offset)) {
-    $LOGGER->debug("OFFSET = $offset");
-  } else {
-    $LOGGER->debug("OFFSET = undefined");
-  }
-  $LOGGER->debug("PATTERN = $pattern");
+  $LOGGER->debug("OFFSET = " . ($offset // "undefined"));
+  $LOGGER->debug("PATTERN = ". ($pattern // "undefined"));
   $LOGGER->debug("FILES  = " . join(', ', @files));
 
   return (\@files, $width, $offset, $pattern);
