@@ -21,19 +21,68 @@
 # http://stackoverflow.com/questions/20037364/why-zsh-tries-to-expand-and-bash-does-not
 setopt nonomatch
 
+# ----------------------------------------------------------------------------
 # Set up history
 export HISTSIZE=15000
 export SAVEHIST=10000
 export HISTFILE=~/.zsh_history
 # Add time/date stamps to history
 export HIST_STAMPS="yyyy-mm-dd"
+
 # inc_append_history and share_history seem to make it so that up-arrow on
 # any shell will see every command you've run in any shell.  I want the recent
 # histories of different shells to be independent, but I want to be able to
 # easily search the histories of all shells.
+
+# from man zshoptions:
+# APPEND_HISTORY
+#              If this is set, zsh sessions will append their history
+#              list to the history file, rather than replace it. Thus,
+#              multiple parallel zsh sessions will all have the new
+#              entries from their history lists added to the history
+#              file, in the order that they exit.  The file will still
+#              be periodically re-written to trim it when the number
+#              of lines grows 20% beyond the value specified by $SAVE‐
+#              HIST (see also the HIST_SAVE_BY_COPY option).
 setopt append_history
+
+# INC_APPEND_HISTORY
+#
+#              This options works like APPEND_HISTORY except that new
+#              history lines are added to the $HISTFILE incrementally
+#              (as soon as they are entered), rather than waiting until
+#              the shell exits.  The file will still be periodically
+#              re-written to trim it when the number of lines grows 20%
+#              beyond the value specified by $SAVEHIST (see also the
+#              HIST_SAVE_BY_COPY option).
 unsetopt inc_append_history
+
+# SHARE_HISTORY
+#
+#              This option both imports new commands from the history
+#              file, and also causes your typed commands to be
+#              appended to the history file (the latter is like
+#              specifying INC_APPEND_HISTORY, which should be turned
+#              off if this option is in effect).  The history lines
+#              are also output with timestamps ala EXTENDED_HISTORY
+#              (which makes it easier to find the spot where we left
+#              off reading the file after it gets re-written).
+#
+#              By default, history movement commands visit the
+#              imported lines as well as the local lines, but you can
+#              toggle this on and off with the set-local-history zle
+#              binding.  It is also possible to create a zle widget
+#              that will make some commands ignore imported commands,
+#              and some include them.
+#
+#              If you find that you want more control over when
+#              commands get imported, you may wish to turn
+#              SHARE_HISTORY off, INC_APPEND_HISTORY or
+#              INC_APPEND_HISTORY_TIME (see above) on, and then
+#              manually import commands whenever you need them using
+#              `fc -RI'.
 unsetopt share_history
+# ----------------------------------------------------------------------------
 
 # By default, meta-F in zsh does forward-word, which goes to the
 # beginning of the next word. I prefer emacs-forward-word, which
