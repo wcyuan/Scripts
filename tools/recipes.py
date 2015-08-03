@@ -482,6 +482,23 @@ def exception_chaining(func, msg):
     except:
         (exc_type, exc_value, exc_traceback) = sys.exc_info()
         exc_value = '{0}: {1}'.format(msg, exc_value)
+        #
+        # The raise statement is described here:
+        #   https://docs.python.org/2/reference/simple_stmts.html#raise
+        #
+        #   If the first object is a class, it becomes the type of the exception.
+        #   The second object is used to determine the exception value: If it is an
+        #   instance of the class, the instance becomes the exception value. If the
+        #   second object is a tuple, it is used as the argument list for the class
+        #   constructor; if it is None, an empty argument list is used, and any other
+        #   object is treated as a single argument to the constructor. The instance
+        #   so created by calling the constructor is used as the exception value.
+        #
+        # This code changes the value to a string, which will then be used
+        # to construct a new copy of the exception.  If that's not the right way
+        # to create this type of exception, this won't work.  For example, this
+        # doesn't work for UnicodeEncodeError.
+        #
         raise exc_type, exc_value, exc_traceback
 
 # --------------------------------------------------------------------------- #
