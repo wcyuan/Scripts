@@ -472,3 +472,61 @@ def from_csv_string(csv_string, ors="\n", ofs=","):
   return [line.split(ofs) for line in csv_string.split(ors)]
 
 # --------------------------------------------------------------------------- #
+# Exception chaining
+#
+
+import sys
+def exception_chaining(func, msg):
+    try:
+        return func()
+    except:
+        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        exc_value = '{0}: {1}'.format(msg, exc_value)
+        raise exc_type, exc_value, exc_traceback
+
+# --------------------------------------------------------------------------- #
+# deep copy
+#
+
+import itertools
+import logging
+
+def deepcmp(a, b, path=None):
+  if not path:
+    path = []
+  if type(a) != type(b):
+    logging.warning("Diff in type %s != %s of path %s", type(a), type(b), path)
+    return cmp(type(a), type(b))
+  if isinstance(a, dict):
+    if len(a) != len(b):
+      logging.warning("Diff in len %s != %s of path %s", len(a), len(b), path)
+      return cmp(len(a), len(b))
+    for x in a.iterkeys():
+      if x not in b:
+        logging.warning("Extra key %s at path %s", x, path)
+        return 1
+      res = deepcmp(a[x], b[x], path=path+[x])
+      if res != 0:
+        return res
+    for y in b.iterkeys():
+      if y not in a:
+        logging.warning("missing key %s at path %s", y, path)
+        return -1
+    return 0
+  if isinstance(a, list):
+    if len(a) != len(b):
+      logging.warning("Diff in len %s != %s of path %s", len(a), len(b), path)
+      return cmp(len(a), len(b))
+    for ii, (x, y) in enumerate(itertools.izip(a, b)):
+      res = deepcmp(x, y, path=path+[ii])
+      if res != 0:
+        return res
+    return 0
+  res = cmp(a, b)
+  if res != 0:
+    logging.warning("Diff in path %s", path)
+  return res
+
+# --------------------------------------------------------------------------- #
+
+
