@@ -528,5 +528,179 @@ def deepcmp(a, b, path=None):
   return res
 
 # --------------------------------------------------------------------------- #
+# Generic proto parsing
+
+import logging
+
+def pretty_string(record, indent=0):
+  indent_str = "   " * indent
+  lines = ["{"]
+  for key in record:
+    for val in record[key]:
+      line = "{0}{1}".format(indent_str, key)
+      if isinstance(val, dict):
+        line += " " + pretty_string(val, indent=indent+1)
+      else:
+        line += ": " + val
+      lines.append(line)
+  lines.append(indent_str + "}")
+  return "\n".join(lines)
 
 
+def parse_blocks(string):
+  level = 0
+  block = ""
+  logging.debug("length = %s", len(string))
+  for c in string:
+    block += c
+    if c == "{":
+      level += 1
+    if c == "}":
+      level -= 1
+    if level == 0:
+      if block:
+        yield block[1:-1]
+      block = ""
+
+
+def parse_responses(lines, is_split=False, is_reversed=False):
+  """Sample response looks like:
+
+  result {
+    key: "value"
+    entry {
+      foo: "bar"
+      name: "John"
+      value: 0.12
+      enum_val: FOOT
+    }
+    entry {
+      foo: "safd"
+      name: "Sara"
+      value: 2.5
+      enum_val: ARM
+    }
+  }
+  result {
+  }
+
+  This returns an iterator, so you have to tuplize it.  Then you'll
+  get a single element, which is a dictionary with a single key,
+  "result".  The value for that key will be a list of all the
+  responses.
+
+  In general, we don't know how many of a value there will be.  I.e.,
+  there could be a single entry or there could be many entries.
+  There could be a single foo or there could be many foos.  So we
+  assume that all fields are lists.  The clients of the data should
+  know which fields are really lists and which fields you just need to
+  take the [0] element of.
+  """
+  if not is_split:
+    lines = lines.split("\n")
+  if not is_reversed:
+    lines.reverse()
+  block = {}
+  while lines:
+    line = lines.pop().lstrip()
+    if line == "}":
+      yield block
+      block = {}
+      continue
+    if ": " in line:
+      var, val = line.split(": ", 1)
+    elif line.endswith(" {"):
+      var = line[:-2]
+      val = ""
+      # Just take the first response, there should either 0 or 1 responses.
+      for response in parse_responses(lines, is_split=True, is_reversed=True):
+        val = response
+        break
+    else:
+      if line.strip():
+         logging.warning("Can't parse line %s", line)
+      continue
+    block.setdefault(var, []).append(val)
+  if block:
+    yield block
+
+# --------------------------------------------------------------------------- #
+
+class Runner(object):
+  """A class to run commands."""
+  NO_WRITE = False
+
+  @classmethod
+  def run(cls, cmd,
+          always=False,
+          die_on_error=True,
+          warn_on_error=True,
+          capture_stdout=True):
+    """Run the command.
+
+    Args:
+
+      cmd: the command to run.  Should be a string or a list of strings.
+
+      always: If True, we will run even if no_write is true.  False by
+      default.
+
+      die_on_error: If False, then if the command exits with a
+      non-zero exit code, we will log a warning, but we won't throw an
+      exception.  True by default.
+
+      However, if the command doesn't even exist, or if Popen is
+      called with invalid arguments, then we will still throw an
+      exception.
+
+      warn_on_error: If the command fails and die_on_error is False,
+      then we will either log a warning (if warn_on_error is True)
+      or a debug message (if warn_on_error is False)
+
+      capture_stdout: If true, this function will return the stdout.
+      That means the stdout won't appear on the terminal.
+
+    Returns:
+      In NO_WRITE mode, we always return None.
+      Otherwise, if capture_stdout is True, we return the command's stdout.
+      Otherwise, if capture_stdout is False, we return (returncode == 0)
+
+    Raises:
+      RuntimeError: if the command fails and die_on_error is True.
+      Can throw other errors if the command doesn't exist or if
+      Popen is called with invalid arguments.
+
+    """
+    if isinstance(cmd, basestring):
+      strcmd = cmd
+    else:
+      strcmd = "{0} ({1})".format(cmd, " ".join(cmd))
+
+    if cls.NO_WRITE and not always:
+      logging.info("NO WRITE: %s", strcmd)
+      return
+
+    logging.info("Running:  %s", strcmd)
+    if capture_stdout:
+      stdout_opt = subprocess.PIPE
+    else:
+      stdout_opt = None
+    process = subprocess.Popen(cmd,
+                               shell=isinstance(cmd, basestring),
+                               stdout=stdout_opt)
+    stdout = process.communicate()[0]
+    if process.returncode != 0:
+      if die_on_error:
+        raise RuntimeError("Failure running {0}".format(cmd))
+      elif warn_on_error:
+        logging.warning("Error running %s", cmd)
+      else:
+        logging.debug("Error running %s", cmd)
+    logging.info("Command %s finished with return code %s", cmd,
+                 process.returncode)
+    if capture_stdout:
+      return stdout
+    else:
+      return process.returncode == 0
+
+# --------------------------------------------------------------------------- #
