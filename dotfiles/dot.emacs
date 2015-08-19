@@ -101,8 +101,12 @@
 ;; C-x )     -- finish defining a macro
 ;; C-x e     -- execute the last defined macro
 ;;
-;; C-x r k     -- kill rectangle
-;; C-x r y     -- yank rectangle
+;; C-x r k   -- kill rectangle
+;; C-x r y   -- yank rectangle
+;;
+;; C-x TAB   -- indent a region rigidly by one space
+;; C-u <n> C-x TAB
+;;           -- indent a region rigidly by N spaces
 ;;
 ;; M-C-%     -- query-replace-string
 ;;
