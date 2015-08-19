@@ -103,6 +103,12 @@
 ;;
 ;; C-x r k   -- kill rectangle
 ;; C-x r y   -- yank rectangle
+;; C-x r t <str>
+;;           -- string-rectangle replace everything in the rectangle
+;;              with a copy of <str> on each line.  It's fine for the
+;;              rectangle to be empty, in which case you are just inserting
+;;              <str> on each line
+;; C-x r o   -- open rectangle -- move everything in the rectangle to the right and put spaces there instead.
 ;;
 ;; C-x TAB   -- indent a region rigidly by one space
 ;; C-u <n> C-x TAB
