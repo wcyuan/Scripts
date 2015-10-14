@@ -14,7 +14,7 @@ leaf) or sub-Protos (i.e., another dict of lists).
 
 EXAMPLES:
 
-  ipython -i proto.py ~/data/proto.txt
+  ipython -i proto.py ~/data/x20/data/transit/tss/transit_request.txt
 
   ipython -i ~/code/bin/proto.py *.txt
 
@@ -257,6 +257,50 @@ class ProtoList(list):
       elif eltmatch(patt, elt):
         print path, ii, elt
 
+
+class ProtoDict(dict):
+  """A custom dict class for Protos.
+
+  This just allows element access through both getitem (the normal
+  way) and getattr.  It also adds the attributes to dir so tab
+  completion works.
+
+  """
+
+  @classmethod
+  def normalize_attr(cls, attr):
+    """Return a version of a string that is suitable for an attribute
+
+    http://stackoverflow.com/questions/10120295/valid-characters-in-a-python-class-name
+    https://docs.python.org/2/reference/lexical_analysis.html#identifiers
+    """
+    attr = "".join(
+        c for c in attr if c in
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+    if attr[0] in "0123456789":
+      attr = "_" + attr
+    return attr
+
+  def __getattr__(self, attr):
+    if attr in self:
+      return self[attr]
+    # if we were given a normalized attribute, there could be multiple
+    # keys that normalize to the same thing.  We just arbitrarily take
+    # the first one.
+    for key in self.iterkeys():
+      if attr == self.normalize_attr(key):
+        return self[key]
+    raise AttributeError("Can't find field '{0}'".format(attr))
+
+  def __dir__(self):
+    """The __dir__ method controls ipython tab completion
+
+    http://stackoverflow.com/questions/13870241/ipython-tab-completion-for-custom-dict-class
+    https://ipython.org/ipython-doc/dev/config/integrating.html
+    """
+    return dir(dict) + list(
+        set(self.normalize_attr(ky) for ky in self.iterkeys()))
+
 # --------------------------------------------------------------------------- #
 
 
@@ -302,7 +346,7 @@ def parse_iter(lines=None, filename=None, depth=0):
   # our recursive call, we start from where the iterator left off, not
   # at the beginning of the list.
   lines = iter(lines)
-  block = {}
+  block = ProtoDict()
   for line in lines:
     # TODO: decoding the line again could cause problems if the line
     # has already been decoded
@@ -315,7 +359,7 @@ def parse_iter(lines=None, filename=None, depth=0):
       continue
     if line == "}":
       yield block
-      block = {}
+      block = ProtoDict()
       continue
     if ": " in line:
       var, val = line.split(": ", 1)
