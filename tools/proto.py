@@ -12,6 +12,16 @@ Protos can be seen as trees, represented as dicts of lists.  The
 elements of the lists are either strings (in which case the node is a
 leaf) or sub-Protos (i.e., another dict of lists).
 
+EXAMPLES:
+
+  ipython -i proto.py ~/data/proto.txt
+
+  ipython -i ~/code/bin/proto.py *.txt
+
+This command will parse the protos, then drop you in an ipython shell
+with the variable "parsed" set to a map from filename to the protos
+found in that file.
+
 """
 
 # --------------------------------------------------------------------------- #
@@ -44,13 +54,13 @@ def main():
   if opts.log_level:
     logat(opts.log_level)
 
-  if args:
-    responses = (file_lines(arg) for arg in args)
-  else:
-    responses = [sample_response()]
-
-  for response in responses:
-    print tuple(parse_responses(response))
+  parsed = {}
+  if opts.sample:
+    parsed["sample"] = parse(sample_response())
+  for filename in args:
+    parsed[filename] = parse(filename=filename)
+  print parsed
+  return parsed
 
 
 def getopts():
@@ -60,6 +70,7 @@ def getopts():
   parser.add_option("--no_write",
                     action="store_true",
                     help="Just print commands without running them")
+  parser.add_option("--sample", action="store_true")
   return parser.parse_args()
 
 
@@ -154,7 +165,7 @@ class ProtoList(list):
     return super(ProtoList, self).__init__(seq, *args, **kwargs)
 
   # fullstring returns the string that a normal list would return
- fullstring = list.__repr__
+  fullstring = list.__repr__
 
   # summary is a string representation that just shows a bit of key
   # information.  Most importantly, it does not recursively include
@@ -232,7 +243,7 @@ class ProtoList(list):
         return strmatch(patt, str(elt))
 
     for ii, elt in enumerate(self):
-     if isinstance(elt, dict):
+      if isinstance(elt, dict):
         # For dicts, match against the key or the value
         for ky, vl in elt.iteritems():
           if strmatch(patt, ky) or strmatch(patt, vl):
@@ -266,55 +277,7 @@ def parse_blocks(string):
 
 
 def parse_iter(lines=None, filename=None, depth=0):
-  """Sample input looks like:
-
-  result {
-    key:
-    "\357\275\212\357\275\222\345\214\227\346\265\267\351\201\223\343\203\220\343\202\271"
-    candidate {
-      mid: "/m/0j_3tph"
-      name: "JR Hokkaido Bus Company"
-      score: 0.150605774486
-      decision: NO_MATCH
-    }
-    candidate {
-      mid: "/m/03cfjg_"
-      name: "JR Bus"
-      score: 0.000991709262653
-      decision: NO_MATCH
-    }
-  }
-  result {
-    key:
-    "\357\275\212\357\275\222\345\233\233\345\233\275\343\203\220\343\202\271"
-    candidate {
-      mid: "/g/11bc8ccbqc"
-      name:
-      "\357\274\252\357\274\262\345\233\233\345\233\275\343\203\220\343\202\271\351\253\230\351\200\237"
-      score: 0.148700021658
-      decision: NO_MATCH
-    }
-    candidate {
-      mid: "/g/121w1jsf"
-      name:
-      "\343\202\270\343\202\247\343\202\244\343\202\242\343\203\274\343\203\253\345\233\233\345\233\275"
-      score: 0.140173489149
-      decision: NO_MATCH
-    }
-    candidate {
-      mid: "/m/03cfjg_"
-      name: "JR Bus"
-      score: 0.00991709262653
-      decision: NO_MATCH
-    }
-    candidate {
-      mid: "/g/122njc5v"
-      name:
-        "\346\235\276\345\261\261\351\253\230\347\237\245\346\200\245\350\241\214\347\267\232"
-      score: 1.26111478455e-05
-      decision: NO_MATCH
-    }
-  }
+  """Parses the text format of a Protobuf
 
   This returns an iterator, so you have to tuplize it.  Then you'll
   get a single element, which is a dictionary with a single key,
@@ -344,6 +307,12 @@ def parse_iter(lines=None, filename=None, depth=0):
     # TODO: decoding the line again could cause problems if the line
     # has already been decoded
     line = decode(line).lstrip().rstrip("\n\r")
+    if line == "{" and not block:
+      # We are ready to accept protos that are not wrapped in braces.
+      # If we see a proto that is wrapped in braces, well we already
+      # stop if we see a close brace, so all we need to add is to
+      # ignore the opening brace.
+      continue
     if line == "}":
       yield block
       block = {}
@@ -355,13 +324,58 @@ def parse_iter(lines=None, filename=None, depth=0):
       val = next(parse_iter(lines, depth=depth + 1))
     else:
       if line.strip():
-        logging.warning("Can't parse line %s", line)
+        logging.warning("Can't parse line %s (file %s)", line, filename)
       continue
     block.setdefault(var, ProtoList((), depth=depth)).append(val)
-  yield block
+  if block:
+    yield block
 
 
 def parse(*args, **kwargs):
+  """Run parse_iter but return a tuple
+
+  # empty proto
+  >>> parse("")
+  Traceback (most recent call last):
+  ...
+  ValueError: No data to parse
+
+  # a single value
+  >>> parse("a: 1")
+  ({u'a': [u'1']},)
+
+  # a single value in braces.  Braces must be on separate lines by themselves.
+  >>> parse("{\\na: 1\\n}")
+  ({u'a': [u'1']},)
+
+  # a list of values
+  >>> parse("a: 1\\na: 2\\na: 3")
+  ({u'a': [u'1', u'2', u'3']},)
+
+  # a complex object breaking up the list
+  >>> parse("a: 1\\na: 2\\na: 3\\nb {\\nc: x\\nc: y\\n}\\na: 4")
+  ({u'a': [u'1', u'2', u'3', u'4'], u'b': [{u'c': [u'x', u'y']}]},)
+
+  # nested complex objects
+  >>> parse(          # doctest: +NORMALIZE_WHITESPACE
+  ... "a: 1\\na: 2\\na: 3\\nb {\\nc: x\\nc: y\\nc {\\nz: 6\\n}\\n}\\na: 4")
+  ({u'a': [u'1', u'2', u'3', u'4'], \
+   u'b': [{u'c': [u'x', u'y', {u'z': [u'6']}]}]},)
+
+  # ProtoList summary
+  >>> ProtoList(parse("a: 1\\na: 2\\na: 3\\nb {\\nc: x\\nc: y\\n}\\na: 4"))
+  ProtoList(len=1, depth=0, height=3)
+
+  # multiple protos in a single string
+  >>> parse(          # doctest: +NORMALIZE_WHITESPACE
+  ...       "{\\na: 1\\na: 2\\na: 3\\n \
+              b {\\nc: x\\nc: y\\n}\\n}\\n \
+             {\\na: 4\\n}\\n{\\na: 4\\n}")
+  ({u'a': [u'1', u'2', u'3'], u'b': [{u'c': [u'x', u'y']}]}, \
+   {u'a': [u'4']}, \
+   {u'a': [u'4']})
+
+  """
   return tuple(parse_iter(*args, **kwargs))
 
 # --------------------------------------------------------------------------- #
@@ -416,6 +430,7 @@ def sample_response():
 # --------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-  main()
+  print "The parsed protos will appear in the variable 'parsed'"
+  parsed = main()
 
 # --------------------------------------------------------------------------- #
