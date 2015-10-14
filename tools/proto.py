@@ -243,7 +243,9 @@ class ProtoList(list):
         return strmatch(patt, str(elt))
 
     for ii, elt in enumerate(self):
-      if isinstance(elt, dict):
+      if isinstance(elt, ProtoDict):
+        elt.search(patt, path=path + [ii], case_insensitive=case_insensitive)
+      elif isinstance(elt, dict):
         # For dicts, match against the key or the value
         for ky, vl in elt.iteritems():
           if strmatch(patt, ky) or strmatch(patt, vl):
@@ -300,6 +302,35 @@ class ProtoDict(dict):
     """
     return dir(dict) + list(
         set(self.normalize_attr(ky) for ky in self.iterkeys()))
+
+  def search(self, patt, path=None, case_insensitive=True):
+    """Search for a string in a proto.
+    """
+    if not path:
+      path = []
+    if case_insensitive:
+      patt = patt.lower()
+
+    def strmatch(patt, strng):
+      if not isinstance(strng, basestring):
+        return False
+      if case_insensitive:
+        # Assumes that patt is already lowered
+        return patt in strng.lower()
+      else:
+        return patt in strng
+
+    def eltmatch(patt, elt):
+      if isinstance(elt, basestring):
+        return strmatch(patt, elt)
+      else:
+        return strmatch(patt, str(elt))
+
+    for ky, vl in self.iteritems():
+      if strmatch(patt, ky) or strmatch(patt, vl):
+        print path, ky, vl
+      elif isinstance(vl, ProtoList):
+        vl.search(patt, path=path + [ky], case_insensitive=case_insensitive)
 
 # --------------------------------------------------------------------------- #
 
