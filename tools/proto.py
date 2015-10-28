@@ -14,9 +14,27 @@ leaf) or sub-Protos (i.e., another dict of lists).
 
 EXAMPLES:
 
-  ipython -i proto.py ~/data/x20/data/transit/tss/transit_request.txt
+  $ ipython -i proto.py ~/data/x20/data/transit/tss/transit_request.txt
 
-  ipython -i ~/code/bin/proto.py *.txt
+  $ ipython -i ~/code/bin/proto.py *.txt
+
+  >>> import proto
+  >>> proto.parse( # doctest: +ELLIPSIS
+  ... filename="~/data/x20/data/transit/tss/transit_request.txt")
+  (...)
+  >>> p = proto.ProtoDict()
+  >>> p.add('mykey', 'myvalue')
+  {'mykey': myvalue}
+  >>> p.add('mykey2', {4: 5, 6: 7})
+  {'mykey2': [{4: 5, 6: 7}], 'mykey': myvalue}
+  >>> p.mykey2[0]._4
+  5
+  >>> print p.full_proto_string()
+  mykey2 {
+    4: 5
+    6: 7
+  }
+  mykey: myvalue
 
 This command will parse the protos, then drop you in an ipython shell
 with the variable "parsed" set to a map from filename to the protos
@@ -213,8 +231,28 @@ class ProtoList(list):
     full = self.fullstring()
     if len(full) > 50:
       return self.summary(show_height=show_height)
+    elif len(self) == 1 and not isinstance(self[0], ProtoDict):
+      return self[0]
     else:
       return full
+
+  def full_proto_string(self, pretty=True, indent_amount=0):
+    if pretty:
+      ors = "\n"
+      indent = "  " * indent_amount
+    else:
+      ors = " "
+      indent = ""
+    def print_elt(elt):
+      if isinstance(elt, ProtoDict):
+        return elt.full_proto_string(
+            pretty=pretty, indent_amount=indent_amount)
+      else:
+        return "{0}{1}".format(indent, elt)
+    return ors.join(print_elt(elt) for elt in self)
+
+  def is_simple(self):
+    return len(self) < 2 and not any(isinstance(elt, ProtoDict) for elt in self)
 
   def __repr__(self):
     return self.string()
@@ -259,6 +297,14 @@ class ProtoList(list):
       elif eltmatch(patt, elt):
         print path, ii, elt
 
+  def add(self, elt):
+    if isinstance(elt, dict):
+      self.append(ProtoDict().add_dict(elt))
+    elif isinstance(elt, ProtoDict):
+      self.append(elt)
+    else:
+      self.append(str(elt))
+    return self
 
 class ProtoDict(dict):
   """A custom dict class for Protos.
@@ -276,6 +322,7 @@ class ProtoDict(dict):
     http://stackoverflow.com/questions/10120295/valid-characters-in-a-python-class-name
     https://docs.python.org/2/reference/lexical_analysis.html#identifiers
     """
+    attr = str(attr)
     attr = "".join(
         c for c in attr if c in
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
@@ -332,6 +379,44 @@ class ProtoDict(dict):
       elif isinstance(vl, ProtoList):
         vl.search(patt, path=path + [ky], case_insensitive=case_insensitive)
 
+  def full_proto_string(self, pretty=True, indent_amount=0):
+    if pretty:
+      ors = "\n"
+      indent = "  " * indent_amount
+    else:
+      ors = ", "
+      indent = ""
+    def print_elt(key, value):
+      if isinstance(value, ProtoList):
+        if value.is_simple():
+          yield "{0}{1}: {2}".format(
+              indent, key, value.full_proto_string(
+                  pretty=False,
+                  indent_amount=indent_amount + 1))
+        else:
+          yield "{0}{1} {{".format(indent, key)
+          yield value.full_proto_string(
+              pretty=pretty,
+              indent_amount=indent_amount + 1)
+          yield "{0}}}".format(indent)
+      else:
+        yield "{0}{1}: {2}".format(indent, key, value)
+    return ors.join(elt
+                    for (key, value) in self.iteritems()
+                    for elt in print_elt(key, value))
+
+  def add(self, key, value):
+    if isinstance(value, ProtoList):
+      self.setdefault(key, ProtoList(())).extend(value)
+    else:
+      self.setdefault(key, ProtoList(())).add(value)
+    return self
+
+  def add_dict(self, dct):
+    for (key, value) in dct.iteritems():
+      self.add(key, value)
+    return self
+
 # --------------------------------------------------------------------------- #
 
 
@@ -368,6 +453,7 @@ def parse_iter(lines=None, filename=None, depth=0):
   """
   if not lines:
     if filename:
+      filename = os.path.expanduser(filename)
       lines = file_lines(filename)
     else:
       raise ValueError("No data to parse")
@@ -417,11 +503,11 @@ def parse(*args, **kwargs):
 
   # a single value
   >>> parse("a: 1")
-  ({u'a': [u'1']},)
+  ({u'a': 1},)
 
   # a single value in braces.  Braces must be on separate lines by themselves.
   >>> parse("{\\na: 1\\n}")
-  ({u'a': [u'1']},)
+  ({u'a': 1},)
 
   # a list of values
   >>> parse("a: 1\\na: 2\\na: 3")
@@ -435,7 +521,7 @@ def parse(*args, **kwargs):
   >>> parse(          # doctest: +NORMALIZE_WHITESPACE
   ... "a: 1\\na: 2\\na: 3\\nb {\\nc: x\\nc: y\\nc {\\nz: 6\\n}\\n}\\na: 4")
   ({u'a': [u'1', u'2', u'3', u'4'], \
-   u'b': [{u'c': [u'x', u'y', {u'z': [u'6']}]}]},)
+   u'b': [{u'c': [u'x', u'y', {u'z': 6}]}]},)
 
   # ProtoList summary
   >>> ProtoList(parse("a: 1\\na: 2\\na: 3\\nb {\\nc: x\\nc: y\\n}\\na: 4"))
@@ -447,8 +533,8 @@ def parse(*args, **kwargs):
               b {\\nc: x\\nc: y\\n}\\n}\\n \
              {\\na: 4\\n}\\n{\\na: 4\\n}")
   ({u'a': [u'1', u'2', u'3'], u'b': [{u'c': [u'x', u'y']}]}, \
-   {u'a': [u'4']}, \
-   {u'a': [u'4']})
+   {u'a': 4}, \
+   {u'a': 4})
 
   """
   return tuple(parse_iter(*args, **kwargs))
