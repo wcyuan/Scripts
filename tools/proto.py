@@ -306,6 +306,10 @@ class ProtoList(list):
       self.append(str(elt))
     return self
 
+  def to_list(self):
+    return list((elt.to_dict() if isinstance(elt, ProtoDict) else elt)
+                for elt in self)
+
 class ProtoDict(dict):
   """A custom dict class for Protos.
 
@@ -405,6 +409,11 @@ class ProtoDict(dict):
                     for (key, value) in self.iteritems()
                     for elt in print_elt(key, value))
 
+  def to_dict(self):
+    return dict((key,
+                 value.to_list() if isinstance(value, ProtoList) else value)
+                for (key, value) in self.iteritems())
+
   def add(self, key, value):
     if isinstance(value, ProtoList):
       self.setdefault(key, ProtoList(())).extend(value)
@@ -416,6 +425,10 @@ class ProtoDict(dict):
     for (key, value) in dct.iteritems():
       self.add(key, value)
     return self
+
+  @classmethod
+  def from_dict(cls, dct):
+    return cls().add_dict(dct)
 
 # --------------------------------------------------------------------------- #
 
