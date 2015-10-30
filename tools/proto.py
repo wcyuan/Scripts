@@ -35,6 +35,28 @@ EXAMPLES:
     6: 7
   }
   mykey: myvalue
+  >>> p = proto.ProtoDict.from_dict(
+  ... {'request':
+  ...  {'location':
+  ...   {'center':
+  ...    { 'lat': 4,
+  ...      'lng': 5,
+  ... }}}})
+  >>> p
+  {'request': ProtoList(len=1, depth=0, height=4)}
+  >>> print p.full_proto_string()
+  request {
+    location {
+      center {
+        lat: 4
+        lng: 5
+      }
+    }
+  }
+  >>> print p.full_proto_string(pretty=False)
+  request { location { center { lat: 4, lng: 5 } } }
+  >>> p.request[0].location[0].add('max_radius_meters', 100)
+  {'max_radius_meters': 100, 'center': [{'lat': 4, 'lng': 5}]}
 
 This command will parse the protos, then drop you in an ipython shell
 with the variable "parsed" set to a map from filename to the protos
@@ -386,9 +408,11 @@ class ProtoDict(dict):
   def full_proto_string(self, pretty=True, indent_amount=0):
     if pretty:
       ors = "\n"
+      line_sep = "\n"
       indent = "  " * indent_amount
     else:
       ors = ", "
+      line_sep = " "
       indent = ""
     def print_elt(key, value):
       if isinstance(value, ProtoList):
@@ -398,11 +422,12 @@ class ProtoDict(dict):
                   pretty=False,
                   indent_amount=indent_amount + 1))
         else:
-          yield "{0}{1} {{".format(indent, key)
-          yield value.full_proto_string(
-              pretty=pretty,
-              indent_amount=indent_amount + 1)
-          yield "{0}}}".format(indent)
+          yield line_sep.join((
+              "{0}{1} {{".format(indent, key),
+              value.full_proto_string(
+                  pretty=pretty,
+                  indent_amount=indent_amount + 1),
+              "{0}}}".format(indent)))
       else:
         yield "{0}{1}: {2}".format(indent, key, value)
     return ors.join(elt
