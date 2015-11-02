@@ -29,7 +29,7 @@ EXAMPLES:
   {'mykey2': [{4: 5, 6: 7}], 'mykey': myvalue}
   >>> p.mykey2[0]._4
   5
-  >>> print p.full_proto_string()
+  >>> print p.full_proto_string().encode("utf-8")
   mykey2 {
     4: 5
     6: 7
@@ -260,17 +260,17 @@ class ProtoList(list):
 
   def full_proto_string(self, pretty=True, indent_amount=0):
     if pretty:
-      ors = "\n"
-      indent = "  " * indent_amount
+      ors = u"\n"
+      indent = u"  " * indent_amount
     else:
-      ors = " "
-      indent = ""
+      ors = u" "
+      indent = u""
     def print_elt(elt):
       if isinstance(elt, ProtoDict):
         return elt.full_proto_string(
             pretty=pretty, indent_amount=indent_amount)
       else:
-        return "{0}{1}".format(indent, elt)
+        return u"{0}{1}".format(indent, elt)
     return ors.join(print_elt(elt) for elt in self)
 
   def is_simple(self):
@@ -407,29 +407,29 @@ class ProtoDict(dict):
 
   def full_proto_string(self, pretty=True, indent_amount=0):
     if pretty:
-      ors = "\n"
-      line_sep = "\n"
-      indent = "  " * indent_amount
+      ors = u"\n"
+      line_sep = u"\n"
+      indent = u"  " * indent_amount
     else:
-      ors = ", "
-      line_sep = " "
-      indent = ""
+      ors = u", "
+      line_sep = u" "
+      indent = u""
     def print_elt(key, value):
       if isinstance(value, ProtoList):
         if value.is_simple():
-          yield "{0}{1}: {2}".format(
+          yield u"{0}{1}: {2}".format(
               indent, key, value.full_proto_string(
                   pretty=False,
                   indent_amount=indent_amount + 1))
         else:
           yield line_sep.join((
-              "{0}{1} {{".format(indent, key),
+              u"{0}{1} {{".format(indent, key),
               value.full_proto_string(
                   pretty=pretty,
                   indent_amount=indent_amount + 1),
-              "{0}}}".format(indent)))
+              u"{0}}}".format(indent)))
       else:
-        yield "{0}{1}: {2}".format(indent, key, value)
+        yield u"{0}{1}: {2}".format(indent, key, value)
     return ors.join(elt
                     for (key, value) in self.iteritems()
                     for elt in print_elt(key, value))
