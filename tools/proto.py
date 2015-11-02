@@ -57,6 +57,44 @@ EXAMPLES:
   request { location { center { lat: 4, lng: 5 } } }
   >>> p.request[0].location[0].add('max_radius_meters', 100)
   {'max_radius_meters': 100, 'center': [{'lat': 4, 'lng': 5}]}
+  >>> p = parse('''single_request {
+  ...   id {
+  ...     v1: 4123124123123
+  ...     v2: 1502959385023
+  ...   }
+  ... }
+  ... single_request {
+  ...   id {
+  ...     v1: 20593950293402934
+  ...     v2: 19289402093012930
+  ...   }
+  ... }
+  ... single_request {
+  ...   id {
+  ...     v1: 10592003940293949394
+  ...     v2: 89297492883749283839
+  ...   }
+  ... }
+  ... ''')
+  >>> print p[0].full_proto_string()
+  single_request {
+    id {
+      v1: 4123124123123
+      v2: 1502959385023
+    }
+  }
+  single_request {
+    id {
+      v1: 20593950293402934
+      v2: 19289402093012930
+    }
+  }
+  single_request {
+    id {
+      v1: 10592003940293949394
+      v2: 89297492883749283839
+    }
+  }
 
 This command will parse the protos, then drop you in an ipython shell
 with the variable "parsed" set to a map from filename to the protos
@@ -422,12 +460,16 @@ class ProtoDict(dict):
                   pretty=False,
                   indent_amount=indent_amount + 1))
         else:
-          yield line_sep.join((
-              u"{0}{1} {{".format(indent, key),
-              value.full_proto_string(
-                  pretty=pretty,
-                  indent_amount=indent_amount + 1),
-              u"{0}}}".format(indent)))
+          for elt in value:
+            if isinstance(elt, ProtoDict):
+              inner = elt.full_proto_string(
+                  pretty=pretty, indent_amount=indent_amount + 1)
+            else:
+              inner = u"{0}{1}".format(indent, elt)
+            yield line_sep.join((
+                u"{0}{1} {{".format(indent, key),
+                inner,
+                u"{0}}}".format(indent)))
       else:
         yield u"{0}{1}: {2}".format(indent, key, value)
     return ors.join(elt
