@@ -182,3 +182,20 @@ function python27() {
     /cygdrive/c/Python27/python $cmd $*
 }
 
+# Pass the first N lines of a file unchanged, then pass the rest
+# through a command.
+#
+# e.g.:
+#   savehead 1 myfile.csv shuf -n 10
+# This will print the first line unchanged, then shuffle the rest of
+# the file and print out the first ten shuffled lines.
+function savehead() {
+  num_header_lines=$1
+  filename=$2
+  {
+    head -$num_header_lines $filename ;
+    gawk "NR > $num_header_lines" $filename | ${@:3} ;
+  }
+}
+
+
