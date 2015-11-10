@@ -192,10 +192,9 @@ function python27() {
 function savehead() {
   num_header_lines=$1
   filename=$2
-  {
-    head -$num_header_lines $filename ;
-    gawk "NR > $num_header_lines" $filename | ${@:3} ;
-  }
+  headcmd="head -$num_header_lines $filename"
+  gawkcmd="gawk 'NR > $num_header_lines' $filename | ${@:3}"
+  cmd="{ $headcmd; $gawkcmd; }"
+  echo $cmd > /dev/stderr
+  eval $cmd
 }
-
-
