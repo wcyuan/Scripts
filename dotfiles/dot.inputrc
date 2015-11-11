@@ -12,8 +12,8 @@
 #
 
 # First, include any systemwide bindings and variable assignments from
-# /etc/.inputrc (only seems to exist on linux)
-$include /etc/.inputrc
+# /etc/inputrc (only seems to exist on linux)
+$include /etc/inputrc
 
 set editing-mode emacs
 
