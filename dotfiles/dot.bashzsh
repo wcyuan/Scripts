@@ -198,3 +198,25 @@ function savehead() {
   echo $cmd > /dev/stderr
   eval $cmd
 }
+
+function joinlines() {
+  # Join lines, unless there is a blank line
+  #
+  # So this:
+  #   A
+  #   B
+  #   C
+  #
+  #   D
+  #   E
+  #
+  # Becomes something like:
+  #   ABC
+  #
+  #   DE
+
+  #perl -e '$_=join("",<>);s/([^\n])\n([^\n])/$1 $2/g;print' "$@"
+
+  # A simpler solution
+  perl -ane 'chomp unless /^\n$/;print' "$@"
+}
