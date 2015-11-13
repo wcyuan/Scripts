@@ -119,7 +119,7 @@ def deg_to_rad(deg):
 
 class LatLng(object):
   def __init__(self, csv_values, input_type=None):
-    self.orig = csv_values
+    self.orig = csv_values.strip("(").strip(")")
     self.input_type = input_type
     lat, lng = [float(val) for val in self.orig.split(",", 1)]
     if not input_type:
