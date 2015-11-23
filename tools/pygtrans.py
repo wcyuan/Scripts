@@ -5,8 +5,11 @@
 
 # ----------------------------------------------------------------------- #
 
-import sys
+import fileinput
 from os.path import expanduser
+import sys
+import urllib
+
 try:
   import ConfigParser as configparser
 except ImportError:
@@ -23,7 +26,12 @@ try:
 except ImportError:
   from bs4 import BeautifulSoup
 
+# ----------------------------------------------------------------------- #
+
 version = "v0.1" + " beta5"
+DEFAULT_GOOGLE_DOMAIN = "google.com"
+DEFAULT_TARGET_LANG = "en"
+DEFAULT_SRC_LANG = "auto"
 
 # ----------------------------------------------------------------------- #
 
@@ -31,11 +39,14 @@ version = "v0.1" + " beta5"
 def main():
   #(googleDomain, targetLang, srcLang) = read_config()
   #(targetLang, srcLang, key) = read_args(targetLang, srcLang)
-  (googleDomain, targetLang, srcLang) = ("google.com", "en", "auto")
-  import fileinput
+  (googleDomain, targetLang, srcLang) = (DEFAULT_GOOGLE_DOMAIN,
+                                         DEFAULT_TARGET_LANG, DEFAULT_SRC_LANG)
   for (ii, line) in enumerate(fileinput.input()):
     line = line.rstrip()
-    page = send_request(googleDomain, srcLang, targetLang, line)
+    page = send_request(line,
+                        googleDomain=googleDomain,
+                        srcLang=srcLang,
+                        targetLang=targetLang)
     result = parse_response(page)
     #print(unicode(key, "utf-8") + "\t->\t" + result)
     print ii, "orig :", line
@@ -45,10 +56,9 @@ def main():
 
 
 def read_config():
-  # read config
-  googleDomain = "google.com"
-  targetLang = "en"
-  srcLang = "auto"
+  googleDomain = DEFAULT_GOOGLE_DOMAIN
+  targetLang = DEFAULT_TARGET_LANG
+  srcLang = DEFAULT_SRC_LANG
 
   home = expanduser("~")
   config = configparser.RawConfigParser()
@@ -92,13 +102,17 @@ def read_args(targetLang, srcLang):
   return (targetLang, srcLang, key)
 
 
-def send_request(googleDomain, srcLang, targetLang, key):
+def send_request(text,
+                 googleDomain=DEFAULT_GOOGLE_DOMAIN,
+                 srcLang=DEFAULT_SRC_LANG,
+                 targetLang=DEFAULT_TARGET_LANG):
   ## http request
   userAgent = ("Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like "
                "Gecko) Chrome/39.0.2171.95 Safari/537.36")
   headers = {"User-Agent": userAgent}
-  url = ("http://translate." + googleDomain + "/?langpair=" + srcLang + "|" +
-         targetLang + "&text=" + key.replace(" ", "+"))
+  url = ("http://translate." + googleDomain + "/?" +
+         urllib.urlencode({"langpair": "|".join((srcLang, targetLang)),
+                           "text": text}))
   return urllib2.urlopen(urllib2.Request(url, None, headers))
 
 
