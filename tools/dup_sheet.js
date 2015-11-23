@@ -2,6 +2,10 @@
 // This is a Google Sheets App-script add-on which duplicates the current sheet
 // many times, to a hard-coded set of names.
 //
+// To install it, in a Google Sheet, go to the Tools menu and choose "Script Editor..."
+// Then just copy and paste this there.  Then reload the sheet.  A new menu should appear
+// with this function in it.
+//
 
 var COPIES = [
   'First',
