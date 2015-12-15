@@ -135,6 +135,18 @@
 ;; M-x describe-key
 ;;           -- say what function a key sequence is bound to
 ;;
+;; Window management:
+;; C-x r w <character>
+;;           -- register the current window layout to a character
+;; C-x r j <character>
+;;           -- return to the layout saved to the given character
+;; winner-mode
+;;           -- toggle winner-mode
+;; C-c <left>
+;;           -- if winner-mode is on, this goes to the previous window layout
+;; C-c <right>
+;;           -- if winner-mode is on, this goes to the next window layout
+;;
 ;; Dynamic Abbrev Expansion:
 ;; M-/       -- Search the buffer for possible completions
 ;; C-M-/     -- Show all possible completions
@@ -171,7 +183,7 @@
 ;; C-c C-j - line mode, where everything acts like a normal emacs buffer
 ;;           (e.g., <up> moves to the previous line in the buffer)
 ;; C-c C-c - send Control-C to the shell
-;; C-c C-o - move to another pane in line mode
+;; C-c C-o - move to another pane in line mode (C-c becomes C-x in char-mode)
 ;;
 ;; ---------------------------------------------------------------- ;;
 ;;
@@ -229,6 +241,8 @@
 (setq require-final-newline t)          ;; Always make sure files end
                                         ;; with newlines
 (column-number-mode)
+(winner-mode 1)                         ;; automatically saves window layouts
+                                        ;; move between them with C-c left|right
 
 ;; customize mode line
 (setq display-time-string-forms '((format "%s:%s%s" 12-hours minutes am-pm)))
