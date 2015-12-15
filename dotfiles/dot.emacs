@@ -162,6 +162,17 @@
 ;; http://www.gnu.org/software/emacs/manual/html_node/emacs/index.html
 ;; http://www.emacswiki.org/emacs/EmacsWiki
 ;;
+;; -- Term Mode --
+;; terminal emulation, enter with M-x term
+;; http://www.gnu.org/software/emacs/manual/html_node/emacs/Term-Mode.html#Term-Mode
+;;
+;; C-c C-k - char mode, where basically every character is sent to the terminal
+;;           (e.g., <up> moves to the previous command)
+;; C-c C-j - line mode, where everything acts like a normal emacs buffer
+;;           (e.g., <up> moves to the previous line in the buffer)
+;; C-c C-c - send Control-C to the shell
+;; C-c C-o - move to another pane in line mode
+;;
 ;; ---------------------------------------------------------------- ;;
 ;;
 ;; When definine new key bindings, consider the emacs key binding
@@ -187,7 +198,6 @@
 ;; to expect.
 ;;
 ;; ---------------------------------------------------------------- ;;
-
 
 ;; ---------------------------------------------------------------- ;;
 ;; Macros for determining whether we are in emacs or xemacs, etc.
