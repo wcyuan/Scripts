@@ -240,9 +240,10 @@
 (setq diff-switches "-wu")              ;; Switches to pass to diff
 (setq require-final-newline t)          ;; Always make sure files end
                                         ;; with newlines
-(column-number-mode)
+(column-number-mode)                    ;; show column numbers in the menu bar
 (winner-mode 1)                         ;; automatically saves window layouts
                                         ;; move between them with C-c left|right
+(global-linum-mode t)                   ;; show line numbers in the left border
 
 ;; customize mode line
 (setq display-time-string-forms '((format "%s:%s%s" 12-hours minutes am-pm)))
