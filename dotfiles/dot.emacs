@@ -1246,3 +1246,27 @@ Enters shell-script[tcsh] mode (see `shell-script-mode')."
   )
 
 ;; ---------------------------------------------------------------- ;;
+;; Functions for handling multiple terminal emulator buffers.
+;;
+
+(defun next-term-buffer (&optional num max)
+  "Find the next free buffer of the form *terminal-<num>*"
+  (interactive)
+  (if num nil (setq num 0))
+  (if max nil (setq max 100))
+  (if (< num max)
+      (let ((name (concat "*terminal-" (number-to-string num) "*")))
+        (if (get-buffer name) (next-term-buffer (setq num (+ 1 num)) max) name)
+        )
+    )
+  )
+
+(defun new-term ()
+  "Start a new terminal emulator, rename the buffer, and turn off trailing-whitespace"
+  (interactive)
+  (term "/usr/bin/zsh")
+  (rename-buffer (next-term-buffer))
+  (setq show-trailing-whitespace nil)
+  )
+
+;; ---------------------------------------------------------------- ;;
