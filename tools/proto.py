@@ -14,13 +14,13 @@ leaf) or sub-Protos (i.e., another dict of lists).
 
 EXAMPLES:
 
-  $ ipython -i proto.py ~/data/x20/data/transit/tss/transit_request.txt
+  $ ipython -i proto.py ~/x20/data/transit/tss/transit_request.txt
 
   $ ipython -i ~/code/bin/proto.py *.txt
 
   >>> import proto
   >>> proto.parse( # doctest: +ELLIPSIS
-  ... filename="~/data/x20/data/transit/tss/transit_request.txt")
+  ... filename="~/x20/data/transit/tss/transit_request.txt")
   (...)
   >>> p = proto.ProtoDict()
   >>> p.add('mykey', 'myvalue')
@@ -55,6 +55,8 @@ EXAMPLES:
   }
   >>> print p.full_proto_string(pretty=False)
   request { location { center { lat: 4, lng: 5 } } }
+  >>> p == parse(p.full_proto_string())[0]
+  True
   >>> p.request[0].location[0].add('max_radius_meters', 100)
   {'max_radius_meters': 100, 'center': [{'lat': 4, 'lng': 5}]}
   >>> p = parse('''single_request {
@@ -95,6 +97,8 @@ EXAMPLES:
       v2: 89297492883749283839
     }
   }
+  >>> p[0] == parse(p[0].full_proto_string())[0]
+  True
 
 This command will parse the protos, then drop you in an ipython shell
 with the variable "parsed" set to a map from filename to the protos
@@ -251,10 +255,9 @@ class ProtoList(list):
   # the height of the tree, which does require visiting each
   # sub-element.
   def summary(self, show_height=True):
-    val = "{cn}(len={len}, depth={depth}".format(
-        cn=self.__class__.__name__,
-        len=len(self),
-        depth=self._depth)
+    val = "{cn}(len={len}, depth={depth}".format(cn=self.__class__.__name__,
+                                                 len=len(self),
+                                                 depth=self._depth)
     if show_height:
       val += ", height={height})".format(height=self.height())
     else:
@@ -288,8 +291,12 @@ class ProtoList(list):
     return cache[id(self)]
 
   def string(self, show_height=True):
-    full = self.fullstring()
-    if len(full) > 50:
+    try:
+      # try to catch ascii/unicode errors
+      full = self.fullstring()
+    except:
+      full = None
+    if not full or len(full) > 50:
       return self.summary(show_height=show_height)
     elif len(self) == 1 and not isinstance(self[0], ProtoDict):
       return self[0]
@@ -303,16 +310,17 @@ class ProtoList(list):
     else:
       ors = u" "
       indent = u""
+
     def print_elt(elt):
       if isinstance(elt, ProtoDict):
-        return elt.full_proto_string(
-            pretty=pretty, indent_amount=indent_amount)
+        return elt.full_proto_string(pretty=pretty, indent_amount=indent_amount)
       else:
         return u"{0}{1}".format(indent, elt)
+
     return ors.join(print_elt(elt) for elt in self)
 
   def is_simple(self):
-    return len(self) < 2 and not any(isinstance(elt, ProtoDict) for elt in self)
+    return not any(isinstance(elt, ProtoDict) for elt in self)
 
   def __repr__(self):
     return self.string()
@@ -370,6 +378,7 @@ class ProtoList(list):
     return list((elt.to_dict() if isinstance(elt, ProtoDict) else elt)
                 for elt in self)
 
+
 class ProtoDict(dict):
   """A custom dict class for Protos.
 
@@ -388,7 +397,9 @@ class ProtoDict(dict):
     """
     attr = str(attr)
     attr = "".join(
-        c for c in attr if c in
+        c
+        for c in attr
+        if c in
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
     if attr[0] in "0123456789":
       attr = "_" + attr
@@ -411,8 +422,8 @@ class ProtoDict(dict):
     http://stackoverflow.com/questions/13870241/ipython-tab-completion-for-custom-dict-class
     https://ipython.org/ipython-doc/dev/config/integrating.html
     """
-    return dir(dict) + list(
-        set(self.normalize_attr(ky) for ky in self.iterkeys()))
+    return dir(dict) + list(set(self.normalize_attr(ky) for ky in self.iterkeys(
+    )))
 
   def search(self, patt, path=None, case_insensitive=True):
     """Search for a string in a proto.
@@ -452,34 +463,31 @@ class ProtoDict(dict):
       ors = u", "
       line_sep = u" "
       indent = u""
+
     def print_elt(key, value):
       if isinstance(value, ProtoList):
         if value.is_simple():
-          yield u"{0}{1}: {2}".format(
-              indent, key, value.full_proto_string(
-                  pretty=False,
-                  indent_amount=indent_amount + 1))
+          for elt in value:
+            yield u"{0}{1}: {2}".format(indent, key, elt)
         else:
           for elt in value:
             if isinstance(elt, ProtoDict):
-              inner = elt.full_proto_string(
-                  pretty=pretty, indent_amount=indent_amount + 1)
+              inner = elt.full_proto_string(pretty=pretty,
+                                            indent_amount=indent_amount + 1)
             else:
               inner = u"{0}{1}".format(indent, elt)
-            yield line_sep.join((
-                u"{0}{1} {{".format(indent, key),
-                inner,
-                u"{0}}}".format(indent)))
+            yield line_sep.join((u"{0}{1} {{".format(indent, key), inner,
+                                 u"{0}}}".format(indent)))
       else:
         yield u"{0}{1}: {2}".format(indent, key, value)
+
     return ors.join(elt
                     for (key, value) in self.iteritems()
                     for elt in print_elt(key, value))
 
   def to_dict(self):
-    return dict((key,
-                 value.to_list() if isinstance(value, ProtoList) else value)
-                for (key, value) in self.iteritems())
+    return dict((key, value.to_list() if isinstance(value, ProtoList) else
+                 value) for (key, value) in self.iteritems())
 
   def add(self, key, value):
     if isinstance(value, ProtoList):
@@ -618,6 +626,109 @@ def parse(*args, **kwargs):
 
   """
   return tuple(parse_iter(*args, **kwargs))
+
+
+def parse_lisp(string, idx=0, is_value=True):
+  """Parse a lisp list
+
+  Read a lisp list like this:
+    (extension1 ((field1 value1) (field2 value2)))
+  And return a python list like this:
+    [extension1 [[field1 value1] [field2 value2]]]
+  It's a very simple grammar, like this:
+    element = (element element ...) | (value element) | value
+
+  >>> parse_lisp("val")
+  ('val', 3)
+  >>> parse_lisp("(field value)")
+  (['field', 'value'], 13)
+  >>> parse_lisp('(field "string value")')
+  (['field', '"string value"'], 22)
+  >>> parse_lisp("(extension1 ((field1 value1) (field2 value2)))")
+  (['extension1', [['field1', 'value1'], ['field2', 'value2']]], 46)
+  >>> parse_lisp(            # doctest: +NORMALIZE_WHITESPACE
+  ... "(extension1 ((field1 value1) (field2 value2) (field3 value3)))")
+  (['extension1', [['field1', 'value1'], ['field2', 'value2'],
+   ['field3', 'value3']]], 62)
+
+  """
+  while idx < len(string) and string[idx].isspace():
+    idx += 1
+  if idx >= len(string):
+    return ("", idx)
+  if string[idx] == "(":
+    # This is a list, parse each element and add it to the return list
+    idx += 1
+    retval = []
+    while len(string) > idx and string[idx] != ")":
+      # read an element
+      element, new_idx = parse_lisp(string, idx)
+      logging.debug("Read '%s' from %s, new idx = %s", element, string, new_idx)
+      retval.append(element)
+      idx = new_idx
+    # skip over the closing paren
+    idx += 1
+    logging.debug("Finished '%s', new idx = %s", retval, idx)
+    return (retval, idx)
+  else:
+    # This is a value, not an list.  Take the string up to the next
+    # whitespace, close paren, or end of string.
+    regexp = ".*?(\s|\)|$)"
+    if string[idx] == '"':
+      # If this value starts with a double-quote (") then take
+      # everything up to the next double-quote (or end-of-string)
+      regexp = '\".*?(\"|$)'
+    mo = re.match(regexp, string[idx:])
+    if mo:
+      # set the variables end and next_idx.  end is the index of the
+      # end of the value.  next_idx is where we should start parsing
+      # the rest of the string.
+      if re.match("\s*$", mo.group(1)):
+        # if the delimeter is whitespace, skip over it
+        end = idx + mo.start(1)
+        next_idx = idx + mo.end(1)
+      elif mo.group(1) == '"':
+        # if the delimeter is a quote, include it in the value
+        next_idx = idx + mo.end(1)
+        end = next_idx
+      else:
+        # otherwise, let the caller deal with the delimeter
+        end = idx + mo.start(1)
+        next_idx = end
+      logging.debug("Finished value '%s', new idx = %s", string[idx:end],
+                    next_idx)
+      return (string[idx:end], next_idx)
+    else:
+      logging.error("Error parsing value '%s' at idx %s", string, idx)
+    return ("", idx)
+
+
+def list_to_proto(lst):
+  """Convert a list to a Proto
+
+  >>> print list_to_proto(['a', 'b']).full_proto_string()
+  a: b
+  >>> print list_to_proto(['a', ['b', 'c']]).full_proto_string()
+  a {
+    b: c
+  }
+  >>> print list_to_proto(['a', [['b', 'c'], ['b', 'e']]]).full_proto_string()
+  a {
+    b: c
+    b: e
+  }
+  """
+  if not isinstance(lst, list):
+    return lst
+  if len(lst) > 0 and not isinstance(lst[0], list):
+    lst = [lst]
+  block = ProtoDict()
+  for elt in lst:
+    if len(elt) != 2:
+      logging.error("Can't parse element '%s' of list '%s'", elt, lst)
+    (var, val) = elt[:2]
+    block.setdefault(var, ProtoList(())).append(list_to_proto(val))
+  return block
 
 # --------------------------------------------------------------------------- #
 
