@@ -259,6 +259,19 @@
       mouse-drag-copy-region t)))
 
 ;; ---------------------------------------------------------------- ;;
+;; windmove: Move from window to window with arrow keys
+;; http://stackoverflow.com/questions/91071/emacs-switch-to-previous-window
+;;
+(global-set-key (kbd "C-x C-<up>") 'windmove-up)
+(global-set-key (kbd "C-x C-<down>") 'windmove-down)
+;; These override the defaults:
+;;    C-x C-<right> = next buffer
+;;    C-x C-<left> = prev buffer
+(global-set-key (kbd "C-x C-<right>") 'windmove-right)
+(global-set-key (kbd "C-x C-<left>") 'windmove-left)
+(setq windmove-wrap-around t)
+
+;; ---------------------------------------------------------------- ;;
 ;; Handle different arrow-key key-sequences when in a terminal emulator
 ;; http://stackoverflow.com/questions/4548106/screen-somehow-unmaps-my-arrow-keys-in-emacs-after-a-z
 ;;
