@@ -14,14 +14,27 @@ leaf) or sub-Protos (i.e., another dict of lists).
 
 EXAMPLES:
 
-  $ ipython -i proto.py ~/x20/data/transit/tss/transit_request.txt
+  Use this command to read a bunch of files, each of which contains a
+  proto or a list of protos, and output the result to stdout.
 
-  $ ipython -i ~/code/bin/proto.py *.txt
+  $ proto.py *.txt
+
+  Or, use this command to start IPython with that data read into a
+  variabled called "parsed", which will be a dict from filename to the
+  protos parsed from that file.
+
+  $ ipython -i proto.py ~/my/file/name.txt.txt
+  $ ipython -i proto.py *.txt
+
+  Here are examples (and doctests) of how to use this library from
+  inside of python.
 
   >>> import proto
   >>> proto.parse( # doctest: +ELLIPSIS
-  ... filename="~/x20/data/transit/tss/transit_request.txt")
+  ... filename="/dev/null")
   (...)
+  >>> proto.parse(filename="/dev/null")
+  ()
   >>> p = proto.ProtoDict()
   >>> p.add('mykey', 'myvalue')
   {'mykey': myvalue}
@@ -738,42 +751,42 @@ def sample_response():
   result {
     key: "\357\275\212\357\275\222\345\214\227\346\265\267\351\201\223\343\203\220\343\202\271"
     candidate {
-      mid: "/m/0j_3tph"
-      name: "JR Hokkaido Bus Company"
-      score: 0.150605774486
+      mid: "/m/asdfasdf"
+      name: "jekyl and hyde"
+      score: 0.534235234
       decision: NO_MATCH
     }
     candidate {
-      mid: "/m/03cfjg_"
-      name: "JR Bus"
-      score: 0.000991709262653
+      mid: "/o/154213123"
+      name: "JRJRJRJRJ"
+      score: 0.9299293949128
       decision: NO_MATCH
     }
   }
   result {
     key: "\357\275\212\357\275\222\345\233\233\345\233\275\343\203\220\343\202\271"
     candidate {
-      mid: "/g/11bc8ccbqc"
+      mid: "/z/xxxxxxxx"
       name: "\357\274\252\357\274\262\345\233\233\345\233\275\343\203\220\343\202\271\351\253\230\351\200\237"
-      score: 0.148700021658
+      score: 0.12345678901
       decision: NO_MATCH
     }
     candidate {
-      mid: "/g/121w1jsf"
+      mid: "/r/yyyyyyyy"
       name: "\343\202\270\343\202\247\343\202\244\343\202\242\343\203\274\343\203\253\345\233\233\345\233\275"
-      score: 0.140173489149
+      score: 0.2345678901
       decision: NO_MATCH
     }
     candidate {
-      mid: "/m/03cfjg_"
-      name: "JR Bus"
-      score: 0.00991709262653
+      mid: "/c/ppppppppp"
+      name: "PPSPSP"
+      score: 0.0000230300
       decision: NO_MATCH
     }
     candidate {
-      mid: "/g/122njc5v"
+      mid: "/b/agasdfasd"
       name: "\346\235\276\345\261\261\351\253\230\347\237\245\346\200\245\350\241\214\347\267\232"
-      score: 1.26111478455e-05
+      score: 1.1828912382e-05
       decision: NO_MATCH
     }
   }
