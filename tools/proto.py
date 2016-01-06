@@ -205,7 +205,10 @@ def enc(string):
 def decode(encoded):
   """Decoding octal utf-8
   """
-  decoded = encoded.encode("utf-8")
+  try:
+    decoded = encoded.encode("utf-8")
+  except UnicodeDecodeError as e:
+    decoded = encoded
   matches = set()
   for octc in re.findall(r"\\(\d{3})", decoded):
     matches.add(octc)
