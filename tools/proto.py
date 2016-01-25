@@ -597,6 +597,49 @@ def parse_iter(lines=None, filename=None, depth=0):
   # at the beginning of the list.
   lines = iter(lines)
   block = ProtoDict()
+
+  # Protos fields come in two forms.  When the var and variable on one
+  # line, like this:
+  #
+  #  var1: val1
+  #  var2: val2
+  #
+  # Or in a block form, like this:
+  #
+  #  var1 {
+  #    val1var: val1val
+  #  }
+  #  var2 {
+  #    val2var: val2val
+  #  }
+  #
+  # The block form generally indicates that the value is a more
+  # complicated object, not just a primitive like a string.
+  # parse_iter is used to parse the part in brackets, and parse_iter
+  # currently always expects to return a ProtoDict() which represents
+  # the complicated object.
+  #
+  # However, there is one case where the block form is used for
+  # primitives.  That is for enums.  If flag is a repeated enum field
+  # with possible values FLAG_VALUE1, and FLAG_VALUE2, you might see:
+  #
+  #  flag {
+  #    FLAG_VALUE1
+  #  }
+  #  flag {
+  #    FLAG_VALUE2
+  #  }
+  #
+  # and that is equivalent to
+  #  flag: FLAG_VALUE1
+  #  flag: FLAG_VALUE2
+  #
+  # This is the one case where parse_iter should not return a
+  # ProtoDict, but should just return the string FLAG_VALUE1 or
+  # FLAG_VALUE2.  The way we detect this case is if we see a line like
+  # FLAG_VALUE1, which has no colon (":") in it.  Also, it is the only
+  # line in the block
+  enum_values = []
   for line in lines:
     # TODO: decoding the line again could cause problems if the line
     # has already been decoded
@@ -608,7 +651,16 @@ def parse_iter(lines=None, filename=None, depth=0):
       # ignore the opening brace.
       continue
     if line == "}":
-      yield block
+      if enum_values:
+        if not block and len(enum_values) == 1:
+          yield enum_values[0]
+        else:
+          logging.warning("Can't parse line %s (file %s)", enum_values,
+                          filename)
+          yield block
+      else:
+        yield block
+      enum_values = []
       block = ProtoDict()
       continue
     if ": " in line:
@@ -618,9 +670,15 @@ def parse_iter(lines=None, filename=None, depth=0):
       val = next(parse_iter(lines, depth=depth + 1))
     else:
       if line.strip():
-        logging.warning("Can't parse line %s (file %s)", line, filename)
+        logging.debug("Taking line as enum value %s (file %s)", line, filename)
+        enum_values.append(line.strip())
       continue
     block.setdefault(var, ProtoList((), depth=depth)).append(val)
+  if enum_values:
+    if not block and len(enum_values) == 1:
+      yield enum_values[0]
+    else:
+      logging.warning("Can't parse line %s (file %s)", enum_values, filename)
   if block:
     yield block
 
@@ -669,6 +727,25 @@ def parse(*args, **kwargs):
    {u'a': 4}, \
    {u'a': 4})
 
+  # An enum with each value on the same line
+  >>> parse("obj {\\nenum: v1\\nenum: v2\\nenum: v3\\n}")
+  ({u'obj': [{u'enum': [u'v1', u'v2', u'v3']}]},)
+
+  # The same enum with values in block style
+  >>> parse("obj {\\nenum {\\nv1\\n}\\nenum {\\nv2\\n}\\nenum {\\nv3\\n}\\n}")
+  ({u'obj': [{u'enum': [u'v1', u'v2', u'v3']}]},)
+
+  # An invalid enum
+  # This also generates a warning
+  #  [ ...parse_iter:663 WARNING] Can't parse line [u'v1', u'v2'] (file None)
+  >>> parse("obj {\\nenum {\\nv1\\nv2\\n}\\nenum {\\nv3\\n}\\n}")
+  ({u'obj': [{u'enum': [{}, u'v3']}]},)
+
+  # Another invalid enum
+  # This also generates a warning
+  #  [ ...parse_iter:663 WARNING] Can't parse line [u'v1'] (file None)
+  >>> parse("obj {\\nenum {\\nv1\\nv2: asdf\\n}\\nenum {\\nv3\\n}\\n}")
+  ({u'obj': [{u'enum': [{u'v2': asdf}, u'v3']}]},)
   """
   return tuple(parse_iter(*args, **kwargs))
 
