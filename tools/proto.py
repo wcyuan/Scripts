@@ -569,7 +569,7 @@ def parse_blocks(string):
       block = ""
 
 
-def parse_iter(lines=None, filename=None, depth=0):
+def parse_iter(lines=None, filename=None, depth=0, log_errors_at=logging.WARN):
   """Parses the text format of a Protobuf
 
   This returns an iterator, so you have to tuplize it.  Then you'll
@@ -655,8 +655,8 @@ def parse_iter(lines=None, filename=None, depth=0):
         if not block and len(enum_values) == 1:
           yield enum_values[0]
         else:
-          logging.warning("Can't parse line %s (file %s)", enum_values,
-                          filename)
+          logging.log(log_errors_at, "Can't parse line %s (file %s)",
+                      enum_values, filename)
           yield block
       else:
         yield block
@@ -667,7 +667,9 @@ def parse_iter(lines=None, filename=None, depth=0):
       var, val = line.split(": ", 1)
     elif line.endswith(" {"):
       var = line[:-2]
-      val = next(parse_iter(lines, depth=depth + 1))
+      val = next(parse_iter(lines,
+                            depth=depth + 1,
+                            log_errors_at=log_errors_at))
     else:
       if line.strip():
         logging.debug("Taking line as enum value %s (file %s)", line, filename)
@@ -678,7 +680,8 @@ def parse_iter(lines=None, filename=None, depth=0):
     if not block and len(enum_values) == 1:
       yield enum_values[0]
     else:
-      logging.warning("Can't parse line %s (file %s)", enum_values, filename)
+      logging.log(log_errors_at, "Can't parse line %s (file %s)", enum_values,
+                  filename)
   if block:
     yield block
 
