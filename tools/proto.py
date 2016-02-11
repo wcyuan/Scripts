@@ -342,6 +342,12 @@ class ProtoList(list):
     logging.debug("Quoting: '%s'", elt)
     return '"{0}"'.format(elt)
 
+  @classmethod
+  def to_unicode(cls, elt):
+    if isinstance(elt, unicode):
+      return elt
+    return unicode(elt, errors="replace")
+
   def full_proto_string(self, pretty=True, indent_amount=0, auto_quote=False):
     if pretty:
       ors = u"\n"
@@ -357,7 +363,7 @@ class ProtoList(list):
                                      auto_quote=auto_quote)
       else:
         selt = self.apply_auto_quote(elt) if auto_quote else elt
-        return u"{0}{1}".format(indent, selt)
+        return u"{0}{1}".format(indent, self.to_unicode(selt))
 
     return ors.join(print_elt(elt) for elt in self)
 
@@ -511,7 +517,7 @@ class ProtoDict(dict):
         if value.is_simple():
           for elt in value:
             selt = ProtoList.apply_auto_quote(elt) if auto_quote else elt
-            yield u"{0}{1}: {2}".format(indent, key, selt)
+            yield u"{0}{1}: {2}".format(indent, key, ProtoList.to_unicode(selt))
         else:
           for elt in value:
             if isinstance(elt, ProtoDict):
@@ -520,7 +526,7 @@ class ProtoDict(dict):
                                             auto_quote=auto_quote)
             else:
               selt = ProtoList.apply_auto_quote(elt) if auto_quote else elt
-              inner = u"{0}{1}".format(indent, selt)
+              inner = u"{0}{1}".format(indent, ProtoList.to_unicode(selt))
             yield line_sep.join((u"{0}{1} {{".format(indent, key), inner,
                                  u"{0}}}".format(indent)))
       else:
