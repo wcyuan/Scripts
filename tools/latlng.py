@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Calculate the distance between two latlngs
 
 Uses the haversine formula.  Stolen from
@@ -27,9 +28,6 @@ logging.basicConfig(format="[%(asctime)s "
                     "%(funcName)s:%(lineno)s %(levelname)-5s] "
                     "%(message)s")
 
-KM_EARTH_RADIUS = 6373.0
-MILES_EARTH_RADIUS = 3961.0
-
 # --------------------------------------------------------------------------- #
 
 
@@ -47,23 +45,32 @@ def main():
   lines.append(types + ["distance(m,km)"])
   for point in points:
     line = point.latlng_as(types)
-    line.append(haversine(source.latlng_as("degrees"),
-                          point.latlng_as("degrees")))
+    line.append(haversine(
+        source.latlng_as("degrees"), point.latlng_as("degrees")))
     line = [str(val) for val in line]
     lines.append(line)
   table = make_table(lines)
   print table
 
+
 def getopts():
   parser = optparse.OptionParser()
-  parser.add_option("--degrees", action="store_const",
-                    const="degrees", dest="input_type")
-  parser.add_option("--radians", action="store_const",
-                    const="radians", dest="input_type")
-  parser.add_option("--e6", action="store_const",
-                    const="signed_e6", dest="input_type")
-  parser.add_option("--e7", action="store_const",
-                    const="signed_e7", dest="input_type")
+  parser.add_option("--degrees",
+                    action="store_const",
+                    const="degrees",
+                    dest="input_type")
+  parser.add_option("--radians",
+                    action="store_const",
+                    const="radians",
+                    dest="input_type")
+  parser.add_option("--e6",
+                    action="store_const",
+                    const="signed_e6",
+                    dest="input_type")
+  parser.add_option("--e7",
+                    action="store_const",
+                    const="signed_e7",
+                    dest="input_type")
   parser.add_option("--verbose", action="store_true")
   parser.add_option("--log_level", help="The level to log at")
   parser.add_option("--no_write",
@@ -88,8 +95,9 @@ def logat(level):
 
 # --------------------------------------------------------------------------- #
 
+
 def signed(num, bits):
-  mask = 1 << (bits-1)
+  mask = 1 << (bits - 1)
   inum = int(num)
   if (inum & mask):
     # You can think of 2s complement as being just like
@@ -101,11 +109,12 @@ def signed(num, bits):
   else:
     return num
 
+
 def unsigned(num, bits):
   # To go from 2s complement to unsigned bits,
   # for positive numbers, do nothing
   # for negative numbers, invert the bits and add 1
-  highbit = 1 << (bits-1)
+  highbit = 1 << (bits - 1)
   num = int(num)
   if (num & highbit):
     num *= -1
@@ -114,14 +123,13 @@ def unsigned(num, bits):
     num += 1
   return num
 
-def deg_to_rad(deg):
-  return deg * (math.pi / 180)
 
 class LatLng(object):
+
   def __init__(self, csv_values, input_type=None):
     self.orig = csv_values.strip("(").strip(")")
     self.input_type = input_type
-    lat, lng = [float(val) for val in self.orig.split(",", 1)]
+    lat, lng = [val for val in self.orig.split(",", 1)]
     if not input_type:
       input_type = self.guess_input_type([lat, lng])
     self.lat_e7 = self.to_signed_e7(lat, input_type)
@@ -129,6 +137,12 @@ class LatLng(object):
 
   @classmethod
   def guess_input_type(cls, vals):
+    try:
+      if any(val.count(".") > 1 for val in vals):
+        return "sexagesimal"
+    except AttributeError:
+      pass
+    vals = [float(val) for val in vals]
     if all(abs(val) < 6 for val in vals):
       return "radians"
     if any(abs(val) > 1e7 for val in vals):
@@ -146,14 +160,25 @@ class LatLng(object):
     logging.warning("Can't guess input type for %s, using degrees", vals)
     return "degrees"
 
-
   @classmethod
   def to_signed_e7(cls, val, input_type):
-    """
-    to signed e7 values
+    """to signed e7 values
     """
     orig_val = val
     orig_type = input_type
+    if input_type == "sexagesimal":
+      # base 60: e.g. 50.43.30.7 = 50 + 43/60 + 30.7/3600
+      # Ideally, we'd find a way to handle: 50°43′30.7″N 2°32′28.9″E
+      # since that's what they have on wikipedia
+      parts = val.split(".", 2)
+      val = float(parts[0])
+      if len(parts) > 1:
+        val += float(parts[1]) / 60.0
+      if len(parts) > 2:
+        val += float(parts[2]) / 60.0 / 60.0
+      input_type = "degrees"
+    else:
+      val = float(val)
     if input_type.startswith("unsigned"):
       val = signed(val, 32)
       input_type = input_type[2:]
@@ -167,8 +192,8 @@ class LatLng(object):
       val *= 1e7
       input_type = "signed_e7"
     if input_type != "signed_e7":
-      logging.error("Failed to convert %s %s, got to %s %s",
-                    orig_val, orig_type, val, input_type)
+      logging.error("Failed to convert %s %s, got to %s %s", orig_val,
+                    orig_type, val, input_type)
     return val
 
   def __repr__(self):
@@ -184,6 +209,7 @@ class LatLng(object):
       val /= 1e7
     if output_type == "radians":
       val *= (math.pi / 180)
+    # sexgesimal currently unsupported
     return val
 
   @classmethod
@@ -216,37 +242,51 @@ class LatLng(object):
 
 # --------------------------------------------------------------------------- #
 
+
 def haversine(latlng1, latlng2):
+  """Computes distance according to the haversine formula
+
+  This is written to include all dependencies (imports, called
+  functions, constants) so that it is easy to copy out to other
+  places.
+
   """
-  Computes distance according to the haversine formula
-  """
+  import math
+
   (lat1, lng1) = latlng1
   (lat2, lng2) = latlng2
+
+  def deg_to_rad(deg):
+    return deg * (math.pi / 180)
+
   lat1 = deg_to_rad(lat1)
   lng1 = deg_to_rad(lng1)
   lat2 = deg_to_rad(lat2)
   lng2 = deg_to_rad(lng2)
   dlng = lng2 - lng1
   dlat = lat2 - lat1
-  a = (math.pow(math.sin(dlat/2.0), 2.0) +
-       math.cos(lat1) * math.cos(lat2) * math.pow(math.sin(dlng/2.0), 2.0))
-  c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+  a = (math.pow(
+      math.sin(dlat / 2.0), 2.0) + math.cos(lat1) * math.cos(lat2) * math.pow(
+          math.sin(dlng / 2.0), 2.0))
+  c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+  KM_EARTH_RADIUS = 6373.0
+  MILES_EARTH_RADIUS = 3961.0
+
   d_km = KM_EARTH_RADIUS * c
   d_miles = MILES_EARTH_RADIUS * c
   return (d_km, d_miles)
 
-def deg_to_rad(deg):
-  return deg * (math.pi / 180)
-
 # --------------------------------------------------------------------------- #
 
-def make_table(table, delim=' ', ors='\n', left=True):
+
+def make_table(table, delim=" ", ors="\n", left=True):
   import itertools
-  transposed = itertools.izip_longest(*table, fillvalue='')
+  transposed = itertools.izip_longest(*table, fillvalue="")
   widths = (max(len(fld) for fld in line) for line in transposed)
-  lch = '-' if left else ''
-  formats = ['%{0}{1}s'.format(lch, width) for width in widths]
-  return ors.join('%s' % delim.join(format % (fld)
+  lch = "-" if left else ""
+  formats = ["%{0}{1}s".format(lch, width) for width in widths]
+  return ors.join("%s" % delim.join(format % (fld)
                                     for (format, fld) in zip(formats, line))
                   for line in table)
 
