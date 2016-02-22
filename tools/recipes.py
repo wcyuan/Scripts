@@ -151,6 +151,17 @@ class FieldMixin(object):
     def __hash__(self):
         return hash(self._vals(self))
 
+    def __init__(self, **kwargs):
+      for var in self._flds:
+        if var in kwargs:
+          setattr(self, var, kwargs[var])
+        else:
+          setattr(self, var, None)
+      for var in kwargs:
+        if var not in self._flds:
+          raise ValueError("Unknown keyword argument: {0} = {1}".format(
+              var, kwargs[var]))
+
 # --------------------------------------------------------------------------- #
 
 class SpellChecker(object):
