@@ -112,6 +112,12 @@ EXAMPLES:
   }
   >>> p[0] == parse(p[0].full_proto_string())[0]
   True
+  >>> p[0].follow("single_request", 1, "id", 0, "v1", 0)
+  u'20593950293402934'
+  >>> p[0].follow("single_request", 1, "id", 0)
+  {u'v1': 20593950293402934, u'v2': 19289402093012930}
+  >>> p[0].single_request.follow(1, "id", 0, "v1", 0)
+  u'20593950293402934'
 
 This command will parse the protos, then drop you in an ipython shell
 with the variable "parsed" set to a map from filename to the protos
@@ -235,7 +241,48 @@ def make_table(table, delim=",", ors="\n", left=True, align=False):
 # --------------------------------------------------------------------------- #
 
 
-class ProtoList(list):
+class ProtoMixin(object):
+
+  def follow(self, *path):
+    if not path:
+      return self
+    elt = self[path[0]]
+    if isinstance(elt, ProtoMixin) or isinstance(elt, ProtoMixin):
+      return elt.follow(*path[1:])
+    else:
+      return elt
+
+  @classmethod
+  def apply_auto_quote(cls, elt):
+    if not isinstance(elt, basestring):
+      logging.debug("Not quoting non-string '%s'", elt)
+      return elt
+    if all(c.isupper() for c in elt if c.isalpha()):
+      logging.debug("Not quoting uppercase '%s'", elt)
+      return elt
+    if elt[0] == '"' and elt[-1] == '"':
+      logging.debug("Element already quoted '%s'", elt)
+      return elt
+    try:
+      float(elt)
+      logging.debug("Not quoting string that looks like a number '%s'", elt)
+      return elt
+    except ValueError:
+      pass
+    if elt.lower() == "true" or elt.lower() == "false":
+      logging.debug("Not quoting string that looks like a bool '%s'", elt)
+      return elt
+    logging.debug("Quoting: '%s'", elt)
+    return '"{0}"'.format(elt)
+
+  @classmethod
+  def to_unicode(cls, elt):
+    if isinstance(elt, unicode):
+      return elt
+    return unicode(elt, errors="replace")
+
+
+class ProtoList(list, ProtoMixin):
   """A list whose repr summarizes long lists.
 
   Protos' string representations can be long and difficult to read.
@@ -319,35 +366,6 @@ class ProtoList(list):
     else:
       return full
 
-  @classmethod
-  def apply_auto_quote(cls, elt):
-    if not isinstance(elt, basestring):
-      logging.debug("Not quoting non-string '%s'", elt)
-      return elt
-    if all(c.isupper() for c in elt if c.isalpha()):
-      logging.debug("Not quoting uppercase '%s'", elt)
-      return elt
-    if elt[0] == '"' and elt[-1] == '"':
-      logging.debug("Element already quoted '%s'", elt)
-      return elt
-    try:
-      float(elt)
-      logging.debug("Not quoting string that looks like a number '%s'", elt)
-      return elt
-    except ValueError:
-      pass
-    if elt.lower() == "true" or elt.lower() == "false":
-      logging.debug("Not quoting string that looks like a bool '%s'", elt)
-      return elt
-    logging.debug("Quoting: '%s'", elt)
-    return '"{0}"'.format(elt)
-
-  @classmethod
-  def to_unicode(cls, elt):
-    if isinstance(elt, unicode):
-      return elt
-    return unicode(elt, errors="replace")
-
   def full_proto_string(self, pretty=True, indent_amount=0, auto_quote=False):
     if pretty:
       ors = u"\n"
@@ -362,8 +380,8 @@ class ProtoList(list):
                                      indent_amount=indent_amount,
                                      auto_quote=auto_quote)
       else:
-        selt = self.apply_auto_quote(elt) if auto_quote else elt
-        return u"{0}{1}".format(indent, self.to_unicode(selt))
+        selt = ProtoMixin.apply_auto_quote(elt) if auto_quote else elt
+        return u"{0}{1}".format(indent, ProtoMixin.to_unicode(selt))
 
     return ors.join(print_elt(elt) for elt in self)
 
@@ -427,7 +445,7 @@ class ProtoList(list):
                 for elt in self)
 
 
-class ProtoDict(dict):
+class ProtoDict(dict, ProtoMixin):
   """A custom dict class for Protos.
 
   This just allows element access through both getitem (the normal
@@ -516,8 +534,9 @@ class ProtoDict(dict):
       if isinstance(value, ProtoList):
         if value.is_simple():
           for elt in value:
-            selt = ProtoList.apply_auto_quote(elt) if auto_quote else elt
-            yield u"{0}{1}: {2}".format(indent, key, ProtoList.to_unicode(selt))
+            selt = ProtoMixin.apply_auto_quote(elt) if auto_quote else elt
+            yield u"{0}{1}: {2}".format(indent, key,
+                                        ProtoMixin.to_unicode(selt))
         else:
           for elt in value:
             if isinstance(elt, ProtoDict):
@@ -525,8 +544,8 @@ class ProtoDict(dict):
                                             indent_amount=indent_amount + 1,
                                             auto_quote=auto_quote)
             else:
-              selt = ProtoList.apply_auto_quote(elt) if auto_quote else elt
-              inner = u"{0}{1}".format(indent, ProtoList.to_unicode(selt))
+              selt = ProtoMixin.apply_auto_quote(elt) if auto_quote else elt
+              inner = u"{0}{1}".format(indent, ProtoMixin.to_unicode(selt))
             yield line_sep.join((u"{0}{1} {{".format(indent, key), inner,
                                  u"{0}}}".format(indent)))
       else:
