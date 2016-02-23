@@ -931,7 +931,8 @@ def tokenify(string):
           ind += 1
         ind += 1
       else:
-        raise ValueError("No end of string found: %s".format(string[last_ind:]))
+        raise ValueError("No end of string found: {0}".format(string[
+            last_ind:]))
     elif string[ind].isspace():
       if last_ind != ind:
         yield string[last_ind:ind]
