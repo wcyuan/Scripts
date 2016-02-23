@@ -774,7 +774,7 @@ def parse_tokens(tokens=None,
     else:
       raise ValueError("No data to parse")
   if isinstance(tokens, basestring):
-    tokens = tokenify(tokens)
+    tokens = tokenify(tokens, log_errors_at=log_errors_at)
   if not isinstance(tokens, LookaheadIter):
     tokens = LookaheadIter(tokens)
   block = ProtoDict()
@@ -889,7 +889,7 @@ class LookaheadIter(collections.Iterator):
     return next(self.it)
 
 
-def tokenify(string):
+def tokenify(string, log_errors_at=logging.WARN, die_on_error=False):
   """return a list of tokens
 
   >>> list(tokenify("{a : b}"))
@@ -931,8 +931,11 @@ def tokenify(string):
           ind += 1
         ind += 1
       else:
-        raise ValueError("No end of string found: {0}".format(string[
-            last_ind:]))
+        err = "No end of string found: {0}".format(string[last_ind:])
+        if die_on_error:
+          raise ValueError(err)
+        else:
+          logging.log(log_errors_at, err)
     elif string[ind].isspace():
       if last_ind != ind:
         yield string[last_ind:ind]
