@@ -129,6 +129,7 @@ found in that file.
 
 from __future__ import absolute_import, division, with_statement
 
+import collections
 import contextlib
 import gzip
 import itertools
@@ -192,6 +193,7 @@ def file_lines(filename):
 
 @contextlib.contextmanager
 def zopen(filename, mode="r"):
+  filename = os.path.expanduser(filename)
   if filename.endswith(".gz"):
     with gzip.open(filename, mode=mode) as fd:
       yield fd
@@ -224,19 +226,6 @@ def decode(encoded):
     return decoded.decode("utf8")
   except UnicodeDecodeError as e:
     return decoded
-
-
-# Unused
-def make_table(table, delim=",", ors="\n", left=True, align=False):
-  transposed = itertools.izip_longest(*table, fillvalue=u"")
-  widths = (min(25, max(len(fld) for fld in line)) for line in transposed)
-  lch = "-" if left else ""
-  if align:
-    formats = ["%{0}{1}s".format(lch, width) for width in widths]
-  else:
-    formats = ["%s" for width in widths]
-  return ors.join(delim.join(fmt % fld for (fmt, fld) in zip(formats, line))
-                  for line in table)
 
 # --------------------------------------------------------------------------- #
 
@@ -594,125 +583,8 @@ def parse_blocks(string):
       block = ""
 
 
-def parse_iter(lines=None, filename=None, depth=0, log_errors_at=logging.WARN):
-  """Parses the text format of a Protobuf
-
-  This returns an iterator, so you have to tuplize it.  Then you'll
-  get a single element, which is a dictionary with a single key,
-  "result".  The value for that key will be a list of all the
-  responses.
-
-  In general, we don't know how many of a value there will be.  I.e.,
-  there could be a single candidate or there could be many candidates.
-  There could be a single key or there could be many keys.  So we
-  assume that all fields are lists.  The clients of the data should
-  know which fields are really lists and which fields you just need to
-  take the [0] element of.
-  """
-  if not lines:
-    if filename:
-      filename = os.path.expanduser(filename)
-      lines = file_lines(filename)
-    else:
-      raise ValueError("No data to parse")
-  if isinstance(lines, basestring):
-    lines = lines.split("\n")
-  # if we were given a list, we have to make it a generator so that on
-  # our recursive call, we start from where the iterator left off, not
-  # at the beginning of the list.
-  lines = iter(lines)
-  block = ProtoDict()
-
-  # Protos fields come in two forms.  When the var and variable on one
-  # line, like this:
-  #
-  #  var1: val1
-  #  var2: val2
-  #
-  # Or in a block form, like this:
-  #
-  #  var1 {
-  #    val1var: val1val
-  #  }
-  #  var2 {
-  #    val2var: val2val
-  #  }
-  #
-  # The block form generally indicates that the value is a more
-  # complicated object, not just a primitive like a string.
-  # parse_iter is used to parse the part in brackets, and parse_iter
-  # currently always expects to return a ProtoDict() which represents
-  # the complicated object.
-  #
-  # However, there is one case where the block form is used for
-  # primitives.  That is for enums.  If flag is a repeated enum field
-  # with possible values FLAG_VALUE1, and FLAG_VALUE2, you might see:
-  #
-  #  flag {
-  #    FLAG_VALUE1
-  #  }
-  #  flag {
-  #    FLAG_VALUE2
-  #  }
-  #
-  # and that is equivalent to
-  #  flag: FLAG_VALUE1
-  #  flag: FLAG_VALUE2
-  #
-  # This is the one case where parse_iter should not return a
-  # ProtoDict, but should just return the string FLAG_VALUE1 or
-  # FLAG_VALUE2.  The way we detect this case is if we see a line like
-  # FLAG_VALUE1, which has no colon (":") in it.  Also, it is the only
-  # line in the block
-  enum_values = []
-  for line in lines:
-    # TODO: decoding the line again could cause problems if the line
-    # has already been decoded
-    line = decode(line).lstrip().rstrip("\n\r")
-    if line == "{" and not block:
-      # We are ready to accept protos that are not wrapped in braces.
-      # If we see a proto that is wrapped in braces, well we already
-      # stop if we see a close brace, so all we need to add is to
-      # ignore the opening brace.
-      continue
-    if line == "}":
-      if enum_values:
-        if not block and len(enum_values) == 1:
-          yield enum_values[0]
-        else:
-          logging.log(log_errors_at, "Can't parse line %s (file %s)",
-                      enum_values, filename)
-          yield block
-      else:
-        yield block
-      enum_values = []
-      block = ProtoDict()
-      continue
-    if ": " in line:
-      var, val = line.split(": ", 1)
-    elif line.endswith(" {"):
-      var = line[:-2]
-      val = next(parse_iter(lines,
-                            depth=depth + 1,
-                            log_errors_at=log_errors_at))
-    else:
-      if line.strip():
-        logging.debug("Taking line as enum value %s (file %s)", line, filename)
-        enum_values.append(line.strip())
-      continue
-    block.setdefault(var, ProtoList((), depth=depth)).append(val)
-  if enum_values:
-    if not block and len(enum_values) == 1:
-      yield enum_values[0]
-    else:
-      logging.log(log_errors_at, "Can't parse line %s (file %s)", enum_values,
-                  filename)
-  if block:
-    yield block
-
-
 def parse(*args, **kwargs):
-  """Run parse_iter but return a tuple
+  """Run parse_tokens but return a tuple
 
   # empty proto
   >>> parse("")
@@ -764,18 +636,22 @@ def parse(*args, **kwargs):
   ({u'obj': [{u'enum': [u'v1', u'v2', u'v3']}]},)
 
   # An invalid enum
-  # This also generates a warning
-  #  [ ...parse_iter:663 WARNING] Can't parse line [u'v1', u'v2'] (file None)
-  >>> parse("obj {\\nenum {\\nv1\\nv2\\n}\\nenum {\\nv3\\n}\\n}")
+  # This would generate a warning
+  #  [ ...parse_tokens:868 WARNING] Can't parse line [u'v1', u'v2'] (file None)
+  # except that we suppress it with log_errors_at
+  >>> parse("obj {\\nenum {\\nv1\\nv2\\n}\\nenum {\\nv3\\n}\\n}",
+  ...       log_errors_at=logging.DEBUG)
   ({u'obj': [{u'enum': [{}, u'v3']}]},)
 
   # Another invalid enum
   # This also generates a warning
-  #  [ ...parse_iter:663 WARNING] Can't parse line [u'v1'] (file None)
-  >>> parse("obj {\\nenum {\\nv1\\nv2: asdf\\n}\\nenum {\\nv3\\n}\\n}")
+  #  [ ...parse_tokens:868 WARNING] Can't parse line [u'v1'] (file None)
+  # except that we suppress it with log_errors_at
+  >>> parse("obj {\\nenum {\\nv1\\nv2: asdf\\n}\\nenum {\\nv3\\n}\\n}",
+  ...       log_errors_at=logging.DEBUG)
   ({u'obj': [{u'enum': [{u'v2': asdf}, u'v3']}]},)
   """
-  return tuple(parse_iter(*args, **kwargs))
+  return tuple(parse_tokens(*args, **kwargs))
 
 
 def parse_lisp(string, idx=0, is_value=True):
@@ -885,6 +761,186 @@ def list_to_proto(lst):
     (var, val) = elt[:2]
     block.setdefault(var, ProtoList(())).append(list_to_proto(val))
   return block
+
+
+def parse_tokens(tokens=None,
+                 filename=None,
+                 depth=0,
+                 log_errors_at=logging.WARN):
+  if not tokens:
+    if filename:
+      with zopen(filename) as fd:
+        tokens = fd.read()
+    else:
+      raise ValueError("No data to parse")
+  if isinstance(tokens, basestring):
+    tokens = tokenify(tokens)
+  if not isinstance(tokens, LookaheadIter):
+    tokens = LookaheadIter(tokens)
+  block = ProtoDict()
+
+  # Protos fields come in two forms.  When the var and variable on one
+  # line, like this:
+  #
+  #  var1: val1
+  #  var2: val2
+  #
+  # Or in a block form, like this:
+  #
+  #  var1 {
+  #    val1var: val1val
+  #  }
+  #  var2 {
+  #    val2var: val2val
+  #  }
+  #
+  # The block form generally indicates that the value is a more
+  # complicated object, not just a primitive like a string.
+  # parse_tokens is used to parse the part in brackets, and parse_tokens
+  # currently always expects to return a ProtoDict() which represents
+  # the complicated object.
+  #
+  # However, there is one case where the block form is used for
+  # primitives.  That is for enums.  If flag is a repeated enum field
+  # with possible values FLAG_VALUE1, and FLAG_VALUE2, you might see:
+  #
+  #  flag {
+  #    FLAG_VALUE1
+  #  }
+  #  flag {
+  #    FLAG_VALUE2
+  #  }
+  #
+  # and that is equivalent to
+  #  flag: FLAG_VALUE1
+  #  flag: FLAG_VALUE2
+  #
+  # This is the one case where parse_tokens should not return a
+  # ProtoDict, but should just return the string FLAG_VALUE1 or
+  # FLAG_VALUE2.  The way we detect this case is if we see a line like
+  # FLAG_VALUE1, which has no colon (":") in it.  Also, it is the only
+  # line in the block
+  enum_values = []
+  for token in tokens:
+    # TODO: decoding the line again could cause problems if the line
+    # has already been decoded
+    token = decode(token)
+    if token == "{" and not block:
+      # We are ready to accept protos that are not wrapped in braces.
+      # If we see a proto that is wrapped in braces, well we already
+      # stop if we see a close brace, so all we need to add is to
+      # ignore the opening brace.
+      continue
+    if token == "}":
+      if enum_values:
+        if not block and len(enum_values) == 1:
+          yield enum_values[0]
+        else:
+          logging.log(log_errors_at, "Can't parse line %s (file %s)",
+                      enum_values, filename)
+          yield block
+      else:
+        yield block
+      enum_values = []
+      block = ProtoDict()
+      continue
+    next_token = tokens.lookahead
+    if next_token == ":":
+      var = token
+      next(tokens)
+      val = decode(next(tokens))
+    elif next_token == "{":
+      var = token
+      next(tokens)
+      val = next(parse_tokens(tokens,
+                              depth=depth + 1,
+                              filename=filename,
+                              log_errors_at=log_errors_at))
+    else:
+      logging.debug("Taking token as enum value %s (file %s)", token, filename)
+      enum_values.append(token)
+      continue
+    block.setdefault(var, ProtoList((), depth=depth)).append(val)
+  if enum_values:
+    if not block and len(enum_values) == 1:
+      yield enum_values[0]
+    else:
+      logging.log(log_errors_at, "Can't parse line %s (file %s)", enum_values,
+                  filename)
+  if block:
+    yield block
+
+
+class LookaheadIter(collections.Iterator):
+
+  def __init__(self, it):
+    self.it, self.nextit = itertools.tee(iter(it))
+    self._advance()
+
+  def _advance(self):
+    self.lookahead = next(self.nextit, None)
+
+  def next(self):
+    return self.__next__()
+
+  def __next__(self):
+    self._advance()
+    return next(self.it)
+
+
+def tokenify(string):
+  """return a list of tokens
+
+  >>> list(tokenify("{a : b}"))
+  ['{', 'a', ':', 'b', '}']
+  >>> list(tokenify("{abc : b}"))
+  ['{', 'abc', ':', 'b', '}']
+  >>> list(tokenify("{abc : 'b'}"))
+  ['{', 'abc', ':', "'b'", '}']
+  """
+  last_ind = 0
+  ind = 0
+  while ind < len(string):
+    if string[ind] in ("{", "}", ":", ";"):
+      # Single character tokens
+      # This signals the end of any previous token
+      if last_ind != ind:
+        yield string[last_ind:ind]
+      # Now also yield this token
+      yield string[ind]
+      ind += 1
+      last_ind = ind
+    elif string[ind] == "#":
+      # Comment
+      while ind < len(string) and string[ind] != "\n":
+        ind += 1
+      ind += 1
+      last_ind = ind
+    elif string[ind] in ("'", '"'):
+      # String
+      quote = string[ind]
+      ind += 1
+      while ind < len(string):
+        if string[ind] == quote:
+          ind += 1
+          yield string[last_ind:ind]
+          last_ind = ind
+          break
+        if string[ind] == "\\":
+          ind += 1
+        ind += 1
+      else:
+        raise ValueError("No end of string found: %s".format(string[last_ind:]))
+    elif string[ind].isspace():
+      if last_ind != ind:
+        yield string[last_ind:ind]
+      ind += 1
+      last_ind = ind
+    else:
+      ind += 1
+
+  if ind != last_ind:
+    yield string[last_ind:ind + 1]
 
 # --------------------------------------------------------------------------- #
 
