@@ -871,6 +871,7 @@ def parse_tokens(tokens=None,
     yield block
 
 
+# http://stackoverflow.com/questions/1517862/using-lookahead-with-generators
 class LookaheadIter(collections.Iterator):
 
   def __init__(self, it):
