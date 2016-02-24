@@ -736,3 +736,51 @@ class Runner(object):
       return process.returncode == 0
 
 # --------------------------------------------------------------------------- #
+
+class AttrDict(dict):
+  """A dict that allows element access via attributes.
+
+  This just allows element access through both getitem (the normal
+  way) and getattr.  It also adds the attributes to dir so tab
+  completion works.
+
+  """
+
+  @classmethod
+  def normalize_attr(cls, attr):
+    """Return a version of a string that is suitable for an attribute
+
+    http://stackoverflow.com/questions/10120295/valid-characters-in-a-python-class-name
+    https://docs.python.org/2/reference/lexical_analysis.html#identifiers
+    """
+    attr = str(attr)
+    attr = "".join(
+        c
+        for c in attr
+        if c in
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+    if attr[0] in "0123456789":
+      attr = "_" + attr
+    return attr
+
+  def __getattr__(self, attr):
+    if attr in self:
+      return self[attr]
+    # if we were given a normalized attribute, there could be multiple
+    # keys that normalize to the same thing.  We just arbitrarily take
+    # the first one.
+    for key in self.iterkeys():
+      if attr == self.normalize_attr(key):
+        return self[key]
+    raise AttributeError("Can't find field '{0}'".format(attr))
+
+  def __dir__(self):
+    """The __dir__ method controls ipython tab completion
+
+    http://stackoverflow.com/questions/13870241/ipython-tab-completion-for-custom-dict-class
+    https://ipython.org/ipython-doc/dev/config/integrating.html
+    """
+    return dir(dict) + list(set(self.normalize_attr(ky) for ky in self.iterkeys(
+    )))
+
+# --------------------------------------------------------------------------- #
