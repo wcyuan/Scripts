@@ -299,10 +299,11 @@ def make_table(table, delim=" ", left=True, ors="\n"):
     """
     Args:
       table: A sequence of rows, where each row is a sequence of fields.
-      Can't be a generator, it will be traversed twice.
     Returns:
       A string where the rows are printed with the columns lined up
     """
+    # make it a tuple so we can traverse it twice.
+    table = tuple(table)
     transposed = itertools.izip_longest(*table, fillvalue="")
     widths = (max(len(fld) for fld in line) for line in transposed)
     lch = "-" if left else ""
@@ -653,6 +654,9 @@ def parse_responses(lines, is_split=False, is_reversed=False):
     yield block
 
 # --------------------------------------------------------------------------- #
+
+import logging
+import subprocess
 
 class Runner(object):
   """A class to run commands."""
