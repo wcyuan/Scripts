@@ -35,11 +35,11 @@ function confirmCopySheet_() {
   // Process the user's response.
   if (result == ui.Button.YES) {
     // User clicked "Yes".
-    ui.alert('Continuing...');
+    ui.alert('Press OK to Continue.');
     copySheet_(spreadsheet, sheet, filtered);
   } else {
     // User clicked "No" or X in the title bar.
-    ui.alert('Canceling.');
+    ui.alert('Press OK to Cancel.');
   }
 }
 
@@ -80,6 +80,14 @@ function copySheet_(spreadsheet, sheet, names) {
     } else {
       Logger.log("No exising sheet for: " + name);
     };
-    sheet.copyTo(spreadsheet).setName(name);
+    // Could do it in one line
+    //sheet.copyTo(spreadsheet).setName(name);
+    // But maybe a little more readable on multiple lines
+    var new_sheet = sheet.copyTo(spreadsheet);
+    new_sheet.setName(name);
+    // Uncomment the row below to set the value of cell D1 to
+    // the name of the sheet
+    // Note that getRange is 1-indexed.  Column #1 = Column "D".
+    //new_sheet.getRange(1, 4).setValue(name);
   }
 }
