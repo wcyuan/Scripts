@@ -20,7 +20,7 @@ EXAMPLES:
   $ proto.py *.txt
 
   Or, use this command to start IPython with that data read into a
-  variabled called "parsed", which will be a dict from filename to the
+  variable called "parsed", which will be a dict from filename to the
   protos parsed from that file.
 
   $ ipython -i proto.py ~/my/file/name.txt.txt
@@ -118,6 +118,23 @@ EXAMPLES:
   {u'v1': 20593950293402934, u'v2': 19289402093012930}
   >>> p[0].single_request.follow(1, "id", 0, "v1", 0)
   u'20593950293402934'
+  >>> p = parse('''single_request: {
+  ...   id: {
+  ...     v1: 4123124123123 # this is a comment
+  ...     v2: '150295 9385023' # this is a multiline string
+  ...   }
+  ... }
+  ... single_request {
+  ...   id {
+  ...     v1: 10592003940293949394
+  ...     v2: 89297492883749283839
+  ...   }
+  ... }
+  ... ''')
+  >>> p[0]
+  {u'single_request': ProtoList(len=2, depth=0, height=3)}
+  >>> p[0].single_request[0].id[0].v2[0]
+  u"'150295 9385023'"
 
 This command will parse the protos, then drop you in an ipython shell
 with the variable "parsed" set to a map from filename to the protos
@@ -138,6 +155,7 @@ import logging
 import optparse
 import os
 import re
+import sys
 
 # --------------------------------------------------------------------------- #
 
@@ -198,8 +216,11 @@ def zopen(filename, mode="r"):
     with gzip.open(filename, mode=mode) as fd:
       yield fd
   else:
-    with open(filename, mode=mode) as fd:
-      yield fd
+    if not os.path.exists(filename) and filename == "-":
+      yield sys.stdin
+    else:
+      with open(filename, mode=mode) as fd:
+        yield fd
 
 # --------------------------------------------------------------------------- #
 
@@ -588,9 +609,7 @@ def parse(*args, **kwargs):
 
   # empty proto
   >>> parse("")
-  Traceback (most recent call last):
-  ...
-  ValueError: No data to parse
+  ()
 
   # a single value
   >>> parse("a: 1")
@@ -764,22 +783,29 @@ def list_to_proto(lst):
 
 
 def parse_tokens(tokens=None,
+                 lines=None,
                  filename=None,
                  depth=0,
                  log_errors_at=logging.WARN):
-  if not tokens:
-    if filename:
-      with zopen(filename) as fd:
-        tokens = fd.read()
-    else:
-      raise ValueError("No data to parse")
   if isinstance(tokens, basestring):
-    tokens = tokenify(tokens, log_errors_at=log_errors_at)
+    lines = [tokens]
+    tokens = None
+  if isinstance(tokens, collections.Sequence):
+    lines = tokens
+    tokens = None
+  if filename and not tokens and not lines:
+    lines = file_lines(filename)
+  if lines and not tokens:
+    tokens = itertools.chain.from_iterable(tokenify(line,
+                                                    log_errors_at=log_errors_at)
+                                           for line in lines)
+  if not tokens:
+    raise ValueError("No data to parse")
   if not isinstance(tokens, LookaheadIter):
     tokens = LookaheadIter(tokens)
   block = ProtoDict()
 
-  # Protos fields come in two forms.  When the var and variable on one
+  # Protos fields come in three forms.  When the var and variable on one
   # line, like this:
   #
   #  var1: val1
@@ -791,6 +817,15 @@ def parse_tokens(tokens=None,
   #    val1var: val1val
   #  }
   #  var2 {
+  #    val2var: val2val
+  #  }
+  #
+  # Or in a block form with both colon and brace, like this:
+  #
+  #  var1: {
+  #    val1var: val1val
+  #  }
+  #  var2: {
   #    val2var: val2val
   #  }
   #
@@ -845,17 +880,28 @@ def parse_tokens(tokens=None,
       block = ProtoDict()
       continue
     next_token = tokens.lookahead
-    if next_token == ":":
+    if next_token == ":" or next_token == "{":
       var = token
-      next(tokens)
-      val = decode(next(tokens))
-    elif next_token == "{":
-      var = token
-      next(tokens)
-      val = next(parse_tokens(tokens,
-                              depth=depth + 1,
-                              filename=filename,
-                              log_errors_at=log_errors_at))
+      # consume the colon or brace
+      delim = next(tokens)
+      if delim == ":" and tokens.lookahead == "{":
+        # treat
+        #   field: {
+        #     <other_info>
+        #   }
+        # the same as
+        #   field {
+        #     <other_info>
+        #   }
+        # In that case, we just ignore the colon
+        delim = next(tokens)
+      if delim == ":":
+        val = decode(next(tokens))
+      else:
+        val = next(parse_tokens(tokens,
+                                depth=depth + 1,
+                                filename=filename,
+                                log_errors_at=log_errors_at))
     else:
       logging.debug("Taking token as enum value %s (file %s)", token, filename)
       enum_values.append(token)
