@@ -669,6 +669,30 @@ def parse(*args, **kwargs):
   >>> parse("obj {\\nenum {\\nv1\\nv2: asdf\\n}\\nenum {\\nv3\\n}\\n}",
   ...       log_errors_at=logging.DEBUG)
   ({u'obj': [{u'enum': [{u'v2': asdf}, u'v3']}]},)
+
+  # An inline list
+  >>> p = parse('''single_request: {
+  ...   id: {
+  ...     val: [ "myvalue" , "yourvalue" , "third value" ]
+  ...   }
+  ... }
+  ... single_request {
+  ...   id: {
+  ...     val: [ "John" , "George" ]
+  ...     val: [ "Ringo", "Paul" ]
+  ...   }
+  ... }
+  ... ''')
+  >>> len(p[0].single_request[0].id[0].val)
+  3
+  >>> p[0].single_request[0].id[0].val[1]
+  u'"yourvalue"'
+  >>> p[0].single_request[0].id[0].val[2]
+  u'"third value"'
+  >>> len(p[0].single_request[1].id[0].val)
+  4
+  >>> p[0].single_request[1].id[0].val[3]
+  u'"Paul"'
   """
   return tuple(parse_tokens(*args, **kwargs))
 
@@ -855,17 +879,31 @@ def parse_tokens(tokens=None,
   # FLAG_VALUE2.  The way we detect this case is if we see a line like
   # FLAG_VALUE1, which has no colon (":") in it.  Also, it is the only
   # line in the block
+  #
+  # Another form we have to consider is:
+  #
+  # strfield : [ "string 1", "string 2", "string 3" ]
+  #
+  # which is equivalent to
+  #
+  # strfield: "string 1"
+  # strfield: "string 2"
+  # strfield: "string 3"
+  #
   enum_values = []
   for token in tokens:
     # TODO: decoding the line again could cause problems if the line
     # has already been decoded
     token = decode(token)
+
+    # We are ready to accept protos that are not wrapped in braces.
+    # If we see a proto that is wrapped in braces, well, we already
+    # stop if we see a close brace, so all we need to add is to ignore
+    # the opening brace.
     if token == "{" and not block:
-      # We are ready to accept protos that are not wrapped in braces.
-      # If we see a proto that is wrapped in braces, well we already
-      # stop if we see a close brace, so all we need to add is to
-      # ignore the opening brace.
       continue
+
+    # Handle the end of a block
     if token == "}":
       if enum_values:
         if not block and len(enum_values) == 1:
@@ -879,33 +917,67 @@ def parse_tokens(tokens=None,
       enum_values = []
       block = ProtoDict()
       continue
+
+    # Handle a field
     next_token = tokens.lookahead
-    if next_token == ":" or next_token == "{":
-      var = token
-      # consume the colon or brace
-      delim = next(tokens)
-      if delim == ":" and tokens.lookahead == "{":
-        # treat
-        #   field: {
-        #     <other_info>
-        #   }
-        # the same as
-        #   field {
-        #     <other_info>
-        #   }
-        # In that case, we just ignore the colon
-        delim = next(tokens)
-      if delim == ":":
-        val = decode(next(tokens))
-      else:
-        val = next(parse_tokens(tokens,
-                                depth=depth + 1,
-                                filename=filename,
-                                log_errors_at=log_errors_at))
-    else:
+
+    # After a field name, we expect one of these tokens which
+    # separates the field from the value.  Otherwise, we are either in
+    # the enum_values case, or we have a parse error.
+    if next_token != ":" and next_token != "{":
       logging.debug("Taking token as enum value %s (file %s)", token, filename)
       enum_values.append(token)
       continue
+
+    # OK, now we are in the case where we know the field we are
+    # parsing, so we just have to figure out how to parse the value.
+    var = token
+    # consume the colon or brace.  We'll use the delimeter to
+    # determine whether the value is a primitive type, or an object, or a list.
+    delim = next(tokens)
+
+    # First parse list values
+    if delim == ":" and tokens.lookahead == "[":
+      # consume the opening bracket
+      next(tokens)
+      val = []
+      while tokens:
+        val.append(decode(next(tokens)))
+        if tokens.lookahead == ",":
+          # consume the comma and continue
+          next(tokens)
+        elif tokens.lookahead == "]":
+          # consume the closing bracket and stop
+          next(tokens)
+          break
+      block.setdefault(var, ProtoList((), depth=depth)).extend(val)
+      continue
+
+    # treat
+    #   field: {
+    #     <other_info>
+    #   }
+    # the same as
+    #   field {
+    #     <other_info>
+    #   }
+    # In that case, we just ignore the colon
+    if delim == ":" and tokens.lookahead == "{":
+      delim = next(tokens)
+
+    # Next, parse primitive type values
+    if delim == ":":
+      val = decode(next(tokens))
+
+    # Finally, parse object type values
+    else:
+      val = next(parse_tokens(tokens,
+                              depth=depth + 1,
+                              filename=filename,
+                              log_errors_at=log_errors_at))
+
+    # Add the field and value to the block (the ProtoDict) that we
+    # will return.
     block.setdefault(var, ProtoList((), depth=depth)).append(val)
   if enum_values:
     if not block and len(enum_values) == 1:
