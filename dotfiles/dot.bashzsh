@@ -46,6 +46,11 @@ alias webserver="python -m SimpleHTTPServer"
 
 alias tophonors='cd "/cygdrive/c/Users/Yuan/Dropbox/Top Honors Pairing"'
 
+# Starts an emacs client in a new window
+alias cemacs='emacsclient --alternate-editor="" -c'
+# Starts an emacs client in the terminal
+alias nwemacs='emacsclient --alternate-editor="" -nw'
+
 #
 # ps BSD-style options
 #
