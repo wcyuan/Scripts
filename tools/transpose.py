@@ -283,7 +283,7 @@ PADDING = 4
 # operators must come after operators they are a substring of.  That
 # is, '=' must come after '!=', '<=', and '>='; '<' must come after
 # '<='; '>' must come after '>='.
-FILTER_OPS = ('!=', '<=', '>=', '<', '>', '=')
+FILTER_OPS = ('!=', '<=', '>=', '<', '>', '=', '~')
 
 __all__ = ['zopen',
            'transpose',
@@ -552,6 +552,8 @@ def _opfunc(operator, val):
         return lambda v: float(v) > float(val)
     if operator == '<':
         return lambda v: float(v) < float(val)
+    if operator == '~':
+        return lambda v: re.search(val, v)
     raise AssertionError("Unknown operator '%s'" % operator)
 
 def _parse_filter(filter_string):
