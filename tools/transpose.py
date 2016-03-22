@@ -270,7 +270,7 @@ DECOMPRESSORS = (('.bz2', 'bzcat'),
 COMMENT_CHAR = '#'
 
 # input record separator
-IRS = "\n"
+IRS = "\r\n"
 # output record separator
 ORS = "\n"
 # output field separator
