@@ -110,6 +110,10 @@ Doctests:
 ...          '20140106 9 Jack HR',
 ...          '20140107 86 Mary Payroll')
 
+>>> lines3 = ('date,id,name,dept',
+...          '20140106,9,"Jack,Turner",HR',
+...          '20140107,86,Mary,Payroll')
+
 >>> tuple(next(read_files([lines]))) # doctest: +NORMALIZE_WHITESPACE
 (['date', 'id', 'name'],
  ['20140102', '3', 'Bob'],
@@ -219,6 +223,15 @@ Doctests:
 [['date', 'id', 'name', 'dept'],
  ['20140106', '9', 'Jack', 'HR']]
 
+>>> tuple(next(read_files([("1,2",'this is a test,"test,test,test"')],
+... kind="csv"))) # doctest: +NORMALIZE_WHITESPACE
+(['1', '2'], ['this is a test', 'test,test,test'])
+
+>>> tuple(     # doctest: +NORMALIZE_WHITESPACE
+...       next(read_files([lines3], kind="csv")))
+(['date', 'id', 'name', 'dept'],
+ ['20140106', '9', 'Jack,Turner', 'HR'],
+ ['20140107', '86', 'Mary', 'Payroll'])
 
 """
 
@@ -353,7 +366,7 @@ def getopts():
                       action="store_true",
                       help="reverse the pattern matching")
     parser.add_option('--kind',
-                      help="the kind of table (fixed or delimited)")
+                      help="the kind of table (fixed, delimited, or csv)")
     parser.add_option('--fixed',
                       action="store_true")
     parser.add_option('--header_patt',
@@ -676,7 +689,7 @@ def _guess_delim(header, kind):
         # delimited unless the user tells us differently.
         kind = 'delimited'
 
-    if kind == 'delimited':
+    if kind == 'delimited' or kind == 'csv':
         # We go through the possible delimiters in order from least
         # likely to most likely.  As soon as one of the delimiters
         # appears on the line more than 5 times, it's probably the
@@ -771,6 +784,10 @@ def _separate(line, kind, delim, raw=False):
                                                  fillvalue=None))]
         logging.debug("line (%s delim='%s') %s separated into %s",
                       kind, delim, line, vals)
+        return (vals, magic_word)
+    elif kind == 'csv':
+        import csv
+        vals = next(csv.reader([line]))
         return (vals, magic_word)
     else:
         raise ValueError ("Invalid input kind: %s" % kind)
