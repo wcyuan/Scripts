@@ -81,20 +81,25 @@ def main():
         replacement=opts.replacement)
     print "Target: {0}, Vals: {1}".format(target, vals)
 
-    (_, queue) = run_in_thread(("{0} = {1}".format(expr, expr.value)
-                                for expr in countdown(
-                                        vals, target,
-                                        all_orders=(not opts.in_order),
-                                        all_subsets=(not opts.use_all),
-                                        use_pow=opts.use_pow)))
+    results = countdown(
+        vals, target,
+        all_orders=(not opts.in_order),
+        all_subsets=(not opts.use_all),
+        use_pow=opts.use_pow)
 
-    raw_input("Press Enter to See Solutions: ")
-    while True:
-        try:
-            line = queue.get(block=False)
-            print line
-        except Empty:
-            break
+    if opts.single_threaded:
+        results = tuple(results)
+        num_results = len(results)
+        if results and results[0].value != target:
+            num_results = 0
+        raw_input("Press Enter to See Solutions ({0} results found): ".format(
+            num_results))
+    else:
+        (_, queue) = run_in_thread(results)
+        results = iter_queue_values(queue)
+        raw_input("Press Enter to See Solutions: ")
+    for expr in results:
+        print "{0} = {1}".format(expr, expr.value)
 
 def getopts():
     parser = optparse.OptionParser()
@@ -129,6 +134,8 @@ def getopts():
                       'if shorter solutions exist')
     parser.add_option('--twentyfour',    action='store_true',
                       help='run the standard 24 game')
+    parser.add_option('--single_threaded', action='store_true',
+                      help='run in a single thread')
 
     (opts, args) = parser.parse_args()
 
@@ -172,10 +179,19 @@ def getopts():
         opts.num_large = 0
         opts.replacement = True
         opts.use_all = True
+        opts.single_threaded = True
 
     return (opts, args)
 
 # --------------------------------------------------------------------------- #
+
+def iter_queue_values(queue):
+    while True:
+        try:
+            yield queue.get(block=False)
+        except Empty:
+            break
+
 
 def run_in_thread(gen):
     """
