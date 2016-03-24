@@ -88,7 +88,7 @@ def main():
     raw_input("Press Enter to See Solutions: ")
     while True:
         try:
-            line = queue.get()
+            line = queue.get(block=False)
             print line
         except Empty:
             break
