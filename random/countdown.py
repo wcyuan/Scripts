@@ -45,6 +45,7 @@ from __future__ import absolute_import, division, with_statement
 import logging
 import optparse
 import operator
+import sys
 
 from threading  import Thread
 
@@ -76,14 +77,16 @@ def main():
         min_target=opts.min_target,
         max_target=opts.max_target,
         num_large=opts.num_large,
-        large_numbers=opts.large_numbers)
+        large_numbers=opts.large_numbers,
+        replacement=opts.replacement)
     print "Target: {0}, Vals: {1}".format(target, vals)
 
     (_, queue) = run_in_thread(("{0} = {1}".format(expr, expr.value)
                                 for expr in countdown(
                                         vals, target,
                                         all_orders=(not opts.in_order),
-                                        all_subsets=(not opts.use_all))))
+                                        all_subsets=(not opts.use_all),
+                                        use_pow=opts.use_pow)))
 
     raw_input("Press Enter to See Solutions: ")
     while True:
@@ -98,11 +101,16 @@ def getopts():
     parser.add_option('--verbose',       action='store_true')
     parser.add_option('--log_level')
     parser.add_option('--generate',      action='store_true')
+    parser.add_option('--replacement',   action='store_true',
+                      help='When generating small values, sample with '
+                      'replacement')
     parser.add_option('--num_vals',      type=int)
     parser.add_option('--target', '-t',  type=int)
     parser.add_option('--min_target',    type=int, default=DEFAULT_MIN_TARGET)
     parser.add_option('--max_target',    type=int, default=DEFAULT_MAX_TARGET)
     parser.add_option('--num_large',     type=int, default=DEFAULT_NUM_LARGE)
+    parser.add_option('--use_pow',       action='store_true',
+                      help='Allow exponentiation')
     parser.add_option('--large_numbers', default=DEFAULT_LARGE_NUMBERS)
     parser.add_option('--in_order',      action='store_true',
                       help="The numbers must be used in order "
@@ -119,6 +127,8 @@ def getopts():
     parser.add_option('--prune',         action='store_true',
                       help='prunes out some solutions '
                       'if shorter solutions exist')
+    parser.add_option('--twentyfour',    action='store_true',
+                      help='run the standard 24 game')
 
     (opts, args) = parser.parse_args()
 
@@ -155,6 +165,13 @@ def getopts():
         Operators.ADD = Operators.SADD
         if opts.integer:
             Operators.DIV = Operators.SIDIV
+
+    if opts.twentyfour:
+        opts.target = 24
+        opts.num_vals = 4
+        opts.num_large = 0
+        opts.replacement = True
+        opts.use_all = True
 
     return (opts, args)
 
@@ -194,7 +211,8 @@ def generate(num_vals=DEFAULT_NUM_VALS,
              min_target=DEFAULT_MIN_TARGET,
              max_target=DEFAULT_MAX_TARGET,
              num_large=DEFAULT_NUM_LARGE,
-             large_numbers=None):
+             large_numbers=None,
+             replacement=False):
     import random
 
     # choose the target
@@ -216,8 +234,13 @@ def generate(num_vals=DEFAULT_NUM_VALS,
             sample_without_replacement(
                 min(num_vals - len(vals), num_large), large_numbers))
         if num_vals > len(vals):
-            vals.extend(sample_without_replacement(
-                num_vals - len(vals), range(1, 11) * 2))
+            num_left = num_vals - len(vals)
+            if replacement:
+                for _ in xrange(num_left):
+                    vals.append(random.randint(1, 10))
+            else:
+                vals.extend(sample_without_replacement(
+                    num_left, range(1, 11) * 2))
     return vals, target
 
 # --------------------------------------------------------------------------- #
@@ -234,7 +257,7 @@ class Expression(object):
     @property
     def value(self):
         if self._value is None:
-            value = self.compute_value()
+            value = try_round(self.compute_value())
             if self.POSITIVE_ONLY and value < 0:
                 raise ExpressionError("Negative value")
             self._value = value
@@ -254,6 +277,8 @@ class Expression(object):
         except ZeroDivisionError:
             return True
         except ExpressionError:
+            return True
+        except ValueError:
             return True
 
     @property
@@ -288,7 +313,12 @@ class BiExpr(Expression):
         self.right = right
 
     def compute_value(self):
-        return self.operator(self.left.value, self.right.value)
+        try:
+            return self.operator(self.left.value, self.right.value)
+        except OverflowError as e:
+            (tp, value, traceback) = sys.exc_info()
+            value = 'While evaluating expression {0}: {1}'.format(self, value)
+            raise tp, value, traceback
 
     def __str__(self):
         return '({0} {1} {2})'.format(self.left, self.operator, self.right)
@@ -331,6 +361,15 @@ def fpeq(a, b, epsilon=1e-6):
     """
     return abs(a - b) < epsilon
 
+def safediv(a, b):
+    try:
+        return operator.truediv(a, b)
+    except OverflowError as e:
+        try:
+            return intdiv(a, b)
+        except ExpressionError:
+            raise(e)
+
 def intdiv(a, b):
     if a % b != 0:
         raise ExpressionError("{0} is not a multiple of {1}".format(a, b))
@@ -362,13 +401,17 @@ def strictadd(a, b):
     return a + b
 
 def try_round(v):
-    return int(round(v)) if fpeq(v, round(v)) else v
+    try:
+        return int(round(v)) if fpeq(v, round(v)) else v
+    except OverflowError:
+        return v
 
 class Operators(object):
     ADD  = Operator(operator.add, '+', commutative=True)
     SUB  = Operator(operator.sub, '-')
     MUL  = Operator(operator.mul, '*', commutative=True)
-    DIV  = Operator(operator.truediv, '/')
+    DIV  = Operator(safediv, '/')
+    POW  = Operator(operator.pow, '^')
 
     # Throws an error if the value isn't an integer
     IDIV = Operator(intdiv, '/')
@@ -383,8 +426,11 @@ class Operators(object):
     SIDIV = Operator(strictdiv, '/')
 
     @classmethod
-    def all(cls):
-        return (cls.ADD, cls.SUB, cls.MUL, cls.DIV)
+    def all(cls, use_pow=False):
+        if use_pow:
+            return (cls.ADD, cls.SUB, cls.MUL, cls.DIV, cls.POW)
+        else:
+            return (cls.ADD, cls.SUB, cls.MUL, cls.DIV)
 
 def get_subsets(lst, max_size=None, avoid_dups=False):
     """
@@ -510,7 +556,7 @@ def get_splits(vals, all_orders=False, all_subsets=False, avoid_dups=True):
     return itertools.chain.from_iterable(
         get_partitions(p) for p in perms)
 
-def all_expressions(vals, all_orders=False, all_subsets=False):
+def all_expressions(vals, all_orders=False, all_subsets=False, use_pow=False):
     """
     @param vals: a list of Value or Expr objects.
     """
@@ -527,13 +573,13 @@ def all_expressions(vals, all_orders=False, all_subsets=False):
     for (lpart, rpart) in splits:
         if all_orders and all_subsets:
             logging.debug("Doing split {0} v {1}".format(lpart, rpart))
-        for left in all_expressions(lpart):
+        for left in all_expressions(lpart, use_pow=use_pow):
             if left.exception:
                 continue
-            for right in all_expressions(rpart):
+            for right in all_expressions(rpart, use_pow=use_pow):
                 if right.exception:
                     continue
-                for op in Operators.all():
+                for op in Operators.all(use_pow=use_pow):
                     expr = BiExpr.get_expr(op, left, right)
                     if not expr.exception:
                         yield expr
@@ -543,7 +589,7 @@ def all_expressions(vals, all_orders=False, all_subsets=False):
                     #     if not expr.exception:
                     #         yield expr
 
-def countdown(vals, target, all_orders=True, all_subsets=True):
+def countdown(vals, target, all_orders=True, all_subsets=True, use_pow=False):
     """
     If all_orders is False, then the numbers must be used in the order
     given.  I.e., if you give the numbers 1, 2, 3, 4, 5, 6, 7, 8, 9
@@ -567,7 +613,8 @@ def countdown(vals, target, all_orders=True, all_subsets=True):
     tried = set()
     for expr in all_expressions(vals,
                                 all_orders=all_orders,
-                                all_subsets=all_subsets):
+                                all_subsets=all_subsets,
+                                use_pow=use_pow):
         if str(expr) in tried:
             logging.error("Tried the same expression twice: {0}".format(expr))
             continue
