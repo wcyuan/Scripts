@@ -246,6 +246,10 @@ def decode(encoded):
   try:
     return decoded.decode("utf8")
   except UnicodeDecodeError as e:
+    pass
+  try:
+    return decoded.decode("latin-1")
+  except UnicodeDecodeError as e:
     return decoded
 
 # --------------------------------------------------------------------------- #
@@ -398,8 +402,11 @@ class ProtoList(list, ProtoMixin):
   def is_simple(self):
     return not any(isinstance(elt, ProtoDict) for elt in self)
 
-  def __repr__(self):
+  def __unicode__(self):
     return self.string()
+
+  def __repr__(self):
+    return unicode(self).encode("ascii", "replace")
 
   def search(self, patt, path=None, case_insensitive=True):
     """Search for a string in a proto.
