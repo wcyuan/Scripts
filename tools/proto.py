@@ -178,6 +178,7 @@ def main():
   if opts.sample:
     parsed["sample"] = parse(sample_response())
   for filename in args:
+    print "Reading ", filename
     parsed[filename] = parse(filename=filename)
   print parsed
   return parsed
@@ -484,7 +485,7 @@ class ProtoDict(dict, ProtoMixin):
         for c in attr
         if c in
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
-    if attr[0] in "0123456789":
+    if attr and attr[0] in "0123456789":
       attr = "_" + attr
     return attr
 
@@ -667,7 +668,7 @@ def parse(*args, **kwargs):
   # except that we suppress it with log_errors_at
   >>> parse("obj {\\nenum {\\nv1\\nv2\\n}\\nenum {\\nv3\\n}\\n}",
   ...       log_errors_at=logging.DEBUG)
-  ({u'obj': [{u'enum': [{}, u'v3']}]},)
+  ({u'obj': [{u'enum': [{u'v1': [], u'v2': []}, u'v3']}]},)
 
   # Another invalid enum
   # This also generates a warning
@@ -675,7 +676,7 @@ def parse(*args, **kwargs):
   # except that we suppress it with log_errors_at
   >>> parse("obj {\\nenum {\\nv1\\nv2: asdf\\n}\\nenum {\\nv3\\n}\\n}",
   ...       log_errors_at=logging.DEBUG)
-  ({u'obj': [{u'enum': [{u'v2': asdf}, u'v3']}]},)
+  ({u'obj': [{u'enum': [{u'v1': [], u'v2': asdf}, u'v3']}]},)
 
   # An inline list
   >>> p = parse('''single_request: {
@@ -700,8 +701,61 @@ def parse(*args, **kwargs):
   4
   >>> p[0].single_request[1].id[0].val[3]
   u'"Paul"'
+
+  # Treat [] differently in vars and vals
+  >>> p = parse('''[foo]: {
+  ...   id: {
+  ...     val: [ "myvalue" , "yourvalue" , "third value" ]
+  ...   }
+  ... }
+  ... single_request {
+  ...   id: {
+  ...     val: [ "John" , "George" ]
+  ...     val: [ "Ringo", "Paul" ]
+  ...   }
+  ... }
+  ... ''')
+  >>> print p[0].full_proto_string()
+  [foo] {
+    id {
+      val: "myvalue"
+      val: "yourvalue"
+      val: "third value"
+    }
+  }
+  single_request {
+    id {
+      val: "John"
+      val: "George"
+      val: "Ringo"
+      val: "Paul"
+    }
+  }
+  >>> p[0].foo[0].id[0].val[0]
+  u'"myvalue"'
+
+  # Test of enum_or_proto
+  >>> parse('TrainStation : [{source: OYSTER , eid: PROVIDER}]')
+  ({u'TrainStation': [{u'source': OYSTER, u'eid': PROVIDER}]},)
+
+  # Test that we tokenize braces ([]) properly for lists
+  >>> parse('TrainStation : [OYSTER, PROVIDER]')
+  ({u'TrainStation': [u'OYSTER', u'PROVIDER']},)
+
+  >>> parse('x {}')
+  ({u'x': [{}]},)
+  >>> parse('{x {}}')
+  ({u'x': [{}]},)
+  >>> parse('x: {}')
+  ({u'x': [{}]},)
+
+  # this is malformed -- the return value doesn't matter, but make sure we don't
+  # go into an infinite loop
+  >>> parse('}')
+  ({},)
   """
-  return tuple(parse_tokens(*args, **kwargs))
+  #return tuple(parse_tokens(*args, **kwargs))
+  return tuple(parse_root(*args, **kwargs))
 
 
 def parse_lisp(string, idx=0, is_value=True):
@@ -1000,11 +1054,14 @@ def parse_tokens(tokens=None,
 class LookaheadIter(collections.Iterator):
 
   def __init__(self, it):
+    self.orig = it
     self.it, self.nextit = itertools.tee(iter(it))
+    self.idx = 0
     self._advance()
 
   def _advance(self):
     self.lookahead = next(self.nextit, None)
+    self.idx += 1
 
   def next(self):
     return self.__next__()
@@ -1027,7 +1084,7 @@ def tokenify(string, log_errors_at=logging.WARN, die_on_error=False):
   last_ind = 0
   ind = 0
   while ind < len(string):
-    if string[ind] in ("{", "}", ":", ";"):
+    if string[ind] in ("{", "}", "[", "]", ":", ";", ","):
       # Single character tokens
       # This signals the end of any previous token
       if last_ind != ind:
@@ -1071,6 +1128,291 @@ def tokenify(string, log_errors_at=logging.WARN, die_on_error=False):
 
   if ind != last_ind:
     yield string[last_ind:ind + 1]
+
+# --------------------------------------------------------------------------- #
+
+# Grammar that we are parsing:
+#
+# ROOT = PROTO | BODY
+# PROTO = '{' BODY '}'
+# BODY = ITEM*
+# ITEM = VAR ':' VAL | VAR VAL
+# VAR = VARTOKEN
+# VAL = VALTOKEN | PROTO | LIST | ENUM_VAL
+# ENUM_VAL = '{' ELEMENT '}'
+# LIST = '[' VAL* ']'
+# VAR_TOKEN = (COMMENT) VAR_ELEMENT (COMMENT) | STRING
+# VAL_TOKEN = (COMMENT) VAL_ELEMENT (COMMENT) | STRING
+# VAR_ELEMENT = VAR_CHAR+
+# VAL_ELEMENT = VAL_CHAR+
+# STRING = '"' S2CHAR* '"' | "'" S1CHAR* '"'
+# COMMENT = '#' ANY* '\n'
+# VAL_CHAR = any non-whitespace, non-special character, non [] character:
+#            '#', ':', ';', '{', '}', '[', ']', '"', "'"
+# VAR_CHAR = any non-whitespace, non-special character:
+#            '#', ':', ';', '{', '}', '"', "'"
+# S1CHAR = any character except an un-escaped single quote
+# S2CHAR = any character except an un-escaped double quote
+# ANY = any character
+#
+# () means optional
+# *  means any number of repetitions
+# +  means one or more repetitions
+# |  means any one of
+
+
+def parse_root(tokens=None,
+               lines=None,
+               filename=None,
+               depth=0,
+               log_errors_at=logging.WARN):
+  if isinstance(tokens, basestring):
+    lines = [tokens]
+    tokens = None
+  if isinstance(tokens, collections.Sequence):
+    lines = tokens
+    tokens = None
+  if filename and not tokens and not lines:
+    lines = file_lines(filename)
+  if lines and not tokens:
+    # tokens = itertools.chain.from_iterable(tokenify(line,
+    #                                                 log_errors_at=log_errors_at)
+    #                                        for line in lines)
+    tokens = itertools.chain.from_iterable(lines)
+  if not tokens:
+    raise ValueError("No data to parse")
+  if not isinstance(tokens, LookaheadIter):
+    tokens = LookaheadIter(tokens)
+    consume_spaces(tokens, log_errors_at=log_errors_at)
+
+  path = ["root"]
+  while tokens.lookahead:
+    last = tokens.idx
+    yield parse_proto(tokens,
+                      log_errors_at=log_errors_at,
+                      path=path,
+                      expect_braces=False)
+    if tokens.idx == last:
+      logging.log(log_errors_at, "Couldn't continue parsing %s %s",
+                  tokens.lookahead, tokens.idx)
+      break
+
+
+def parse_proto(tokens,
+                log_errors_at=logging.WARN,
+                path=None,
+                expect_braces=True):
+  logging.debug("%s", tokens.lookahead)
+  if path:
+    path = path + ["proto"]
+  if tokens.lookahead == "{":
+    # consume the '{'
+    advance_tokens(tokens)
+  elif expect_braces:
+    logging.log(log_errors_at, "proto does not start with {: %s", path)
+  block = ProtoDict()
+  fill_body_block(tokens, block, log_errors_at=log_errors_at, path=path)
+  if tokens.lookahead == "}":
+    # consume the '}'
+    advance_tokens(tokens)
+  elif expect_braces:
+    logging.log(log_errors_at, "proto %s does not end with }: %s", block, path)
+  return block
+
+
+def fill_body_block(tokens, block, log_errors_at=logging.WARN, path=None):
+  logging.debug("%s", tokens.lookahead)
+  if path:
+    path = path + ["body"]
+  while tokens.lookahead and tokens.lookahead != "}":
+    (var, val) = parse_item(tokens, log_errors_at=log_errors_at, path=path)
+    block.setdefault(var, ProtoList(())).extend(val)
+    if tokens.lookahead == ",":
+      advance_tokens(tokens)
+    elif tokens.lookahead == "}":
+      break
+  return block
+
+
+def parse_item(tokens, log_errors_at=logging.WARN, path=None):
+  logging.debug("%s", tokens.lookahead)
+  if path:
+    path = path + ["item"]
+  var = parse_var(tokens, log_errors_at=log_errors_at, path=path)
+  val = parse_item_val(tokens, log_errors_at=log_errors_at, path=path + [var])
+  return (var, val)
+
+
+# Note, this always returns a sequence
+def parse_item_val(tokens, log_errors_at=logging.WARN, path=None):
+  logging.debug("%s", tokens.lookahead)
+  if path:
+    path = path + ["item_val"]
+  if tokens.lookahead == ":":
+    advance_tokens(tokens)
+    val = parse_val(tokens, log_errors_at=log_errors_at, path=path)
+  elif tokens.lookahead == "{":
+    val = [parse_enum_or_proto(tokens, log_errors_at=log_errors_at, path=path)]
+  else:
+    logging.log(log_errors_at, "Can't parse value, next char is %s, path=%s",
+                tokens.lookahead, path)
+    val = ()
+  return val
+
+
+def parse_var(tokens, log_errors_at=logging.WARN, path=None):
+  logging.debug("%s", tokens.lookahead)
+  if path:
+    path = path + ["var"]
+  return parse_token(tokens, for_var=True, log_errors_at=log_errors_at)
+
+
+def parse_token(tokens, for_var, log_errors_at=logging.WARN, path=None):
+  if path:
+    path = path + ["token"]
+  val = decode(get_next_token(tokens=tokens,
+                              for_var=for_var,
+                              log_errors_at=log_errors_at,
+                              path=path))
+  logging.debug("token = %s, path=%s", val, path)
+  return val
+
+
+# Note, this always returns a sequence
+def parse_val(tokens, log_errors_at=logging.WARN, path=None):
+  logging.debug("%s", tokens.lookahead)
+  if path:
+    path = path + ["val"]
+  if tokens.lookahead == "{":
+    return [parse_enum_or_proto(tokens, log_errors_at=log_errors_at, path=path)]
+  elif tokens.lookahead == "[":
+    return parse_list(tokens, log_errors_at=log_errors_at, path=path)
+  else:
+    return [parse_token(tokens,
+                        for_var=False,
+                        log_errors_at=log_errors_at,
+                        path=path)]
+
+
+def parse_enum_or_proto(tokens, log_errors_at=logging.WARN, path=None):
+  logging.debug("%s", tokens.lookahead)
+  if path:
+    path = path + ["enum_or_proto"]
+  if tokens.lookahead == "{":
+    advance_tokens(tokens)
+  else:
+    logging.log(log_errors_at, "proto or enum does not start with {: %s", path)
+  if tokens.lookahead == "}":
+    # empty block
+    advance_tokens(tokens)
+    return ProtoDict()
+  var = parse_var(tokens, log_errors_at=log_errors_at, path=path)
+  if tokens.lookahead == "}":
+    # this is an enum
+    advance_tokens(tokens)
+    return var
+  else:
+    # this is a proto
+    block = ProtoDict()
+    path = path + [var]
+    val = parse_item_val(tokens, log_errors_at=log_errors_at, path=path)
+    block.setdefault(var, ProtoList(())).extend(val)
+    if tokens.lookahead == ",":
+      advance_tokens(tokens)
+    fill_body_block(tokens, block, log_errors_at=log_errors_at, path=path)
+    if tokens.lookahead == "}":
+      advance_tokens(tokens)
+    else:
+      logging.log(log_errors_at, "proto %s does not end with }: %s", block,
+                  path)
+    return block
+
+
+def parse_list(tokens, log_errors_at=logging.WARN, path=None):
+  logging.debug("%s", tokens.lookahead)
+  if path:
+    path = path + ["list"]
+  if tokens.lookahead == "[":
+    advance_tokens(tokens)
+  else:
+    logging.log(log_errors_at, "list does not start with [: %s", path)
+  retval = []
+  while tokens.lookahead and tokens.lookahead != "]":
+    retval.extend(parse_val(tokens, log_errors_at=log_errors_at, path=path))
+    if tokens.lookahead == ",":
+      advance_tokens(tokens)
+  if tokens.lookahead == "]":
+    advance_tokens(tokens)
+  else:
+    logging.log(log_errors_at, "list %s does not end with ]: %s", retval, path)
+  return retval
+
+# --------------------------------------------------------------------------- #
+
+
+def consume_spaces(tokens, log_errors_at=logging.WARN):
+  while tokens.lookahead is not None:
+    if tokens.lookahead == "#":
+      while tokens.lookahead and tokens.lookahead != "\n":
+        next(tokens)
+      if tokens.lookahead == "\n":
+        next(tokens)
+    elif tokens.lookahead.isspace():
+      next(tokens)
+    else:
+      break
+
+
+def advance_tokens(tokens, log_errors_at=logging.WARN):
+  retval = next(tokens)
+  consume_spaces(tokens)
+  return retval
+
+
+def get_next_token(tokens,
+                   for_var=True,
+                   log_errors_at=logging.WARN,
+                   path=None,
+                   die_on_error=False):
+  logging.debug("%s", tokens.lookahead)
+  special = "{}:;,"
+  if not for_var:
+    special += "[]"
+
+  retval = ""
+  while tokens.lookahead is not None:
+    if tokens.lookahead in special:
+      if retval:
+        break
+      else:
+        retval = next(tokens)
+    elif tokens.lookahead in ("'", '"'):
+      # String
+      quote = next(tokens)
+      retval += quote
+      while tokens.lookahead is not None and tokens.lookahead != "\n":
+        if tokens.lookahead == quote:
+          retval += next(tokens)
+          break
+        if tokens.lookahead == "\\":
+          retval += next(tokens)
+        retval += next(tokens)
+      else:
+        err = "No end of string found: {0}.  path={1}".format(retval, path)
+        if die_on_error:
+          raise ValueError(err)
+        else:
+          logging.log(log_errors_at, err)
+    elif tokens.lookahead.isspace():
+      if retval:
+        break
+      else:
+        next(tokens)
+    else:
+      retval += next(tokens)
+
+  consume_spaces(tokens)
+  return retval
 
 # --------------------------------------------------------------------------- #
 
