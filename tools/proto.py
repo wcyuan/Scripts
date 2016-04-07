@@ -1399,7 +1399,7 @@ def advance_tokens(tokens, log_errors_at=logging.WARN, stop_at_newline=False):
 class BufferedIter(collections.Iterator):
   """An iterator that saves its results
 
-  >>> bi = BufferedIter("abcdefg")
+  >>> bi = BufferedIter("abcde")
   >>> next(bi)
   'a'
   >>> next(bi)
@@ -1435,8 +1435,22 @@ class BufferedIter(collections.Iterator):
   'd'
   >>> next(bi)
   'd'
+  >>> bi.peek()
+  'e'
   >>> next(bi)
   'e'
+  >>> bi.peek() is None
+  True
+  >>> next(bi)
+  Traceback (most recent call last):
+      ...
+  StopIteration
+  >>> bi.peek() is None
+  True
+  >>> next(bi)
+  Traceback (most recent call last):
+      ...
+  StopIteration
   """
 
   def __init__(self, itr):
@@ -1455,9 +1469,9 @@ class BufferedIter(collections.Iterator):
     self.buffer = []
 
   def advance(self):
+    # doesn't save to the buffer
     if self.replay:
       return self.replay.pop()
-    # doesn't save to the buffer
     return next(self.itr)
 
   def rewind(self, n=None):
@@ -1467,15 +1481,20 @@ class BufferedIter(collections.Iterator):
         n -= 1
 
   def peek(self):
-    retval = next(self)
-    self.rewind(1)
-    return retval
+    try:
+      retval = next(self)
+      self.rewind(1)
+      return retval
+    except StopIteration:
+      return None
 
 
 class ChooseIter(object):
   """An iterator which can be advanced in multiple ways
 
-  >>> ci = ChooseIter("abcdefg", func=lambda x, n=1: [next(x)] * n)
+  Not a proper iter -- extra arguments to next are handled unconventionally
+
+  >>> ci = ChooseIter("abcdef", func=lambda x, n=1: [next(x)] * n)
   >>> ci.peek(4)
   ['a', 'a', 'a', 'a']
   >>> ci.peek()
@@ -1502,18 +1521,36 @@ class ChooseIter(object):
   ['f']
   >>> next(ci)
   ['f']
+  >>> ci.peek() is None
+  True
+  >>> next(ci)
+  Traceback (most recent call last):
+      ...
+  StopIteration
+  >>> ci.peek() is None
+  True
+  >>> next(ci)
+  Traceback (most recent call last):
+      ...
+  StopIteration
   """
 
-  def __init__(self, itr, func):
+  def __init__(self, itr, func=None):
     self.itr = BufferedIter(itr)
-    self.func = func
+    if func:
+      self.func = func
+    else:
+      self.func = lambda itr, *args, **kwargs: next(itr)
     self.cache = {}
 
   def peek(self, *args, **kwargs):
     key = (args, tuple((k, v) for (k, v) in kwargs.iteritems()))
     if key not in self.cache:
-      self.cache[key] = self.func(self.itr, *args, **kwargs)
-      self.itr.rewind()
+      try:
+        self.cache[key] = self.func(self.itr, *args, **kwargs)
+        self.itr.rewind()
+      except StopIteration:
+        self.cache[key] = None
     return self.cache[key]
 
   def next(self, *args, **kwargs):
@@ -1549,6 +1586,7 @@ def get_next_token(tokens,
         break
       else:
         retval = next(tokens)
+        break
     elif tokens.lookahead in ("'", '"'):
       # String
       quote = next(tokens)
