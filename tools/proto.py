@@ -753,6 +753,11 @@ def parse(*args, **kwargs):
   # go into an infinite loop
   >>> parse('}')
   ({},)
+
+  >>> parse('a:\\nb:c')
+  ({u'a': , u'b': c},)
+  >>> parse('a: http://myval\\nb:c')
+  ({u'a': http://myval, u'b': c},)
   """
   #return tuple(parse_tokens(*args, **kwargs))
   return tuple(parse_root(*args, **kwargs))
@@ -1209,14 +1214,16 @@ def parse_proto(tokens,
     # consume the '{'
     advance_tokens(tokens)
   elif expect_braces:
-    logging.log(log_errors_at, "proto does not start with {: %s", path)
+    logging.log(log_errors_at, "proto does not start with {: %s %s", tokens.idx,
+                path)
   block = ProtoDict()
   fill_body_block(tokens, block, log_errors_at=log_errors_at, path=path)
   if tokens.lookahead == "}":
     # consume the '}'
     advance_tokens(tokens)
   elif expect_braces:
-    logging.log(log_errors_at, "proto %s does not end with }: %s", block, path)
+    logging.log(log_errors_at, "proto %s does not end with }: %s %s", block,
+                tokens.idx, path)
   return block
 
 
@@ -1249,13 +1256,17 @@ def parse_item_val(tokens, log_errors_at=logging.WARN, path=None):
   if path:
     path = path + ["item_val"]
   if tokens.lookahead == ":":
-    advance_tokens(tokens)
-    val = parse_val(tokens, log_errors_at=log_errors_at, path=path)
+    advance_tokens(tokens, stop_at_newline=True)
+    val = parse_val(tokens,
+                    log_errors_at=log_errors_at,
+                    path=path,
+                    stop_at_newline=True)
   elif tokens.lookahead == "{":
     val = [parse_enum_or_proto(tokens, log_errors_at=log_errors_at, path=path)]
   else:
-    logging.log(log_errors_at, "Can't parse value, next char is %s, path=%s",
-                tokens.lookahead, path)
+    logging.log(log_errors_at,
+                "Can't parse value, next char is %s, idx=%s, path=%s",
+                tokens.lookahead, tokens.idx, path)
     val = ()
   return val
 
@@ -1267,19 +1278,27 @@ def parse_var(tokens, log_errors_at=logging.WARN, path=None):
   return parse_token(tokens, for_var=True, log_errors_at=log_errors_at)
 
 
-def parse_token(tokens, for_var, log_errors_at=logging.WARN, path=None):
+def parse_token(tokens,
+                for_var,
+                log_errors_at=logging.WARN,
+                path=None,
+                stop_at_newline=False):
   if path:
     path = path + ["token"]
   val = decode(get_next_token(tokens=tokens,
                               for_var=for_var,
                               log_errors_at=log_errors_at,
+                              stop_at_newline=stop_at_newline,
                               path=path))
   logging.debug("token = %s, path=%s", val, path)
   return val
 
 
 # Note, this always returns a sequence
-def parse_val(tokens, log_errors_at=logging.WARN, path=None):
+def parse_val(tokens,
+              log_errors_at=logging.WARN,
+              path=None,
+              stop_at_newline=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["val"]
@@ -1291,6 +1310,7 @@ def parse_val(tokens, log_errors_at=logging.WARN, path=None):
     return [parse_token(tokens,
                         for_var=False,
                         log_errors_at=log_errors_at,
+                        stop_at_newline=stop_at_newline,
                         path=path)]
 
 
@@ -1301,7 +1321,8 @@ def parse_enum_or_proto(tokens, log_errors_at=logging.WARN, path=None):
   if tokens.lookahead == "{":
     advance_tokens(tokens)
   else:
-    logging.log(log_errors_at, "proto or enum does not start with {: %s", path)
+    logging.log(log_errors_at, "proto or enum does not start with {: %s %s",
+                tokens.idx, path)
   if tokens.lookahead == "}":
     # empty block
     advance_tokens(tokens)
@@ -1323,8 +1344,8 @@ def parse_enum_or_proto(tokens, log_errors_at=logging.WARN, path=None):
     if tokens.lookahead == "}":
       advance_tokens(tokens)
     else:
-      logging.log(log_errors_at, "proto %s does not end with }: %s", block,
-                  path)
+      logging.log(log_errors_at, "proto %s does not end with }: %s %s", block,
+                  tokens.idx, path)
     return block
 
 
@@ -1335,7 +1356,8 @@ def parse_list(tokens, log_errors_at=logging.WARN, path=None):
   if tokens.lookahead == "[":
     advance_tokens(tokens)
   else:
-    logging.log(log_errors_at, "list does not start with [: %s", path)
+    logging.log(log_errors_at, "list does not start with [: %s %s", tokens.idx,
+                path)
   retval = []
   while tokens.lookahead and tokens.lookahead != "]":
     retval.extend(parse_val(tokens, log_errors_at=log_errors_at, path=path))
@@ -1344,28 +1366,33 @@ def parse_list(tokens, log_errors_at=logging.WARN, path=None):
   if tokens.lookahead == "]":
     advance_tokens(tokens)
   else:
-    logging.log(log_errors_at, "list %s does not end with ]: %s", retval, path)
+    logging.log(log_errors_at, "list %s does not end with ]: %s, %s", retval,
+                tokens.idx, path)
   return retval
 
 # --------------------------------------------------------------------------- #
 
 
-def consume_spaces(tokens, log_errors_at=logging.WARN):
+def consume_spaces(tokens, log_errors_at=logging.WARN, stop_at_newline=False):
   while tokens.lookahead is not None:
     if tokens.lookahead == "#":
       while tokens.lookahead and tokens.lookahead != "\n":
         next(tokens)
       if tokens.lookahead == "\n":
         next(tokens)
+    elif stop_at_newline and tokens.lookahead == "\n":
+      break
     elif tokens.lookahead.isspace():
       next(tokens)
     else:
       break
 
 
-def advance_tokens(tokens, log_errors_at=logging.WARN):
+def advance_tokens(tokens, log_errors_at=logging.WARN, stop_at_newline=False):
   retval = next(tokens)
-  consume_spaces(tokens)
+  consume_spaces(tokens,
+                 log_errors_at=log_errors_at,
+                 stop_at_newline=stop_at_newline)
   return retval
 
 
@@ -1373,10 +1400,16 @@ def get_next_token(tokens,
                    for_var=True,
                    log_errors_at=logging.WARN,
                    path=None,
-                   die_on_error=False):
+                   die_on_error=False,
+                   stop_at_newline=False):
+  # It's possible that the set of places where we want stop_at_newline
+  # is exactly the same as when for_var is False.  But I think it's still
+  # clearer to keep them as two separate ideas.
   logging.debug("%s", tokens.lookahead)
-  special = "{}:;,"
-  if not for_var:
+  special = "{};,"
+  if for_var:
+    special += ":"
+  else:
     special += "[]"
 
   retval = ""
@@ -1398,13 +1431,16 @@ def get_next_token(tokens,
           retval += next(tokens)
         retval += next(tokens)
       else:
-        err = "No end of string found: {0}.  path={1}".format(retval, path)
+        err = "No end of string found: {0}.  idx={1}, path={2}".format(
+            retval, tokens.idx, path)
         if die_on_error:
           raise ValueError(err)
         else:
           logging.log(log_errors_at, err)
     elif tokens.lookahead.isspace():
       if retval:
+        break
+      elif tokens.lookahead == "\n" and stop_at_newline:
         break
       else:
         next(tokens)
