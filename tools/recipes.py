@@ -759,7 +759,7 @@ class AttrDict(dict):
         for c in attr
         if c in
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
-    if attr[0] in "0123456789":
+    if attr and attr[0] in "0123456789":
       attr = "_" + attr
     return attr
 
@@ -782,5 +782,174 @@ class AttrDict(dict):
     """
     return dir(dict) + list(set(self.normalize_attr(ky) for ky in self.iterkeys(
     )))
+
+# --------------------------------------------------------------------------- #
+
+import collections
+
+class BufferedIter(collections.Iterator):
+  """An iterator that saves its results
+
+  >>> bi = BufferedIter("abcde")
+  >>> next(bi)
+  'a'
+  >>> next(bi)
+  'b'
+  >>> next(bi)
+  'c'
+  >>> next(bi)
+  'd'
+  >>> bi.rewind()
+  >>> next(bi)
+  'a'
+  >>> next(bi)
+  'b'
+  >>> bi.rewind(1)
+  >>> next(bi)
+  'b'
+  >>> next(bi)
+  'c'
+  >>> bi.rewind(2)
+  >>> next(bi)
+  'b'
+  >>> next(bi)
+  'c'
+  >>> bi.rewind()
+  >>> next(bi)
+  'a'
+  >>> next(bi)
+  'b'
+  >>> bi.clear_buffer()
+  >>> next(bi)
+  'c'
+  >>> bi.peek()
+  'd'
+  >>> next(bi)
+  'd'
+  >>> bi.peek()
+  'e'
+  >>> next(bi)
+  'e'
+  >>> bi.peek() is None
+  True
+  >>> next(bi)
+  Traceback (most recent call last):
+      ...
+  StopIteration
+  >>> bi.peek() is None
+  True
+  >>> next(bi)
+  Traceback (most recent call last):
+      ...
+  StopIteration
+  """
+  def __init__(self, itr):
+    self.itr = iter(itr)
+    self.buffer = []
+    self.replay = []
+
+  def next(self):
+    return self.__next__()
+
+  def __next__(self):
+    self.buffer.append(self.advance())
+    return self.buffer[-1]
+
+  def clear_buffer(self):
+    self.buffer = []
+
+  def advance(self):
+    # doesn't save to the buffer
+    if self.replay:
+      return self.replay.pop()
+    return next(self.itr)
+
+  def rewind(self, n=None):
+    while (self.buffer if n is None else n > 0):
+      self.replay.append(self.buffer.pop())
+      if n:
+        n -= 1
+
+  def peek(self):
+    try:
+      retval = next(self)
+      self.rewind(1)
+      return retval
+    except StopIteration:
+      return None
+
+
+class ChooseIter(object):
+  """An iterator which can be advanced in multiple ways
+
+  Not a proper iter -- extra arguments to next are handled unconventionally
+
+  >>> ci = ChooseIter("abcdef", func=lambda x, n=1: [next(x)] * n)
+  >>> ci.peek(4)
+  ['a', 'a', 'a', 'a']
+  >>> ci.peek()
+  ['a']
+  >>> ci.peek(3)
+  ['a', 'a', 'a']
+  >>> ci.peek(4)
+  ['a', 'a', 'a', 'a']
+  >>> ci.peek(3)
+  ['a', 'a', 'a']
+  >>> ci.next(3)
+  ['a', 'a', 'a']
+  >>> ci.peek(3)
+  ['b', 'b', 'b']
+  >>> ci.next(3)
+  ['b', 'b', 'b']
+  >>> ci.next(4)
+  ['c', 'c', 'c', 'c']
+  >>> ci.next(4)
+  ['d', 'd', 'd', 'd']
+  >>> next(ci)
+  ['e']
+  >>> ci.peek()
+  ['f']
+  >>> next(ci)
+  ['f']
+  >>> ci.peek() is None
+  True
+  >>> next(ci)
+  Traceback (most recent call last):
+      ...
+  StopIteration
+  >>> ci.peek() is None
+  True
+  >>> next(ci)
+  Traceback (most recent call last):
+      ...
+  StopIteration
+  """
+
+  def __init__(self, itr, func=None):
+    self.itr = BufferedIter(itr)
+    if func:
+      self.func = func
+    else:
+      self.func = lambda itr, *args, **kwargs: next(itr)
+    self.cache = {}
+
+  def peek(self, *args, **kwargs):
+    key = (args, tuple((k, v) for (k, v) in kwargs.iteritems()))
+    if key not in self.cache:
+      try:
+        self.cache[key] = self.func(self.itr, *args, **kwargs)
+        self.itr.rewind()
+      except StopIteration:
+        self.cache[key] = None
+    return self.cache[key]
+
+  def next(self, *args, **kwargs):
+    return self.__next__(*args, **kwargs)
+
+  def __next__(self, *args, **kwargs):
+    self.cache.clear()
+    val = self.func(self.itr, *args, **kwargs)
+    self.itr.clear_buffer()
+    return val
 
 # --------------------------------------------------------------------------- #
