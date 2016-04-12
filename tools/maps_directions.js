@@ -279,6 +279,7 @@ function restaurantLocationsMap() {
 }
 
 /*
+  // https://developers.google.com/apps-script/reference/maps/direction-finder#getdirections
  // Logs how long it would take to walk from Times Square to Central Park.
  var directions = Maps.newDirectionFinder()
      .setOrigin('Times Square, New York, NY')
@@ -320,7 +321,6 @@ function getDrivingDirections() {
 
   // Much of this code is based on the template referenced in
   // http://googleappsdeveloper.blogspot.com/2010/06/automatically-generate-maps-and.html
-  // https://developers.google.com/apps-script/reference/maps/direction-finder#getdirections
   for (var i in directions.routes) {
     for (var j in directions.routes[i].legs) {
       for (var k in directions.routes[i].legs[j].steps) {
