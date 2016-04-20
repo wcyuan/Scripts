@@ -119,15 +119,28 @@ def dow_golden(year, month, day):
 
 def check_dow(year, month, day):
   ours = dow(year, month, day)
+  gauss = gauss_dow(year, month, day)
   golden = dow_golden(year, month, day)
-  return ours != golden
+  return ours != golden or gauss != golden
 
 
 def check_years(years):
-  return ((year, month, day)
-          for year in years for month in range(1, 13)
-          for day in range(1, mon_days(month, is_leap(year)))
-          if check_dow(year, month, day))
+  return tuple((year, month, day)
+               for year in years for month in range(1, 13)
+               for day in range(1, mon_days(month, is_leap(year)) + 1)
+               if check_dow(year, month, day))
+
+
+def gauss_dow(year, month, day):
+  # from https://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week
+  import math
+  if month in (1, 2):
+    year = year - 1
+  month = (month - 2) % 12
+  if month == 0:
+    month = 12
+  return (day + math.floor(2.6 * month - 0.2) + 5 * (year % 4) + 4 *
+          (year % 100) + 6 * (year % 400)) % 7 + 1
 
 # --------------------------------------------------------------------------- #
 
