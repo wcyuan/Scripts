@@ -11,5 +11,10 @@ on it and bring up preferences, there is an option to synchronize clipboards.
 One feature that Windows has that I wish Mac had is the ability to easily to put windows side-by-side by
 dragging the window to the side of the screen to make it take up exactly half of a screen.  Luckily, it's
 easy to add that feature to Mac with Better Touch Tool.  http://www.bettertouchtool.net/
+ -- Actually, bettertouchtool now costs money (Apr 2016).  I haven't found any other good alternatives.
+    There are some that let you move the window to the side of the screen with hotkeys, but I haven't
+    gotten dragging to work for those.  Also, once you've snapped it to the side, you can't bring it back
+    to the original shape by unsnapping it.
 
 If using zsh, definitely use https://github.com/robbyrussell/oh-my-zsh.
+ -- Actually, zsh can be slow.  I currently just pick and choose a subset of oh-my-zsh.
