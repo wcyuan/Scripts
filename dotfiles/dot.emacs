@@ -185,6 +185,29 @@
 ;; C-c C-c - send Control-C to the shell
 ;; C-c C-o - move to another pane in line mode (C-c becomes C-x in char-mode)
 ;;
+;; -- git-rebase-mode --
+;; If you have magit's rebase-mode, then "git rebase -i" drops you in
+;; a special emacs mode.  It's read-only except for special commands.
+;; Many of the commands are shown in the comment in the file, but
+;; it doesn't tell you these:
+;;    M-up    -- move a commit up
+;;    M-down  -- move a commit down
+;;
+;; -- Always prompted to revert buffer when committing --
+;; https://groups.google.com/forum/#!topic/magit/x_iTFHgLyqk
+;;
+;; If you have an emacs daemon server running and you use
+;; "emacsclient -nw" as your EDITOR, then various commands,
+;; including "git commit" and "git rebase -i", will open emacsclient.
+;; It will open a file in a standard place.  If, after you edit the
+;; file, you exit by saving (C-x C-s) then exiting (C-x C-c), then
+;; emacs will still have that buffer.  Then, the next time you
+;; perform the same command, it will ask you if you want to revert
+;; the buffer, which is a bit annoying.  The solution is that instead
+;; of exiting with save-and-exit, use the commands that they say to
+;; use, usually either "q" or "C-c C-c".  Then the buffer will be
+;; deleted from emacs and you won't get the prompt the next time.  
+;;
 ;; ---------------------------------------------------------------- ;;
 ;;
 ;; When definine new key bindings, consider the emacs key binding
