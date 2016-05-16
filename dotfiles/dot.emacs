@@ -192,6 +192,7 @@
 ;; it doesn't tell you these:
 ;;    M-up    -- move a commit up
 ;;    M-down  -- move a commit down
+;;    k       -- kill/drop a commit (d for drop doesn't seem to work)
 ;;
 ;; -- Always prompted to revert buffer when committing --
 ;; https://groups.google.com/forum/#!topic/magit/x_iTFHgLyqk
