@@ -18,6 +18,7 @@
         # Show the commits that diverge from upstream
         logu = !sh -c 'git log --name-status $1@{upstream}..$1 "$@"' -
         diffu = !sh -c 'git diff $1@{upstream}..$1 "$@"' -
+        diffun = !sh -c 'git diff --name-status $1@{upstream}..$1 "$@"' -
         # Print full diffs for every commit
         logall = git log --pretty=format:'COMMIT %h (%ci) %s' --follow -p -U0
         # Grep the full diffs of every commit
