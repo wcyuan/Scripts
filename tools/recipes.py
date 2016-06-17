@@ -710,7 +710,10 @@ class Runner(object):
 
     if cls.NO_WRITE and not always:
       logging.info("NO WRITE: %s", strcmd)
-      return
+      if capture_stdout:
+        return
+      else:
+        return True
 
     logging.info("Running:  %s", strcmd)
     if capture_stdout:
