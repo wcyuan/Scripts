@@ -56,16 +56,18 @@ alias nwemacs='emacsclient --alternate-editor="" -nw'
 #
 # u   = user format (shows username)
 # www = wide format (shows as many arguments as it can)
+# f   = forest view: show ascii art representation of process tree
+#
+# Could also try adding x:
 # x   = show process that aren't attached to a terminal.  this has
 #       the effect of always showing the processes of the current
 #       user, even if you add a -U or -u option
-# f   = forest view: show ascii art representation of process tree
 #
 # to show sps for another user, try 'ps uwwwf -u <username> -U <username>'
 # or, if you do 'sps -u <user>' it'll work, but you'll see
 # processes for yourself and for <user>
 #
-alias     sps='ps uxwwwf'
+alias     sps='ps uwwwf'
 
 function gitall() {
     cmd="$@"
