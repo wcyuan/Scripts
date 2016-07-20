@@ -315,12 +315,22 @@ class ProtoList(list, ProtoMixin):
 
   """
 
-  def __init__(self, seq, depth=0, *args, **kwargs):
+  def __init__(self, seq, depth=0, forgiving=False, *args, **kwargs):
     # keep track of this node's depth in the tree
     self._depth = depth
+    self._forgiving = forgiving
     if not seq:
       seq = ()
     return super(ProtoList, self).__init__(seq, *args, **kwargs)
+
+  def __getitem__(self, key):
+    try:
+      return super(ProtoList, self).__getitem__(key)
+    except IndexError:
+      if self._forgiving:
+        return ProtoDict(forgiving=True)
+      else:
+        raise
 
   # fullstring returns the string that a normal list would return
   fullstring = list.__repr__
@@ -449,7 +459,7 @@ class ProtoList(list, ProtoMixin):
 
   def add(self, elt):
     if isinstance(elt, dict):
-      self.append(ProtoDict().add_dict(elt))
+      self.append(ProtoDict(forgiving=self._forgiving).add_dict(elt))
     elif isinstance(elt, ProtoDict):
       self.append(elt)
     else:
@@ -469,6 +479,11 @@ class ProtoDict(dict, ProtoMixin):
   completion works.
 
   """
+
+  def __init__(self, forgiving=False, *args, **kwargs):
+    self._forgiving = forgiving
+    return super(ProtoDict, self).__init__(*args, **kwargs)
+
 
   @classmethod
   def normalize_attr(cls, attr):
@@ -496,6 +511,8 @@ class ProtoDict(dict, ProtoMixin):
     for key in self.iterkeys():
       if attr == self.normalize_attr(key):
         return self[key]
+    if self._forgiving:
+      return ProtoList((), forgiving=True)
     raise AttributeError("Can't find field '{0}'".format(attr))
 
   def __dir__(self):
@@ -577,9 +594,10 @@ class ProtoDict(dict, ProtoMixin):
 
   def add(self, key, value):
     if isinstance(value, ProtoList):
-      self.setdefault(key, ProtoList(())).extend(value)
+      self.setdefault(
+          key, ProtoList((), forgiving=self._forgiving)).extend(value)
     else:
-      self.setdefault(key, ProtoList(())).add(value)
+      self.setdefault(key, ProtoList((), forgiving=self._forgiving)).add(value)
     return self
 
   def add_dict(self, dct):
@@ -819,7 +837,7 @@ def parse_lisp(string, idx=0, is_value=True):
     return ("", idx)
 
 
-def list_to_proto(lst):
+def list_to_proto(lst, forgiving=False):
   """Convert a list to a Proto
 
   >>> print list_to_proto(['a', 'b']).full_proto_string()
@@ -844,12 +862,14 @@ def list_to_proto(lst):
     return lst
   if len(lst) > 0 and not isinstance(lst[0], list):
     lst = [lst]
-  block = ProtoDict()
+  block = ProtoDict(forgiving=forgiving)
   for elt in lst:
     if len(elt) != 2:
       logging.error("Can't parse element '%s' of list '%s'", elt, lst)
     (var, val) = elt[:2]
-    block.setdefault(var, ProtoList(())).append(list_to_proto(val))
+    block.setdefault(
+        var, ProtoList((), forgiving=forgiving)).append(
+            list_to_proto(val, forgiving=forgiving))
   return block
 
 
@@ -909,7 +929,8 @@ def parse_root(tokens=None,
                lines=None,
                filename=None,
                depth=0,
-               log_errors_at=logging.WARN):
+               log_errors_at=logging.WARN,
+               forgiving=False):
   if isinstance(tokens, basestring):
     lines = [tokens]
     tokens = None
@@ -935,7 +956,8 @@ def parse_root(tokens=None,
     yield parse_proto(tokens,
                       log_errors_at=log_errors_at,
                       path=path,
-                      expect_braces=False)
+                      expect_braces=False,
+                      forgiving=forgiving)
     if tokens.idx == last:
       logging.log(log_errors_at, "Couldn't continue parsing %s %s",
                   tokens.lookahead, tokens.idx)
@@ -945,7 +967,8 @@ def parse_root(tokens=None,
 def parse_proto(tokens,
                 log_errors_at=logging.WARN,
                 path=None,
-                expect_braces=True):
+                expect_braces=True,
+                forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["proto"]
@@ -955,8 +978,9 @@ def parse_proto(tokens,
   elif expect_braces:
     logging.log(log_errors_at, "proto does not start with {: %s %s", tokens.idx,
                 path)
-  block = ProtoDict()
-  fill_body_block(tokens, block, log_errors_at=log_errors_at, path=path)
+  block = ProtoDict(forgiving=forgiving)
+  fill_body_block(tokens, block, log_errors_at=log_errors_at,
+                  path=path, forgiving=forgiving)
   if tokens.lookahead == "}":
     # consume the '}'
     advance_tokens(tokens)
@@ -966,13 +990,15 @@ def parse_proto(tokens,
   return block
 
 
-def fill_body_block(tokens, block, log_errors_at=logging.WARN, path=None):
+def fill_body_block(
+    tokens, block, log_errors_at=logging.WARN, path=None, forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["body"]
   while tokens.lookahead and tokens.lookahead != "}":
-    (var, val) = parse_item(tokens, log_errors_at=log_errors_at, path=path)
-    block.setdefault(var, ProtoList(())).extend(val)
+    (var, val) = parse_item(tokens, log_errors_at=log_errors_at,
+                            path=path, forgiving=forgiving)
+    block.setdefault(var, ProtoList((), forgiving=forgiving)).extend(val)
     if tokens.lookahead == ",":
       advance_tokens(tokens)
     elif tokens.lookahead == "}":
@@ -980,17 +1006,19 @@ def fill_body_block(tokens, block, log_errors_at=logging.WARN, path=None):
   return block
 
 
-def parse_item(tokens, log_errors_at=logging.WARN, path=None):
+def parse_item(tokens, log_errors_at=logging.WARN, path=None, forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["item"]
   var = parse_var(tokens, log_errors_at=log_errors_at, path=path)
-  val = parse_item_val(tokens, log_errors_at=log_errors_at, path=path + [var])
+  val = parse_item_val(tokens, log_errors_at=log_errors_at,
+                       path=path + [var], forgiving=forgiving)
   return (var, val)
 
 
 # Note, this always returns a sequence
-def parse_item_val(tokens, log_errors_at=logging.WARN, path=None):
+def parse_item_val(tokens, log_errors_at=logging.WARN,
+                   path=None, forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["item_val"]
@@ -999,9 +1027,11 @@ def parse_item_val(tokens, log_errors_at=logging.WARN, path=None):
     val = parse_val(tokens,
                     log_errors_at=log_errors_at,
                     path=path,
-                    stop_at_newline=True)
+                    stop_at_newline=True,
+                    forgiving=forgiving)
   elif tokens.lookahead == "{":
-    val = [parse_enum_or_proto(tokens, log_errors_at=log_errors_at, path=path)]
+    val = [parse_enum_or_proto(tokens, log_errors_at=log_errors_at,
+                               path=path, forgiving=forgiving)]
   else:
     logging.log(log_errors_at,
                 "Can't parse value, next char is %s, idx=%s, path=%s",
@@ -1037,14 +1067,17 @@ def parse_token(tokens,
 def parse_val(tokens,
               log_errors_at=logging.WARN,
               path=None,
-              stop_at_newline=False):
+              stop_at_newline=False,
+              forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["val"]
   if tokens.lookahead == "{":
-    return [parse_enum_or_proto(tokens, log_errors_at=log_errors_at, path=path)]
+    return [parse_enum_or_proto(tokens, log_errors_at=log_errors_at,
+                                path=path, forgiving=forgiving)]
   elif tokens.lookahead == "[":
-    return parse_list(tokens, log_errors_at=log_errors_at, path=path)
+    return parse_list(tokens, log_errors_at=log_errors_at,
+                      path=path, forgiving=forgiving)
   else:
     return [parse_token(tokens,
                         for_var=False,
@@ -1053,7 +1086,8 @@ def parse_val(tokens,
                         path=path)]
 
 
-def parse_enum_or_proto(tokens, log_errors_at=logging.WARN, path=None):
+def parse_enum_or_proto(
+    tokens, log_errors_at=logging.WARN, path=None, forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["enum_or_proto"]
@@ -1065,7 +1099,7 @@ def parse_enum_or_proto(tokens, log_errors_at=logging.WARN, path=None):
   if tokens.lookahead == "}":
     # empty block
     advance_tokens(tokens)
-    return ProtoDict()
+    return ProtoDict(forgiving=forgiving)
   var = parse_var(tokens, log_errors_at=log_errors_at, path=path)
   if tokens.lookahead == "}":
     # this is an enum
@@ -1073,13 +1107,15 @@ def parse_enum_or_proto(tokens, log_errors_at=logging.WARN, path=None):
     return var
   else:
     # this is a proto
-    block = ProtoDict()
+    block = ProtoDict(forgiving=forgiving)
     path = path + [var]
-    val = parse_item_val(tokens, log_errors_at=log_errors_at, path=path)
-    block.setdefault(var, ProtoList(())).extend(val)
+    val = parse_item_val(tokens, log_errors_at=log_errors_at,
+                         path=path, forgiving=forgiving)
+    block.setdefault(var, ProtoList((), forgiving=forgiving)).extend(val)
     if tokens.lookahead == ",":
       advance_tokens(tokens)
-    fill_body_block(tokens, block, log_errors_at=log_errors_at, path=path)
+    fill_body_block(tokens, block, log_errors_at=log_errors_at,
+                    path=path, forgiving=forgiving)
     if tokens.lookahead == "}":
       advance_tokens(tokens)
     else:
@@ -1088,7 +1124,7 @@ def parse_enum_or_proto(tokens, log_errors_at=logging.WARN, path=None):
     return block
 
 
-def parse_list(tokens, log_errors_at=logging.WARN, path=None):
+def parse_list(tokens, log_errors_at=logging.WARN, path=None, forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["list"]
@@ -1099,7 +1135,8 @@ def parse_list(tokens, log_errors_at=logging.WARN, path=None):
                 path)
   retval = []
   while tokens.lookahead and tokens.lookahead != "]":
-    retval.extend(parse_val(tokens, log_errors_at=log_errors_at, path=path))
+    retval.extend(parse_val(tokens, log_errors_at=log_errors_at,
+                            path=path, forgiving=forgiving))
     if tokens.lookahead == ",":
       advance_tokens(tokens)
   if tokens.lookahead == "]":
