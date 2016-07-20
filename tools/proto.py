@@ -238,7 +238,10 @@ def decode(encoded):
   for octc in re.findall(r"\\(\d{3})", decoded):
     matches.add(octc)
   for octc in matches:
-    decoded = decoded.replace(r"\%s" % octc, chr(int(octc, 8)))
+    try:
+      decoded = decoded.replace(r"\%s" % octc, chr(int(octc, 8)))
+    except ValueError:
+      logging.debug("Skipping non-octal: %s", octc)
   try:
     return decoded.decode("utf8")
   except UnicodeDecodeError as e:
