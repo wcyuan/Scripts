@@ -22,6 +22,7 @@ Usr	fieldscur=ABDECGfhijlopqrstuvyzMKNWX
 #  W        - write a config file saving your settings
 #  A        - show 4 separate windows (alternate-display mode)
 #  g <1-4>  - which of the 4 windows gets focus
+#  < and >  - change which column to sort by
 #
 
 #
