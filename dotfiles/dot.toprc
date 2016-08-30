@@ -23,6 +23,14 @@ Usr	fieldscur=ABDECGfhijlopqrstuvyzMKNWX
 #  A        - show 4 separate windows (alternate-display mode)
 #  g <1-4>  - which of the 4 windows gets focus
 #  < and >  - change which column to sort by
+#  P        - sort by %CPU (note, must be capital)
+#  M        - sort by %MEM (note, must be capital)
+#  f or F   - go to a screen where you can pick the columns to show,
+#             the order of columns, which column to sort on, etc.
+#  o %MEM>0.3
+#           - filter to only show processes where %MEM > 0.3
+#  =        - remove all filters
+#  <enter>  - refresh the display
 #
 
 #
