@@ -54,9 +54,10 @@ function authorize() {
 
 function copy_all() {
   var folder_to_copy = get_folder_to_copy();
-  if (folder_to_copy !== null) {
+  var target_folder = get_target_folder();
+  if (folder_to_copy !== null && target_folder !== null) {
     toast("Found folder to copy: " + folder_to_copy.getName(), "Copying...", -1);
-    deep_copy_folder(folder_to_copy, DriveApp.getRootFolder());
+    deep_copy_folder(folder_to_copy, target_folder);
     toast("Finished copying: " + folder_to_copy.getName(), "Finished.", -1);
   }
 }
@@ -71,6 +72,21 @@ function get_folder_to_copy() {
     return null;
   }
 }
+
+function get_target_folder() {
+  var folder_id = SpreadsheetApp.getActiveSheet().getRange("B8").getValue().toString().trim();
+  if (folder_id == "") {
+    return DriveApp.getRootFolder();
+  }
+  try {
+    return DriveApp.getFolderById(folder_id);
+  } catch (e) {
+    Browser.msgBox("Error", "Sorry, Error Occured: " + e.toString(), Browser.Buttons.OK);
+    toast("Error Occurred :( Please make sure you Entered target folder ID in B8 Cell.", "Oops!", -1);
+    return null;
+  }
+}
+
 
 function deep_copy_folder(orig_folder, target_parent) {
   var new_folder = target_parent.createFolder(orig_folder.getName());
