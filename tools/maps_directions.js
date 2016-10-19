@@ -3,10 +3,70 @@
 // It is mostly based on the provided examples and tutorials
 //
 
+// -------------------------------------------------------------------------
+
+// Convenience wrapper function.  This lets you provide more of the arguments
+// from the spreadsheet.
+function Directions(origin, destination, dist_or_dur, mode_str, units) {
+  dist_or_dur = get_dist_or_dur_(dist_or_dur);
+  units = get_units_(units);
+  var directions = getDirections_(origin, destination, get_mode_(mode_str));
+  if (dist_or_dur === "DURATION") {
+    return directions.routes[0].legs[0].duration.text;
+  } else {
+    var dist_meters = directions.routes[0].legs[0].distance.value;
+    if (units === "MILES") {
+      return dist_meters / 1609.344;
+    } else {
+      return dist_meters;
+    }
+  }
+}
+
+function get_mode_(mode) {
+  return pick_val("mode", mode, {
+    "DRIVING": Maps.DirectionFinder.Mode.DRIVING,
+    "DRIVE": Maps.DirectionFinder.Mode.DRIVING,
+    "WALK": Maps.DirectionFinder.Mode.WALKING,
+    "WALKING": Maps.DirectionFinder.Mode.WALKING,
+  }, "DRIVING");
+}
+
+function get_dist_or_dur_(dist_or_dur) {
+  return pick_val("output", dist_or_dur, {
+    "DURATION": "DURATION",
+    "TIME": "DURATION",
+    "DISTANCE": "DISTANCE",
+  }, "DURATION");
+}
+
+function get_units_(units) {
+  return pick_val("units", units, {
+    "METERS": "METERS",
+    "MILES": "MILES",
+  }, "MILES");
+}
+
+function pick_val(name, key_val, hash, default_val) {
+  if (typeof key_val == 'undefined') {
+    key_val = default_val;
+  }
+  key_val = key_val.toUpperCase();
+  if (key_val in hash) {
+    return hash[key_val];
+  } else {
+    throw 'Unknown ' + name + ' "' + key_val + '", should be one of: ' + Object.keys(hash);
+  }
+}
+
+// -------------------------------------------------------------------------
+
 // This is modified from https://developers.google.com/apps-script/quickstart/macros#set_it_up
 
 /**
  * A custom function that converts meters to miles.
+ * This is slow, it's better to just do this within the spreadsheet
+ * (just divide by 1609.344)
  *
  * @param {Number} meters The distance in meters.
  * @return {Number} The distance in miles.
