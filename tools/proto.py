@@ -188,9 +188,10 @@ def getopts():
   parser = optparse.OptionParser()
   parser.add_option("--verbose", action="store_true")
   parser.add_option("--log_level", help="The level to log at")
-  parser.add_option("--no_write",
-                    action="store_true",
-                    help="Just print commands without running them")
+  parser.add_option(
+      "--no_write",
+      action="store_true",
+      help="Just print commands without running them")
   parser.add_option("--sample", action="store_true")
   return parser.parse_args()
 
@@ -200,6 +201,7 @@ def logat(level):
     level = getattr(logging, level.upper())
   logging.getLogger().setLevel(level)
   logging.info("Setting log level to %s", level)
+
 
 # --------------------------------------------------------------------------- #
 
@@ -222,6 +224,7 @@ def zopen(filename, mode="r"):
     else:
       with open(filename, mode=mode) as fd:
         yield fd
+
 
 # --------------------------------------------------------------------------- #
 
@@ -250,6 +253,7 @@ def decode(encoded):
     return decoded.decode("latin-1")
   except UnicodeDecodeError as e:
     return decoded
+
 
 # --------------------------------------------------------------------------- #
 
@@ -341,9 +345,8 @@ class ProtoList(list, ProtoMixin):
   # the height of the tree, which does require visiting each
   # sub-element.
   def summary(self, show_height=True):
-    val = "{cn}(len={len}, depth={depth}".format(cn=self.__class__.__name__,
-                                                 len=len(self),
-                                                 depth=self._depth)
+    val = "{cn}(len={len}, depth={depth}".format(
+        cn=self.__class__.__name__, len=len(self), depth=self._depth)
     if show_height:
       val += ", height={height})".format(height=self.height())
     else:
@@ -399,9 +402,8 @@ class ProtoList(list, ProtoMixin):
 
     def print_elt(elt):
       if isinstance(elt, ProtoDict):
-        return elt.full_proto_string(pretty=pretty,
-                                     indent_amount=indent_amount,
-                                     auto_quote=auto_quote)
+        return elt.full_proto_string(
+            pretty=pretty, indent_amount=indent_amount, auto_quote=auto_quote)
       else:
         selt = ProtoMixin.apply_auto_quote(elt) if auto_quote else elt
         return u"{0}{1}".format(indent, ProtoMixin.to_unicode(selt))
@@ -449,9 +451,8 @@ class ProtoList(list, ProtoMixin):
           if strmatch(patt, ky) or strmatch(patt, vl):
             print path, ii, ky, vl
           if isinstance(vl, ProtoList):
-            vl.search(patt,
-                      path=path + [ii, ky],
-                      case_insensitive=case_insensitive)
+            vl.search(
+                patt, path=path + [ii, ky], case_insensitive=case_insensitive)
       elif isinstance(elt, ProtoList):
         elt.search(patt, path=path + [ii], case_insensitive=case_insensitive)
       elif eltmatch(patt, elt):
@@ -484,7 +485,6 @@ class ProtoDict(dict, ProtoMixin):
     self._forgiving = forgiving
     return super(ProtoDict, self).__init__(*args, **kwargs)
 
-
   @classmethod
   def normalize_attr(cls, attr):
     """Return a version of a string that is suitable for an attribute
@@ -494,8 +494,7 @@ class ProtoDict(dict, ProtoMixin):
     """
     attr = str(attr)
     attr = "".join(
-        c
-        for c in attr
+        c for c in attr
         if c in
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
     if attr and attr[0] in "0123456789":
@@ -521,8 +520,8 @@ class ProtoDict(dict, ProtoMixin):
     http://stackoverflow.com/questions/13870241/ipython-tab-completion-for-custom-dict-class
     https://ipython.org/ipython-doc/dev/config/integrating.html
     """
-    return dir(dict) + list(set(self.normalize_attr(ky) for ky in self.iterkeys(
-    )))
+    return dir(dict) + list(
+        set(self.normalize_attr(ky) for ky in self.iterkeys()))
 
   def search(self, patt, path=None, case_insensitive=True):
     """Search for a string in a proto.
@@ -573,9 +572,10 @@ class ProtoDict(dict, ProtoMixin):
         else:
           for elt in value:
             if isinstance(elt, ProtoDict):
-              inner = elt.full_proto_string(pretty=pretty,
-                                            indent_amount=indent_amount + 1,
-                                            auto_quote=auto_quote)
+              inner = elt.full_proto_string(
+                  pretty=pretty,
+                  indent_amount=indent_amount + 1,
+                  auto_quote=auto_quote)
             else:
               selt = ProtoMixin.apply_auto_quote(elt) if auto_quote else elt
               inner = u"{0}{1}".format(indent, ProtoMixin.to_unicode(selt))
@@ -584,9 +584,9 @@ class ProtoDict(dict, ProtoMixin):
       else:
         yield u"{0}{1}: {2}".format(indent, key, value)
 
-    return ors.join(elt
-                    for (key, value) in self.iteritems()
-                    for elt in print_elt(key, value))
+    return ors.join(
+        elt for (key, value) in self.iteritems()
+        for elt in print_elt(key, value))
 
   def to_dict(self):
     return dict((key, value.to_list() if isinstance(value, ProtoList) else
@@ -595,7 +595,8 @@ class ProtoDict(dict, ProtoMixin):
   def add(self, key, value):
     if isinstance(value, ProtoList):
       self.setdefault(
-          key, ProtoList((), forgiving=self._forgiving)).extend(value)
+          key, ProtoList(
+              (), forgiving=self._forgiving)).extend(value)
     else:
       self.setdefault(key, ProtoList((), forgiving=self._forgiving)).add(value)
     return self
@@ -608,6 +609,7 @@ class ProtoDict(dict, ProtoMixin):
   @classmethod
   def from_dict(cls, dct):
     return cls().add_dict(dct)
+
 
 # --------------------------------------------------------------------------- #
 
@@ -868,8 +870,10 @@ def list_to_proto(lst, forgiving=False):
       logging.error("Can't parse element '%s' of list '%s'", elt, lst)
     (var, val) = elt[:2]
     block.setdefault(
-        var, ProtoList((), forgiving=forgiving)).append(
-            list_to_proto(val, forgiving=forgiving))
+        var, ProtoList(
+            (), forgiving=forgiving)).append(
+                list_to_proto(
+                    val, forgiving=forgiving))
   return block
 
 
@@ -892,6 +896,7 @@ class LookaheadIter(collections.Iterator):
   def __next__(self):
     self._advance()
     return next(self.it)
+
 
 # --------------------------------------------------------------------------- #
 
@@ -953,11 +958,12 @@ def parse_root(tokens=None,
   path = ["root"]
   while tokens.lookahead:
     last = tokens.idx
-    yield parse_proto(tokens,
-                      log_errors_at=log_errors_at,
-                      path=path,
-                      expect_braces=False,
-                      forgiving=forgiving)
+    yield parse_proto(
+        tokens,
+        log_errors_at=log_errors_at,
+        path=path,
+        expect_braces=False,
+        forgiving=forgiving)
     if tokens.idx == last:
       logging.log(log_errors_at, "Couldn't continue parsing %s %s",
                   tokens.lookahead, tokens.idx)
@@ -979,8 +985,12 @@ def parse_proto(tokens,
     logging.log(log_errors_at, "proto does not start with {: %s %s", tokens.idx,
                 path)
   block = ProtoDict(forgiving=forgiving)
-  fill_body_block(tokens, block, log_errors_at=log_errors_at,
-                  path=path, forgiving=forgiving)
+  fill_body_block(
+      tokens,
+      block,
+      log_errors_at=log_errors_at,
+      path=path,
+      forgiving=forgiving)
   if tokens.lookahead == "}":
     # consume the '}'
     advance_tokens(tokens)
@@ -990,14 +1000,17 @@ def parse_proto(tokens,
   return block
 
 
-def fill_body_block(
-    tokens, block, log_errors_at=logging.WARN, path=None, forgiving=False):
+def fill_body_block(tokens,
+                    block,
+                    log_errors_at=logging.WARN,
+                    path=None,
+                    forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["body"]
   while tokens.lookahead and tokens.lookahead != "}":
-    (var, val) = parse_item(tokens, log_errors_at=log_errors_at,
-                            path=path, forgiving=forgiving)
+    (var, val) = parse_item(
+        tokens, log_errors_at=log_errors_at, path=path, forgiving=forgiving)
     block.setdefault(var, ProtoList((), forgiving=forgiving)).extend(val)
     if tokens.lookahead == ",":
       advance_tokens(tokens)
@@ -1011,27 +1024,35 @@ def parse_item(tokens, log_errors_at=logging.WARN, path=None, forgiving=False):
   if path:
     path = path + ["item"]
   var = parse_var(tokens, log_errors_at=log_errors_at, path=path)
-  val = parse_item_val(tokens, log_errors_at=log_errors_at,
-                       path=path + [var], forgiving=forgiving)
+  val = parse_item_val(
+      tokens,
+      log_errors_at=log_errors_at,
+      path=path + [var],
+      forgiving=forgiving)
   return (var, val)
 
 
 # Note, this always returns a sequence
-def parse_item_val(tokens, log_errors_at=logging.WARN,
-                   path=None, forgiving=False):
+def parse_item_val(tokens,
+                   log_errors_at=logging.WARN,
+                   path=None,
+                   forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["item_val"]
   if tokens.lookahead == ":":
     advance_tokens(tokens, stop_at_newline=True)
-    val = parse_val(tokens,
-                    log_errors_at=log_errors_at,
-                    path=path,
-                    stop_at_newline=True,
-                    forgiving=forgiving)
+    val = parse_val(
+        tokens,
+        log_errors_at=log_errors_at,
+        path=path,
+        stop_at_newline=True,
+        forgiving=forgiving)
   elif tokens.lookahead == "{":
-    val = [parse_enum_or_proto(tokens, log_errors_at=log_errors_at,
-                               path=path, forgiving=forgiving)]
+    val = [
+        parse_enum_or_proto(
+            tokens, log_errors_at=log_errors_at, path=path, forgiving=forgiving)
+    ]
   else:
     logging.log(log_errors_at,
                 "Can't parse value, next char is %s, idx=%s, path=%s",
@@ -1054,11 +1075,13 @@ def parse_token(tokens,
                 stop_at_newline=False):
   if path:
     path = path + ["token"]
-  val = decode(get_next_token(tokens=tokens,
-                              for_var=for_var,
-                              log_errors_at=log_errors_at,
-                              stop_at_newline=stop_at_newline,
-                              path=path))
+  val = decode(
+      get_next_token(
+          tokens=tokens,
+          for_var=for_var,
+          log_errors_at=log_errors_at,
+          stop_at_newline=stop_at_newline,
+          path=path))
   logging.debug("token = %s, path=%s", val, path)
   return val
 
@@ -1073,21 +1096,28 @@ def parse_val(tokens,
   if path:
     path = path + ["val"]
   if tokens.lookahead == "{":
-    return [parse_enum_or_proto(tokens, log_errors_at=log_errors_at,
-                                path=path, forgiving=forgiving)]
+    return [
+        parse_enum_or_proto(
+            tokens, log_errors_at=log_errors_at, path=path, forgiving=forgiving)
+    ]
   elif tokens.lookahead == "[":
-    return parse_list(tokens, log_errors_at=log_errors_at,
-                      path=path, forgiving=forgiving)
+    return parse_list(
+        tokens, log_errors_at=log_errors_at, path=path, forgiving=forgiving)
   else:
-    return [parse_token(tokens,
-                        for_var=False,
-                        log_errors_at=log_errors_at,
-                        stop_at_newline=stop_at_newline,
-                        path=path)]
+    return [
+        parse_token(
+            tokens,
+            for_var=False,
+            log_errors_at=log_errors_at,
+            stop_at_newline=stop_at_newline,
+            path=path)
+    ]
 
 
-def parse_enum_or_proto(
-    tokens, log_errors_at=logging.WARN, path=None, forgiving=False):
+def parse_enum_or_proto(tokens,
+                        log_errors_at=logging.WARN,
+                        path=None,
+                        forgiving=False):
   logging.debug("%s", tokens.lookahead)
   if path:
     path = path + ["enum_or_proto"]
@@ -1109,13 +1139,17 @@ def parse_enum_or_proto(
     # this is a proto
     block = ProtoDict(forgiving=forgiving)
     path = path + [var]
-    val = parse_item_val(tokens, log_errors_at=log_errors_at,
-                         path=path, forgiving=forgiving)
+    val = parse_item_val(
+        tokens, log_errors_at=log_errors_at, path=path, forgiving=forgiving)
     block.setdefault(var, ProtoList((), forgiving=forgiving)).extend(val)
     if tokens.lookahead == ",":
       advance_tokens(tokens)
-    fill_body_block(tokens, block, log_errors_at=log_errors_at,
-                    path=path, forgiving=forgiving)
+    fill_body_block(
+        tokens,
+        block,
+        log_errors_at=log_errors_at,
+        path=path,
+        forgiving=forgiving)
     if tokens.lookahead == "}":
       advance_tokens(tokens)
     else:
@@ -1135,8 +1169,10 @@ def parse_list(tokens, log_errors_at=logging.WARN, path=None, forgiving=False):
                 path)
   retval = []
   while tokens.lookahead and tokens.lookahead != "]":
-    retval.extend(parse_val(tokens, log_errors_at=log_errors_at,
-                            path=path, forgiving=forgiving))
+    retval.extend(
+        parse_val(
+            tokens, log_errors_at=log_errors_at, path=path,
+            forgiving=forgiving))
     if tokens.lookahead == ",":
       advance_tokens(tokens)
   if tokens.lookahead == "]":
@@ -1145,6 +1181,7 @@ def parse_list(tokens, log_errors_at=logging.WARN, path=None, forgiving=False):
     logging.log(log_errors_at, "list %s does not end with ]: %s, %s", retval,
                 tokens.idx, path)
   return retval
+
 
 # --------------------------------------------------------------------------- #
 
@@ -1166,9 +1203,8 @@ def consume_spaces(tokens, log_errors_at=logging.WARN, stop_at_newline=False):
 
 def advance_tokens(tokens, log_errors_at=logging.WARN, stop_at_newline=False):
   retval = next(tokens)
-  consume_spaces(tokens,
-                 log_errors_at=log_errors_at,
-                 stop_at_newline=stop_at_newline)
+  consume_spaces(
+      tokens, log_errors_at=log_errors_at, stop_at_newline=stop_at_newline)
   return retval
 
 
@@ -1227,6 +1263,127 @@ def get_next_token(tokens,
   consume_spaces(tokens)
   return retval
 
+
+# --------------------------------------------------------------------------- #
+
+
+class ProtoEnum(object):
+
+  def __init__(self, enum_string, prefix_to_strip=""):
+    tree, fwdmap, revmap = self._parse_enum_definition(
+        enum_string, prefix_to_strip=prefix_to_strip)
+    self.tree = tree
+    self.fwdmap = fwdmap
+    self.revmap = revmap
+
+  @classmethod
+  def _parse_enum_definition(cls, enum_string, prefix_to_strip=""):
+    tree = {}
+    fwdmap = {}
+    revmap = {}
+
+    # handle /* */ comments
+    enum_string = re.sub(r"/\*.*?\*/", "", enum_string, flags=re.MULTILINE)
+
+    # handle (remove) annotations like "[deprecated = true]"
+    enum_string = re.sub(r"\[.*?\]\s*;", ";", enum_string, flags=re.MULTILINE)
+
+    # handle // comments
+    enum_string = "".join(line[:line.index("//")] if "//" in line else line
+                          for line in enum_string.split("\n"))
+
+    for line in re.split(";|\{|\}", enum_string):
+      line = line.strip()
+      if not line:
+        logging.debug("skipping empty enum line %s", line)
+        continue
+      if "=" not in line:
+        logging.debug("skipping enum line %s", line)
+        continue
+      (var, val) = line.split("=", 1)
+      var = var.strip()
+      if prefix_to_strip and var.startswith(prefix_to_strip):
+        var = var[len(prefix_to_strip):]
+      val = val.strip()
+      try:
+        val = eval(val)
+      except SyntaxError as e:
+        logging.warning("Skipping invalid line: %s at %s", e, line)
+        continue
+      val = hex(val)
+      fwdmap[var] = val
+      revmap[val] = var
+
+      logging.debug("Adding %s=%s", var, val)
+      subtree = cls._find_subtree(
+          tree, fwdmap, revmap, val, add_missing=True)[1]
+      subtree[var] = {}
+    return tree, fwdmap, revmap
+
+  @classmethod
+  def _find_subtree(cls, tree, fwdmap, revmap, val, add_missing=False):
+    path = []
+    subtree = tree
+    for idx in xrange(3, len(val)):
+      parent_val = val[:idx]
+      parent_var = revmap.get(parent_val, parent_val)
+      logging.debug("traversing %s=%s", parent_val, parent_var)
+      if add_missing:
+        subtree = subtree.setdefault(parent_var, {})
+      else:
+        subtree = subtree[parent_var]
+      path.append(parent_var)
+    return path, subtree
+
+  def subtree(self, var=None, val=None):
+    if not val:
+      if var:
+        val = self.name_to_value(var)
+    if val:
+      if not var:
+        var = self.value_to_name(val)
+      path, subtree = self._find_subtree(self.tree, self.fwdmap, self.revmap,
+                                         val)
+      path.append(var)
+      return path, subtree[var]
+
+  @classmethod
+  def _normalize_enum_value(cls, value):
+    """make sure the enum value is formatted correctly
+
+    >>> ProtoEnum._normalize_enum_value(162)
+    '0xa2'
+    >>> ProtoEnum._normalize_enum_value(0xa2)
+    '0xa2'
+    >>> ProtoEnum._normalize_enum_value(0xA2)
+    '0xa2'
+    >>> ProtoEnum._normalize_enum_value('162')
+    '0xa2'
+    >>> ProtoEnum._normalize_enum_value('0xA2')
+    '0xa2'
+    >>> ProtoEnum._normalize_enum_value('0xa2')
+    '0xa2'
+    """
+    return hex(eval(str(value))).lower()
+
+  def value_to_name(self, value, forgiving=False):
+    try:
+      return self.revmap[self._normalize_enum_value(value)]
+    except:
+      if forgiving:
+        return None
+      else:
+        raise
+
+  def name_to_value(self, name, forgiving=False):
+    """map an enum's name to its value
+    """
+    if forgiving:
+      return self.fwdmap.get(name)
+    else:
+      return self.fwdmap[name]
+
+
 # --------------------------------------------------------------------------- #
 
 
@@ -1275,6 +1432,7 @@ def sample_response():
     }
   }
 """.decode("utf-8")
+
 
 # --------------------------------------------------------------------------- #
 
