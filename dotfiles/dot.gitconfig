@@ -20,7 +20,7 @@
         diffu = !sh -c 'git diff $1@{upstream}..$1 "$@"' -
         diffun = !sh -c 'git diff --name-status $1@{upstream}..$1 "$@"' -
         # Print full diffs for every commit
-        logall = git log --pretty=format:'COMMIT %h (%ci) %s' --follow -p -U0
+        logall = log --pretty=format:'COMMIT %h (%ci) %s' --follow -p -U0
         # Grep the full diffs of every commit
         # Note that $0 gets expanded to the first argument, $1 the second, etc.
         # $@ and $* expand to all arguments but the first
