@@ -64,7 +64,9 @@ function solve_singleop(words, operation, callback, len, mappings) {
 		if (invalid.length > 0) {
 			throw "Words have invalid characters: " + invalid;
 		}
-		len = maxlen(words);
+		// len has to be big enough to accomodate the number of digits in the largest possible result.
+		// If you multiply W N-digit numbers, the result will have on the order of W*N digits.
+		len = maxlen(words) * words.length;
 	}
 	if (!callback) {
 		callback = function (mapping, expression, pretty_expression) {
@@ -108,22 +110,23 @@ function solve_singleop(words, operation, callback, len, mappings) {
 // all the mappings that will satisfy those new variables.
 //
 function do_layer(words, operation, len, mappings, callback) {
-	for (var ii = 0; ii < words.length; ii++) {
-		var word = words[ii];
-		if (word.length >= len && !(word[word.length - len] in mappings)) {
-			var char = word[word.length - len];
-			//console.log("Missing " + char);
-			var values = get_possible_values(char, words, mappings);
-			values.forEach(function(value) {
-				//console.log("Trying " + char + " = " + value);
-				mappings[char] = value;
-				do_layer(words, operation, len, mappings, callback);
-				delete(mappings[char]);
-			});
-			return;
+	if (len) {
+		for (var ii = 0; ii < words.length; ii++) {
+			var word = words[ii];
+			if (word.length >= len && !(word[word.length - len] in mappings)) {
+				var char = word[word.length - len];
+				//console.log("Missing " + char);
+				var values = get_possible_values(char, words, mappings);
+				values.forEach(function(value) {
+					//console.log("Trying " + char + " = " + value);
+					mappings[char] = value;
+					do_layer(words, operation, len, mappings, callback);
+					delete(mappings[char]);
+				});
+				return;
+			}
 		}
 	}
-
 	if (check_equal(words, operation, len, mappings)) {
 		var expression = substitute(words.slice(0, words.length - 1).join(operation) + "=" + words[words.length - 1], mappings);
 		callback(mappings, expression, pretty_expression(words, operation, mappings));
@@ -219,7 +222,10 @@ function check_both(words, operation, len, mappings) {
 // Check if the given mappings satisfy the least-significant <len> columns of
 // the problem.
 function check_equal(words, operation, len, mappings) {
-	var new_words = words.map(function(elt) {return elt.substring(elt.length - len, elt.length);});
+	var new_words = words;
+	if (len) {
+		new_words = words.map(function(elt) {return elt.substring(elt.length - len, elt.length);});
+	}
 	var desired = new_words[new_words.length - 1];
 	var operands = new_words.slice(0, new_words.length - 1);
 	operands = operands.map(function(word) {return Number(substitute(word, mappings))});
@@ -231,7 +237,10 @@ function check_equal(words, operation, len, mappings) {
 	} else {
 		throw "Invalid operation '" + operation + "' should be either '+' or '*'";
 	}
-	return result % Math.pow(10, len) == Number(substitute(desired, mappings));
+	if (len) {
+		result = result % Math.pow(10, len);
+	}
+	return result == Number(substitute(desired, mappings));
 }
 
 // Return a string which is made up of a character repeated len times.
