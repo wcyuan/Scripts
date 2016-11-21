@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- mode: python; eval: (no-pyformat-mode) -*-
 """
 Given a list of 4-letter words, create a 4x4 crossword -- a 4x4 grid
 where every row and every column is a valid word. In fact, produce
@@ -47,16 +48,28 @@ def main():
     if opts.test:
         words = ['abc', 'bca', 'cab']
         opts.start = 0
+    elif opts.words:
+        words = opts.words
     else:
         words = get_words()
 
-    print_solutions(words, start=opts.start, num=opts.num)
-    
+    if opts.board:
+        board = Board.from_string(opts.board)
+    else:
+        nchars = len(words[0])
+        board = Board(rows=nchars, cols=nchars)
+
+    logging.debug("Board = %s", board)
+    logging.debug("Empties = %s", list(iter_empties(board)))
+    print_solutions(solve(words, board), start=opts.start, num=opts.num)
+
 
 def getopts():
     parser = optparse.OptionParser()
     parser.add_option('--start', type=int, default=10000)
     parser.add_option('--num', type=int, default=1)
+    parser.add_option('--board')
+    parser.add_option('--words', action='append')
     parser.add_option('--test', action='store_true')
     parser.add_option('--verbose',  action='store_true')
     parser.add_option('--log_level',
@@ -69,6 +82,9 @@ def getopts():
     if opts.log_level is not None:
         logat(opts.log_level)
 
+
+    if opts.words:
+        opts.words = [word for group in opts.words for word in group.split(",")]
     return (opts, args)
 
 def logat(level):
@@ -139,7 +155,8 @@ class Trie(object):
         Given a path, return the subtrie rooted at the end of that path.
         If the subtrie doesn't exist in the trie, return None.  If
         create is true, then it will create the path if necessary.
-        >>> print str(Trie(['agb', 'agbas', 'basd', 'agbsdfa']).subtrie('agb', create=False))
+        >>> print str(Trie(['agb', 'agbas', 'basd', 'agbsdfa']).
+        ... subtrie('agb', create=False))
         agb
          a : None
           s : agbas
@@ -255,7 +272,7 @@ class Trie(object):
         >>> Trie(range(3))
         Trie(['0', '1', '2'])
         >>> Trie(range(9)) # doctest: +ELLIPSIS
-        <solver.Trie object at ...>
+        <crossword.Trie object at ...>
         """
         itr = iter(self)
         nvals = tuple(next(itr) for _ in xrange(6))
@@ -322,7 +339,7 @@ class Board(FieldMixin):
     . B A .
     . . . .
     . . . .
-    >>> b.get_range((1, 1), (1, 2))
+    >>> list(b.get_range((1, 1), (1, 2)))
     ['B', 'A']
     """
     EMPTY = '.'
@@ -389,6 +406,23 @@ class Board(FieldMixin):
             self.add_letter(loc, self.letters[loc])
         return self
 
+    @classmethod
+    def from_string(cls, string):
+        rows = string.lower().split()
+        num_cols = max(len(r) for r in rows)
+        board = Board(rows=len(rows), cols=num_cols)
+        for rr in xrange(len(rows)):
+            for cc in xrange(len(rows[rr])):
+                loc = (rr, cc)
+                char = rows[rr][cc]
+                if char == cls.BLOCK:
+                    board.set_block(loc)
+                elif char == cls.EMPTY:
+                    pass
+                else:
+                    board.add_letter(loc, char)
+        return board
+
     def add_letter(self, loc, letter):
         """
         Add a letter to the board at the given location.
@@ -399,6 +433,12 @@ class Board(FieldMixin):
             self.letters[loc] = letter
         self._set(loc, letter)
         return self
+
+    def set_block(self, loc):
+        """
+        Set the given location to be a block
+        """
+        self._set(loc, self.BLOCK)
 
     def clear_loc(self, loc):
         """
@@ -414,6 +454,9 @@ class Board(FieldMixin):
     def is_empty(self, loc):
         return self._get(loc) == self.EMPTY
 
+    def is_block(self, loc):
+        return self._get(loc) == self.BLOCK
+
     def _all_locs(self):
         return ((row, col)
                 for row in xrange(self.rows)
@@ -428,9 +471,9 @@ class Board(FieldMixin):
 
     def get_range(self, start_loc, end_loc, incr=None):
         """
-        This is a bit hacky, it doesn't handle corner cases well, 
+        This is a bit hacky, it doesn't handle corner cases well,
         such as if the end_loc is not on the board or is either above
-        or to the left of the start_loc.  Use with caution.  
+        or to the left of the start_loc.  Use with caution.
         """
         if not incr:
             (srow, scol) = start_loc
@@ -461,17 +504,17 @@ def iter_empties(board):
     Find empty locs in this order.  By alternating rows/cols somewhat,
     we find conflicts more quickly.
     0, 0
-    
+
     0, 1
     1, 0
     1, 1
-    
+
     2, 0
     2, 1
     0, 2
     1, 2
     2, 2
-    
+
     3, 0
     3, 1
     3, 2
@@ -480,7 +523,7 @@ def iter_empties(board):
     2, 3
     3, 3
     ...
-    
+
     """
     maxn = max(board.rows, board.cols)
     maxrow = board.rows - 1
@@ -489,13 +532,15 @@ def iter_empties(board):
         max_ii_row = min(ii, maxrow)
         max_ii_col = min(ii, maxcol)
         row = max_ii_row
-        for col in xrange(max_ii_col):
-            if board.is_empty((row, col)):
-                yield (row, col)
+        if row == ii:
+            for col in xrange(max_ii_col):
+                if board.is_empty((row, col)):
+                    yield (row, col)
         col = max_ii_col
-        for row in xrange(max_ii_row + 1):
-            if board.is_empty((row, col)):
-                yield (row, col)
+        if col == ii:
+            for row in xrange(max_ii_row + 1):
+                if board.is_empty((row, col)):
+                    yield (row, col)
 
 def next_empty(board):
     """
@@ -526,16 +571,54 @@ def by_prefix(trie, prefixes):
         else:
             letters.intersection_update(next_letters)
     if letters is None:
-        return ()
+        return set()
     return letters
 
-def get_possible_letters(trie, board, loc):
-    (row, col) = loc
-    row_pfx = ''.join(board.get((row, c)) for c in xrange(0, col))
-    col_pfx = ''.join(board.get((r, col)) for r in xrange(0, row))
-    return by_prefix(trie, [row_pfx, col_pfx])
+def get_prefix_and_length(board, loc, direction):
+  (row, col) = loc
+  if direction == "row":
+    index = row
+    max_index = board.rows
+  else:
+    index = col
+    max_index = board.cols
+  prefix = ""
+  for temp_index in xrange(index - 1, -1, -1):
+    if direction == "row":
+      temp_loc = (temp_index, col)
+    else:
+      temp_loc = (row, temp_index)
+    if board.is_block(temp_loc):
+      break
+    prefix = board.get(temp_loc) + prefix
 
-def helper(trie, board):
+  length = len(prefix) + 1
+  for temp_index in xrange(index + 1, max_index):
+    if direction == "row":
+      temp_loc = (temp_index, col)
+    else:
+      temp_loc = (row, temp_index)
+    if board.is_block(temp_loc):
+      break
+    length += 1
+
+  #print board, loc, prefix, length
+  return prefix, length
+
+def get_possible_letters(trie_list, board, loc):
+    (row, col) = loc
+    letters = None
+    for direction in ("row", "col"):
+      prefix, length = get_prefix_and_length(board, loc, direction)
+      if length not in trie_list:
+        letters = set()
+      elif letters is None:
+        letters = set(by_prefix(trie_list[length], [prefix]))
+      else:
+        letters.intersection_update(by_prefix(trie_list[length], [prefix]))
+    return letters
+
+def helper(trie_list, board):
     # Nothing stops us from using the same word in multiple
     # places on the board, such as:
     #   a a h s
@@ -546,20 +629,20 @@ def helper(trie, board):
     if not spot:
         yield board
         return
-    letters = get_possible_letters(trie, board, spot)
+    letters = get_possible_letters(trie_list, board, spot)
+    if not letters:
+        logging.debug("Stuck, no letters for: %s, %s", board, spot)
     for letter in letters:
         board.add_letter(spot, letter)
-        for solution in helper(trie, board):
+        for solution in helper(trie_list, board):
             yield solution
         board.clear_loc(spot)
 
-def solve(words, nchars=None):
-    if not nchars:
-        nchars = len(words[0])
-    t = Trie(w.lower() for w in words)
-    b = Board(rows=nchars, cols=nchars)
-    
-    for solution in helper(t, b):
+def solve(words, board, nchars=None):
+    trie_list = {}
+    for word in words:
+        trie_list.setdefault(len(word), Trie()).insert(word.lower())
+    for solution in helper(trie_list, board):
         yield solution
 
 def get_words():
@@ -569,10 +652,10 @@ def get_words():
                  if not word.startswith("#")]
     return words
 
-def print_solutions(words, start=10000, num=1):
+def print_solutions(solutions, start=10000, num=1):
     end = start + num - 1
     nvalues = 0
-    for board in solve(words):
+    for board in solutions:
         nvalues += 1
         if nvalues >= start:
             print board
