@@ -253,6 +253,7 @@ function pad(word, width, value) {
 	if (!value) {
 		value = " ";
 	}
+	word = String(word);
 	return repeat(value, width - word.length) + word;
 }
 
