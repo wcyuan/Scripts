@@ -56,8 +56,7 @@ def main():
     if opts.board:
         board = Board.from_string(opts.board)
     else:
-        nchars = len(words[0])
-        board = Board(rows=nchars, cols=nchars)
+        board = Board(rows=opts.size, cols=opts.size)
 
     logging.debug("Board = %s", board)
     logging.debug("Empties = %s", list(iter_empties(board)))
@@ -69,6 +68,7 @@ def getopts():
     parser.add_option('--start', type=int, default=10000)
     parser.add_option('--num', type=int, default=1)
     parser.add_option('--board')
+    parser.add_option('--size', type=int, default=4)
     parser.add_option('--words', action='append')
     parser.add_option('--test', action='store_true')
     parser.add_option('--verbose',  action='store_true')
@@ -345,7 +345,8 @@ class Board(FieldMixin):
     EMPTY = '.'
     BLOCK = '#'
 
-    def __init__(self, rows=DEFAULT_SIZE, cols=DEFAULT_SIZE, letters=None):
+    def __init__(self, rows=DEFAULT_SIZE, cols=DEFAULT_SIZE,
+                 letters=None, blocks=None):
         """
         A board is represented as a list of rows x cols values.  Each
         value can either be empty, or it can be blacked out, or it can
@@ -358,6 +359,7 @@ class Board(FieldMixin):
         self.cols = cols
         self.board = []
         self.letters = letters if letters else {}
+        self.blocks = blocks if blocks else set()
         self._reset_board()
 
     def __str__(self):
@@ -367,7 +369,7 @@ class Board(FieldMixin):
 
     @property
     def _flds(self):
-        return ('rows', 'cols', 'letters')
+        return ('rows', 'cols', 'letters', 'blocks')
 
     def _loc_to_idx(self, loc):
         """
@@ -404,6 +406,8 @@ class Board(FieldMixin):
         self.board = [self.EMPTY] * (self.rows * self.cols)
         for loc in self.letters:
             self.add_letter(loc, self.letters[loc])
+        for loc in self.blocks:
+            self.set_block(loc)
         return self
 
     @classmethod
@@ -439,6 +443,7 @@ class Board(FieldMixin):
         Set the given location to be a block
         """
         self._set(loc, self.BLOCK)
+        self.blocks.add(loc)
 
     def clear_loc(self, loc):
         """
@@ -448,7 +453,7 @@ class Board(FieldMixin):
             self._set(loc, self.EMPTY)
         if loc in self.letters:
             del self.letters[loc]
-            self._reset_board()
+            #self._reset_board()
         return self
 
     def is_empty(self, loc):
@@ -646,7 +651,11 @@ def solve(words, board, nchars=None):
         yield solution
 
 def get_words():
-    url = 'https://raw.githubusercontent.com/wcyuan/Scripts/master/random/4_letter_enable2k_words.txt'
+    #url = ('https://raw.githubusercontent.com/wcyuan/Scripts/master/random/'
+    #       '4_letter_enable2k_words.txt')
+    url = 'https://www.wordgamedictionary.com/sowpods/download/sowpods.txt'
+    #url = 'https://www.wordgamedictionary.com/twl06/download/twl06.txt'
+    #url = 'https://www.wordgamedictionary.com/english-word-list/download/english.txt'
     with contextlib.closing(urllib.urlopen(url)) as fd:
         words = [word.rstrip() for word in fd.readlines()
                  if not word.startswith("#")]
