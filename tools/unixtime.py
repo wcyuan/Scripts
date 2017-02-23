@@ -29,6 +29,8 @@ def main():
   rows = []
   for dt in args:
     time_struct = parse_time(dt, manual_formats=opts.in_format)
+    # this adds the time zone name
+    time_struct = time.localtime(time.mktime(time_struct))
     rows.append([str(time.mktime(time_struct))] +
                 [time.strftime(fmt, time_struct)
                  for fmt in opts.out_format])
