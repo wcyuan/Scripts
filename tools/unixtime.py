@@ -99,7 +99,10 @@ def get_all_formats():
           yield fmt, names
 
 def loose_parse_time(dt, apply_defaults=True):
-  simple_dt = " ".join(re.split("[-\s/:]", dt))
+  try:
+    simple_dt = " ".join(re.split("[-\s/:]", dt))
+  except TypeError:
+    return
   for fmt, names in get_all_formats():
     try:
       logging.debug("Trying to parse %s (from %s) with %s",
