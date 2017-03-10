@@ -86,14 +86,78 @@ use Data::Dumper;
 use Memoize qw(memoize);
 
 use Getopt::Long;
-use Log::Log4perl qw(:levels);
+#use Log::Log4perl qw(:levels);
 use Time::HiRes;
 
 # ----------------------
 
-Log::Log4perl->easy_init($ERROR);
-my $logger = Log::Log4perl->get_logger();
+package Logger;
 
+#
+# Use this simple Logger class instead of Log::Log4perl because
+# Log::Log4perl doesn't seem to be installed by default on cygwin.
+#
+
+use Carp;
+use Data::Dumper;
+
+our %LEVELS = (DEBUG      => 50,
+               INFO       => 40,
+               WARN       => 30,
+               ERROR      => 20,
+               LOGCONFESS => 10);
+our %REVLEVELS = map { $LEVELS{$_} => $_ } keys(%LEVELS);
+
+sub new($;$) {
+    my ($this, $level) = @_;
+    my $class = ref($this) || $this;
+    my $self = {};
+    $level //= 'WARN';
+    $self->{level} = $level;
+    bless $self, $class;
+    return $self;
+}
+
+sub level($;$) {
+    my ($self, $level) = @_;
+    if (defined($level)) {
+        if (defined($LEVELS{$level})) {
+            $self->{level} = $level;
+        } elsif (defined($REVLEVELS{$level})) {
+            $self->{level} = $REVLEVELS{$level};
+        } else {
+            confess("Unknown level: $level");
+        }
+    }
+    return $self->{level};
+}
+
+sub output($$$) {
+    my ($self, $level, $msg) = @_;
+    if ($LEVELS{$self->{level}} >= $LEVELS{$level}) {
+        my ($pack, $fn, $line, $sub) = caller(2);
+        my $str = "[$level][$sub:$line] $msg";
+        if ($level eq 'LOGCONFESS') {
+            confess($str);
+        } else {
+            print STDERR "$str\n";
+        }
+    }
+}
+
+sub debug($$)      { $_[0]->output('DEBUG',      $_[1]) }
+sub info($$)       { $_[0]->output('INFO',       $_[1]) }
+sub warn($$)       { $_[0]->output('WARN',       $_[1]) }
+sub error($$)      { $_[0]->output('ERROR',      $_[1]) }
+sub logconfess($$) { $_[0]->output('LOGCONFESS', $_[1]) }
+
+# ----------------------
+
+package main;
+
+#Log::Log4perl->easy_init($ERROR);
+#my $logger = Log::Log4perl->get_logger();
+my $logger = new Logger();
 
 # default values
 
@@ -106,7 +170,7 @@ GetOptions( "slow|s!"             => \my $slow,
 	    "num_to_do|n=i"       => \my $num_to_do,
 	    "check_uniqueness|a!" => \my $check_uniqueness,
 	    "generate|g!"         => \my $generate,
-            "verbose"             => sub { $logger->level($DEBUG) },
+            "verbose"             => sub { $logger->level("DEBUG") },
             "log_level=s"         => sub { $logger->level($_[1]) },
             "36cube!"             => \my $tscube,
 	  )
