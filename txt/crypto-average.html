@@ -1,0 +1,110 @@
+
+<html>
+
+<head>
+<title>Cryptography: Protocols</title>
+</head>
+
+<body bgcolor=FFFFFF>
+
+Stolen from <a href="http://www.cs.cmu.edu/~cburch/pgss97/slides/0710-crypto.html">http://www.cs.cmu.edu/~cburch/pgss97/slides/0710-crypto.html</a>
+
+<center>
+<h1>Cryptography</h1>
+<h3>Part 2: Protocols, or the Search for Spot</h3>
+<a href="http://www.cs.cmu.edu/~cburch/pgss97/slides/index.html"><strong>PGSS Computer Science Core Slides</strong></a>
+</center>
+
+<p>We look more at cryptography, examining a special-purpose protocol
+for finding the average without revealing numbers.</p>
+
+<h3>Signatures</h3>
+
+<p>To convince Alice he's truly Bob, Bob uses a
+<strong>signature</strong>.</p>
+
+<p>Bob has two keys, one published, one kept private.</p>
+
+<p>Messages sent encrypted by the private key make sense only with the
+published key, but encryption with the private key can't be
+imitated.</p>
+
+<p>So Eve can't masquerade as Bob!</p>
+
+<h3>Communicating an Average</h3>
+
+<p>Alice, Bob, Krunch, and Spot just got their test grades.</p>
+
+<pre>
+  Alice 95
+  Bob 88
+  Spot 50
+  Krunch 82
+</pre>
+
+<p>They want to know their average score, but nobody wants to reveal
+their grades.</p>
+
+<p>What can they do?</p>
+
+<h3>Modulo Arithmetic</h3>
+
+<p>We write x mod N to denote the remainder of x divided by N.</p>
+
+<p>For addition, this gives ``wrap-around'' behavior. For 0 <= x < N, 0
+<= y < N,
+<pre>
+                     x + y      if x + y < N
+   (x + y) mod N = {
+                     x + y - N  otherwise
+</pre>
+Notice that modulo addition is commutative and associative.</p>
+
+<p>We take N to be 401, because the total of the four scores will be
+less than 401.</p>
+
+<h3>The Algorithm</h3>
+
+<p>All behave the same.</p>
+
+<ol>
+
+<li>Bob chooses r[B,A], r[B,S], r[B,K] randomly between 0 and 400. He
+calculates r[B,B] so that (r[B,A] + r[B,B] + r[B,S] + r[B,K]) mod 401
+is his own score, 88.
+
+<li>Bob sends r[B,A] to Alice, receives r[A,B].
+He sends r[B,S] to Spot, receives r[S,B].
+He sends r[B,K] to Krunch, receives r[K,B].
+
+<li>Compute c[B] = (r[A,B] + r[B,B] + r[S,B] + r[K,B]) mod 401. Give
+c[B] to everybody, get c[A],c[S],c[K].
+
+<li>The total is (c[A] + c[B] + c[S] + c[K]) mod 401.
+
+</ol>
+
+<h3>Why Does It Work?</h3>
+
+<p>Let's look at an example.
+<pre>
+            sends to whom
+  who    Alice  Bob  Spot  Krunch   total
+ Alice    135   240   301   221   =  95 = Alice's score
+ Bob      285   363   109   133   =  88 = Alice's score
+ Spot     135   300   334    83   =  50 = Spot's score
+ Krunch   132     5   230   116   =  82 = Krunch's score
+          ---   ---   ---   ---     ---
+ total    286   106   172   152   = 315
+</pre></p>
+
+<p>Because, as we observed, addition is commutative and associative,
+we can find the sum of all the entries either by summing the rows first
+(and getting the actual scores) and then totaling these sums, or by
+summing the columns first and then totaling these sums. The first is
+the total of the scores; the second is what the algorithm does. But
+they're both the total of everything in the array, so the answer is
+correct.</p>
+
+</body>
+</html>
