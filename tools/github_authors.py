@@ -108,12 +108,7 @@ def get_git_authors():
 
 
 class Runner(object):
-  """A class to run commands.
-
-  It's possible that it'd be better to use something in
-  google3.pyglib.process, but I'm not sure.
-
-  """
+  """A class to run commands."""
   NO_WRITE = False
 
   @classmethod
