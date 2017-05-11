@@ -119,7 +119,7 @@ class Wrap(object):
     if self.no_write:
       logging.info("NO WRITE: %s", strcmd)
       return
-    logging.info("Running cmd: %s", strcmd)
+    logging.info("Starting cmd: %s", strcmd)
     self.proc = subprocess.Popen(
         self.cmd,
         shell=isinstance(self.cmd, basestring),
@@ -178,12 +178,12 @@ class Wrap(object):
         arr.append("".join(data[name]))
 
 
-  def write(self, data):
+  def write(self, data, timeout=3):
     if not self.proc:
       self.start()
     self.proc.stdin.write(data.strip())
     self.proc.stdin.write("\n")
-    return self.get_output()
+    return self.get_output(timeout=timeout)
 
 # --------------------------------------------------------------------------- #
 
