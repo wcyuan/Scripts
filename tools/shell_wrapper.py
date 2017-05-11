@@ -184,12 +184,12 @@ class Wrap(object):
         arr.append("".join(data[name]))
 
 
-  def write(self, data, timeout=3):
+  def write(self, data, *args, **kwargs):
     if not self.proc:
       self.start()
     self.proc.stdin.write(data.strip())
     self.proc.stdin.write("\n")
-    return self.get_output(timeout=timeout)
+    return self.get_output(*args, **kwargs)
 
 # --------------------------------------------------------------------------- #
 
