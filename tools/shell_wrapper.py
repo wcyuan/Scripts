@@ -88,12 +88,15 @@ def enqueue_output(out, queue):
 class Wrap(object):
   """A class to wrap shells.
 
-  And saves all stdout/stderr
+  All output will be both printed to stdout/stderr and saved.  Unless
+  suppress=True, in which case the output will only be saved, it won't
+  be printed.
   """
-  def __init__(self, cmd, no_write=False, proc=None):
+  def __init__(self, cmd, suppress=False, no_write=False, proc=None):
     self.cmd = cmd
     self.stdout = []
     self.stderr = []
+    self.suppress = suppress
     self.proc = proc
     self.no_write = no_write
     self._sysfds = {"stderr": sys.stderr, "stdout": sys.stdout}
@@ -156,11 +159,12 @@ class Wrap(object):
           pass
         else:
           has_output = True
-          if name in self._sysfds:
-            self._sysfds[name].write(line)
-          else:
-            logging.error("Invalid fd %s", name)
-            sys.stderr.write(line)
+          if not self.suppress:
+            if name in self._sysfds:
+              self._sysfds[name].write(line)
+            else:
+              logging.error("Invalid fd %s", name)
+              sys.stderr.write(line)
           data.setdefault(name, []).append(line)
       if timeout > 0:
         timeout -= 1
