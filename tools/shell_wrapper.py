@@ -144,9 +144,11 @@ class Wrap(object):
     return self._thread[name]
 
 
-  def get_output(self, timeout=3):
+  def get_output(self, timeout=3, suppress=None):
     if not self.proc:
       self.start()
+    if suppress is None:
+      suppress = self.suppress
     has_output = True
     data = {}
     while has_output or timeout > 0:
