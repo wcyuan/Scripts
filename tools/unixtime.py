@@ -9,6 +9,8 @@
 from __future__ import absolute_import, division, with_statement
 
 import logging
+import math
+import operator
 import optparse
 import time
 import itertools
@@ -60,11 +62,27 @@ def explicit_parse_time(dt, manual_formats=None):
     except ValueError:
       pass
 
-def epoch_parse_time(dt):
+def epoch_parse_time(dt):  
+  # try to figure out if we got seconds since the epoch, milliseconds
+  # since the epoch, or microseconds since the epoch.  Try each one
+  # and see which one is closer to the current time.  "closer" is defined
+  # by having the smallest absolute value of the log of the ratios.
+  current = time.time()
+  input = float(dt)
+  divisors = (1.0, 1e3, 1e6)
+  ratios = [abs(math.log(input / divisor / current)) for divisor in divisors]
+  min_index, min_ratio = min(enumerate(ratios), key=operator.itemgetter(1))
+  best_divisor = divisors[min_index]
+  divisor_name = ("seconds", "milliseconds", "microseconds")[min_index]
+  logging.debug("Current time: %s seconds since epoch", current)
+  logging.debug("Input value: %s", input)
+  logging.debug("Divisors: %s -> ratios: %s", divisors, ratios)
+  logging.debug("Min ratio = %s, index = %s, divisor = %s, name = %s",
+                min_ratio, min_index, best_divisor, divisor_name)
   try:
     # if we were given seconds since epoch, convert it to a time struct
-    logging.debug("Parsed %s as seconds since epoch", dt)
-    return time.localtime(float(dt))
+    logging.debug("Parsed %s as %s since epoch", dt, divisor_name)
+    return time.localtime(input/best_divisor)
   except ValueError:
     pass
 
