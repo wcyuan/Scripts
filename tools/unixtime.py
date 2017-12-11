@@ -62,7 +62,7 @@ def explicit_parse_time(dt, manual_formats=None):
     except ValueError:
       pass
 
-def epoch_parse_time(dt):  
+def epoch_parse_time(dt):
   # try to figure out if we got seconds since the epoch, milliseconds
   # since the epoch, or microseconds since the epoch.  Try each one
   # and see which one is closer to the current time.  "closer" is defined
