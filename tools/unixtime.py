@@ -72,7 +72,7 @@ def epoch_parse_time(dt):
   try:
     input = float(dt)
   except ValueError:
-    pass
+    return
   current = time.time()
   divisors = (1.0, 1e3, 1e6)
   ratios = [abs(math.log(input / divisor / current)) for divisor in divisors]
