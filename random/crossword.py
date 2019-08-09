@@ -5,6 +5,8 @@ Given a list of 4-letter words, create a 4x4 crossword -- a 4x4 grid
 where every row and every column is a valid word. In fact, produce
 every such grid.
 
+https://en.m.wikipedia.org/wiki/Word_square
+
 With --test, it should print:
 
 --
