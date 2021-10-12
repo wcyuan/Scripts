@@ -361,6 +361,7 @@ then
     case "$-" in
         *i*)
             # get preexec.bash from http://www.twistedmatrix.com/users/glyph/preexec.bash.txt
+            # Now on github: https://github.com/rcaloras/bash-preexec/blob/master/bash-preexec.sh
             if [ -f preexec.bash ]
             then
                 . preexec.bash
