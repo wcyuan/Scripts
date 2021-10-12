@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#
+# This version is out of date, get a new version at
+# https://github.com/rcaloras/bash-preexec/blob/master/bash-preexec.sh
+#
+
 # preexec.bash -- Bash support for ZSH-like 'preexec' and 'precmd' functions.
 
 # The 'preexec' function is executed before each interactive command is
