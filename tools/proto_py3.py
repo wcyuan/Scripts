@@ -369,7 +369,7 @@ class ProtoList(list, ProtoMixin):
       val = 0
       for elt in self:
         if isinstance(elt, dict):
-          for vl in elt.itervalues():
+          for vl in elt.values():
             if hasattr(vl, "height"):
               val = max(val, vl.height(cache=cache) + 1)
         elif hasattr(elt, "height"):
@@ -447,7 +447,7 @@ class ProtoList(list, ProtoMixin):
         elt.search(patt, path=path + [ii], case_insensitive=case_insensitive)
       elif isinstance(elt, dict):
         # For dicts, match against the key or the value
-        for ky, vl in elt.iteritems():
+        for ky, vl in elt.items():
           if strmatch(patt, ky) or strmatch(patt, vl):
             print(path, ii, ky, vl)
           if isinstance(vl, ProtoList):
@@ -507,7 +507,7 @@ class ProtoDict(dict, ProtoMixin):
     # if we were given a normalized attribute, there could be multiple
     # keys that normalize to the same thing.  We just arbitrarily take
     # the first one.
-    for key in self.iterkeys():
+    for key in self.keys():
       if attr == self.normalize_attr(key):
         return self[key]
     if self._forgiving:
@@ -521,7 +521,7 @@ class ProtoDict(dict, ProtoMixin):
     https://ipython.org/ipython-doc/dev/config/integrating.html
     """
     return dir(dict) + list(
-        set(self.normalize_attr(ky) for ky in self.iterkeys()))
+        set(self.normalize_attr(ky) for ky in self.keys()))
 
   def search(self, patt, path=None, case_insensitive=True):
     """Search for a string in a proto.
@@ -546,7 +546,7 @@ class ProtoDict(dict, ProtoMixin):
       else:
         return strmatch(patt, str(elt))
 
-    for ky, vl in self.iteritems():
+    for ky, vl in self.items():
       if strmatch(patt, ky) or strmatch(patt, vl):
         print(path, ky, vl)
       elif isinstance(vl, ProtoList):
@@ -585,12 +585,12 @@ class ProtoDict(dict, ProtoMixin):
         yield u"{0}{1}: {2}".format(indent, key, value)
 
     return ors.join(
-        elt for (key, value) in self.iteritems()
+        elt for (key, value) in self.items()
         for elt in print_elt(key, value))
 
   def to_dict(self):
     return dict((key, value.to_list() if isinstance(value, ProtoList) else
-                 value) for (key, value) in self.iteritems())
+                 value) for (key, value) in self.items())
 
   def add(self, key, value):
     if isinstance(value, ProtoList):
@@ -602,7 +602,7 @@ class ProtoDict(dict, ProtoMixin):
     return self
 
   def add_dict(self, dct):
-    for (key, value) in dct.iteritems():
+    for (key, value) in dct.items():
       self.add(key, value)
     return self
 
@@ -1432,5 +1432,7 @@ def sample_response():
     }
   }
 """
+
+
 
 # --------------------------------------------------------------------------- #
