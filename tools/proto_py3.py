@@ -29,17 +29,17 @@ EXAMPLES:
   Here are examples (and doctests) of how to use this library from
   inside of python.
 
-  >>> import proto
-  >>> proto.parse( # doctest: +ELLIPSIS
+  >>> from proto import parse, ProtoDict
+  >>> parse( # doctest: +ELLIPSIS
   ... filename="/dev/null")
   (...)
-  >>> proto.parse(filename="/dev/null")
+  >>> parse(filename="/dev/null")
   ()
-  >>> p = proto.ProtoDict()
+  >>> p = ProtoDict()
   >>> p.add('mykey', 'myvalue')
   {'mykey': myvalue}
   >>> p.add('mykey2', {4: 5, 6: 7})
-  {'mykey2': [{4: 5, 6: 7}], 'mykey': myvalue}
+  {'mykey': myvalue, 'mykey2': [{4: 5, 6: 7}]}
   >>> p.mykey2[0]._4
   5
   >>> print(p.full_proto_string().encode("utf-8"))
@@ -48,7 +48,7 @@ EXAMPLES:
     6: 7
   }
   mykey: myvalue
-  >>> p = proto.ProtoDict.from_dict(
+  >>> p = ProtoDict.from_dict(
   ... {'request':
   ...  {'location':
   ...   {'center':
@@ -71,7 +71,7 @@ EXAMPLES:
   >>> p == parse(p.full_proto_string())[0]
   True
   >>> p.request[0].location[0].add('max_radius_meters', 100)
-  {'max_radius_meters': 100, 'center': [{'lat': 4, 'lng': 5}]}
+  {'center': [{'lat': 4, 'lng': 5}], 'max_radius_meters': 100}
   >>> p = parse('''single_request {
   ...   id {
   ...     v1: 4123124123123
@@ -113,11 +113,11 @@ EXAMPLES:
   >>> p[0] == parse(p[0].full_proto_string())[0]
   True
   >>> p[0].follow("single_request", 1, "id", 0, "v1", 0)
-  u'20593950293402934'
+  '20593950293402934'
   >>> p[0].follow("single_request", 1, "id", 0)
-  {u'v1': 20593950293402934, u'v2': 19289402093012930}
+  {'v1': 20593950293402934, 'v2': 19289402093012930}
   >>> p[0].single_request.follow(1, "id", 0, "v1", 0)
-  u'20593950293402934'
+  '20593950293402934'
   >>> p = parse('''single_request: {
   ...   id: {
   ...     v1: 4123124123123 # this is a comment
@@ -132,9 +132,9 @@ EXAMPLES:
   ... }
   ... ''')
   >>> p[0]
-  {u'single_request': ProtoList(len=2, depth=0, height=3)}
+  {'single_request': ProtoList(len=2, depth=0, height=3)}
   >>> p[0].single_request[0].id[0].v2[0]
-  u"'150295 9385023'"
+  "'150295 9385023'"
 
 This command will parse the protos, then drop you in an ipython shell
 with the variable "parsed" set to a map from filename to the protos
@@ -416,8 +416,8 @@ class ProtoList(list, ProtoMixin):
   def __unicode__(self):
     return self.string()
 
-  #def __repr__(self):
-  #  return self.string()
+  def __repr__(self):
+    return self.string()
 
   def search(self, patt, path=None, case_insensitive=True):
     """Search for a string in a proto.
@@ -623,25 +623,25 @@ def parse(*args, **kwargs):
 
   # a single value
   >>> parse("a: 1")
-  ({u'a': 1},)
+  ({'a': 1},)
 
   # a single value in braces.  Braces must be on separate lines by themselves.
   >>> parse("{\\na: 1\\n}")
-  ({u'a': 1},)
+  ({'a': 1},)
 
   # a list of values
   >>> parse("a: 1\\na: 2\\na: 3")
-  ({u'a': [u'1', u'2', u'3']},)
+  ({'a': ['1', '2', '3']},)
 
   # a complex object breaking up the list
   >>> parse("a: 1\\na: 2\\na: 3\\nb {\\nc: x\\nc: y\\n}\\na: 4")
-  ({u'a': [u'1', u'2', u'3', u'4'], u'b': [{u'c': [u'x', u'y']}]},)
+  ({'a': ['1', '2', '3', '4'], 'b': [{'c': ['x', 'y']}]},)
 
   # nested complex objects
   >>> parse(          # doctest: +NORMALIZE_WHITESPACE
   ... "a: 1\\na: 2\\na: 3\\nb {\\nc: x\\nc: y\\nc {\\nz: 6\\n}\\n}\\na: 4")
-  ({u'a': [u'1', u'2', u'3', u'4'], \
-   u'b': [{u'c': [u'x', u'y', {u'z': 6}]}]},)
+  ({'a': ['1', '2', '3', '4'], \
+   'b': [{'c': ['x', 'y', {'z': 6}]}]},)
 
   # ProtoList summary
   >>> ProtoList(parse("a: 1\\na: 2\\na: 3\\nb {\\nc: x\\nc: y\\n}\\na: 4"))
@@ -652,33 +652,33 @@ def parse(*args, **kwargs):
   ...       "{\\na: 1\\na: 2\\na: 3\\n \
               b {\\nc: x\\nc: y\\n}\\n}\\n \
              {\\na: 4\\n}\\n{\\na: 4\\n}")
-  ({u'a': [u'1', u'2', u'3'], u'b': [{u'c': [u'x', u'y']}]}, \
-   {u'a': 4}, \
-   {u'a': 4})
+  ({'a': ['1', '2', '3'], 'b': [{'c': ['x', 'y']}]}, \
+   {'a': 4}, \
+   {'a': 4})
 
   # An enum with each value on the same line
   >>> parse("obj {\\nenum: v1\\nenum: v2\\nenum: v3\\n}")
-  ({u'obj': [{u'enum': [u'v1', u'v2', u'v3']}]},)
+  ({'obj': [{'enum': ['v1', 'v2', 'v3']}]},)
 
   # The same enum with values in block style
   >>> parse("obj {\\nenum {\\nv1\\n}\\nenum {\\nv2\\n}\\nenum {\\nv3\\n}\\n}")
-  ({u'obj': [{u'enum': [u'v1', u'v2', u'v3']}]},)
+  ({'obj': [{'enum': ['v1', 'v2', 'v3']}]},)
 
   # An invalid enum
   # This would generate a warning
-  #  [ ...parse_tokens:868 WARNING] Can't parse line [u'v1', u'v2'] (file None)
+  #  [ ...parse_tokens:868 WARNING] Can't parse line ['v1', 'v2'] (file None)
   # except that we suppress it with log_errors_at
   >>> parse("obj {\\nenum {\\nv1\\nv2\\n}\\nenum {\\nv3\\n}\\n}",
   ...       log_errors_at=logging.DEBUG)
-  ({u'obj': [{u'enum': [{u'v1': [], u'v2': []}, u'v3']}]},)
+  ({'obj': [{'enum': [{'v1': [], 'v2': []}, 'v3']}]},)
 
   # Another invalid enum
   # This also generates a warning
-  #  [ ...parse_tokens:868 WARNING] Can't parse line [u'v1'] (file None)
+  #  [ ...parse_tokens:868 WARNING] Can't parse line ['v1'] (file None)
   # except that we suppress it with log_errors_at
   >>> parse("obj {\\nenum {\\nv1\\nv2: asdf\\n}\\nenum {\\nv3\\n}\\n}",
   ...       log_errors_at=logging.DEBUG)
-  ({u'obj': [{u'enum': [{u'v1': [], u'v2': asdf}, u'v3']}]},)
+  ({'obj': [{'enum': [{'v1': [], 'v2': asdf}, 'v3']}]},)
 
   # An inline list
   >>> p = parse('''single_request: {
@@ -696,13 +696,13 @@ def parse(*args, **kwargs):
   >>> len(p[0].single_request[0].id[0].val)
   3
   >>> p[0].single_request[0].id[0].val[1]
-  u'"yourvalue"'
+  '"yourvalue"'
   >>> p[0].single_request[0].id[0].val[2]
-  u'"third value"'
+  '"third value"'
   >>> len(p[0].single_request[1].id[0].val)
   4
   >>> p[0].single_request[1].id[0].val[3]
-  u'"Paul"'
+  '"Paul"'
 
   # Treat [] differently in vars and vals
   >>> p = parse('''[foo]: {
@@ -734,22 +734,22 @@ def parse(*args, **kwargs):
     }
   }
   >>> p[0].foo[0].id[0].val[0]
-  u'"myvalue"'
+  '"myvalue"'
 
   # Test of enum_or_proto
   >>> parse('TrainStation : [{source: OYSTER , eid: PROVIDER}]')
-  ({u'TrainStation': [{u'source': OYSTER, u'eid': PROVIDER}]},)
+  ({'TrainStation': [{'source': OYSTER, 'eid': PROVIDER}]},)
 
   # Test that we tokenize braces ([]) properly for lists
   >>> parse('TrainStation : [OYSTER, PROVIDER]')
-  ({u'TrainStation': [u'OYSTER', u'PROVIDER']},)
+  ({'TrainStation': ['OYSTER', 'PROVIDER']},)
 
   >>> parse('x {}')
-  ({u'x': [{}]},)
+  ({'x': [{}]},)
   >>> parse('{x {}}')
-  ({u'x': [{}]},)
+  ({'x': [{}]},)
   >>> parse('x: {}')
-  ({u'x': [{}]},)
+  ({'x': [{}]},)
 
   # this is malformed -- the return value doesn't matter, but make sure we don't
   # go into an infinite loop
@@ -757,9 +757,9 @@ def parse(*args, **kwargs):
   ({},)
 
   >>> parse('a:\\nb:c')
-  ({u'a': , u'b': c},)
+  ({'a': , 'b': c},)
   >>> parse('a: http://myval\\nb:c')
-  ({u'a': http://myval, u'b': c},)
+  ({'a': http://myval, 'b': c},)
   """
   return tuple(parse_root(*args, **kwargs))
 
